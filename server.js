@@ -6,7 +6,9 @@ const admin = require('firebase-admin');
 
 // === 2. НАЛАШТУВАННЯ ===
 const app = express();
-const port = 3000;
+// Render надасть нам свій порт через 'process.env.PORT'
+// Якщо ж ми запускаємо локально (де 'process.env.PORT' немає), ми використаємо 3000
+const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static('.'));
 

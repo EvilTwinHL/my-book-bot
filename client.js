@@ -125,6 +125,7 @@ async function loadProjects(user) {
                     handleDeleteProject(project.id, project.title);
                 };
 
+                buttonsDiv.appendChild(editBtn);
                 buttonsDiv.appendChild(exportBtn);
                 buttonsDiv.appendChild(deleteBtn);
                 li.appendChild(titleSpan);

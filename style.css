@@ -20,7 +20,7 @@ button:disabled { background-color: #ccc; }
 }
 #projects-list li span:hover { color: #0056b3; }
 
-/* Об'єднуємо кнопки в один контейнер */
+/* Об'єднуємо кнопки в один контейнер */ 
 .project-buttons {
     display: flex;
     gap: 5px; /* Відстань між кнопками */
@@ -61,3 +61,5 @@ button:disabled { background-color: #ccc; }
 .message { margin-bottom: 5px; }
 .user { text-align: right; color: blue; }
 .bot { color: green; }
+
+/* test test test */

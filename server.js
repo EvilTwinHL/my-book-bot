@@ -6,9 +6,7 @@ const admin = require('firebase-admin');
 
 // === 2. НАЛАШТУВАННЯ ===
 const app = express();
-// Render надасть нам свій порт через 'process.env.PORT'
-// Якщо ж ми запускаємо локально (де 'process.env.PORT' немає), ми використаємо 3000
-const port = process.env.PORT || 3000;
+const port = 3000;
 app.use(express.json());
 app.use(express.static('.'));
 
@@ -176,12 +174,7 @@ app.post('/chat', async (req, res) => {
     }
 });
 
-
-
-// === 4. ЗАПУСК СЕРВЕРА ===
-app.listen(port, () => {
-  console.log(`✅ Сервер успішно запущено! Працюэмо на Render.com${port}`);
-});// НОВИЙ МАРШРУТ: Видалення проєкту
+// НОВИЙ МАРШРУТ: Видалення проєкту
 app.post('/delete-project', async (req, res) => {
     // Ми очікуємо отримати { projectID: "..." }
     const { projectID } = req.body; 
@@ -205,4 +198,5 @@ app.post('/delete-project', async (req, res) => {
 
 // === 4. ЗАПУСК СЕРВЕРА ===
 app.listen(port, () => {
-// ... і так далі
+  console.log(`✅ Сервер успішно запущено! http://localhost:${port}`);
+});

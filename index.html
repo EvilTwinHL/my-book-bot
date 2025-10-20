@@ -4,15 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мій Бот-Співавтор</title>
+    
     <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 20px auto; }
-        #chat-window {
-            height: 300px;
-            border: 1px solid #ccc;
-            padding: 10px;
-            margin-bottom: 10px;
-            overflow-y: scroll; /* Додає прокрутку */
-        }
+        body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 10px; background-color: #f4f4f4; }
+        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .hidden { display: none; }
+        input[type="text"] { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; } /* Стиль для неактивних кнопок */
+        
+        #projects-list { list-style: none; padding: 0; }
+        #projects-list li { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
+        #projects-list li:hover { background-color: #f9f9f9; }
+        #projects-list li.active { background-color: #e6f7ff; font-weight: bold; } /* Активний проєкт */
+
+        #chat-window { height: 300px; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; overflow-y: scroll; background-color: #fafafa; }
         .message { margin-bottom: 5px; }
         .user { text-align: right; color: blue; }
         .bot { color: green; }
@@ -20,92 +27,213 @@
 </head>
 <body>
 
-    <h1>🤖 Бот-Співавтор "Опус"</h1>
+    <div id="login-container" class="container">
+        <h2>Вітаю!</h2>
+        <p>Будь ласка, введіть ваш унікальний логін, щоб почати.</p>
+        <input type="text" id="login-input" placeholder="Наприклад, Mikhailo_V">
+        <button id="login-button">Увійти</button>
+    </div>
 
-    <div id="chat-window">
+    <div id="app-container" class="container hidden">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <p>Ви увійшли як: <b id="username-display"></b></p>
+            <button id="logout-button" style="width: auto; background-color: #dc3545;">Вийти</button>
         </div>
+        
+        <hr style="margin: 20px 0;">
 
-    <input type="text" id="userInput" placeholder="Напишіть щось..." style="width: 70%;">
-    <button id="sendButton">Надіслати</button>
+        <div id="projects-container">
+            <h2>Ваші проєкти</h2>
+            <button id="create-project-button" style="width: auto; background-color: #28a745;">[ + ] Створити нову книгу</button>
+            <ul id="projects-list">
+                </ul>
+        </div>
+        
+        <div id="chat-container" class="hidden">
+            <hr style="margin: 20px 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 id="current-project-title"></h3>
+                <button id="back-to-projects" style="width: auto; background-color: #6c757d;">← До проєктів</button>
+            </div>
+            <div id="chat-window">
+                </div>
+            <input type="text" id="userInput" placeholder="Напишіть щось...">
+            <button id="sendButton">Надіслати</button>
+        </div>
+    </div>
+
 
     <script>
-        // Знаходимо наші елементи на сторінці
+        // Глобальні змінні
+        let currentUser = null;
+        let currentProjectID = null;
+
+        // --- Елементи DOM ---
+        const loginContainer = document.getElementById('login-container');
+        const appContainer = document.getElementById('app-container');
+        const loginInput = document.getElementById('login-input');
+        const loginButton = document.getElementById('login-button');
+        const logoutButton = document.getElementById('logout-button');
+        const usernameDisplay = document.getElementById('username-display');
+        
+        const projectsContainer = document.getElementById('projects-container'); // Батьківський блок картотеки
+        const projectsList = document.getElementById('projects-list');
+        const createProjectButton = document.getElementById('create-project-button');
+        
+        const chatContainer = document.getElementById('chat-container');
+        const backToProjectsButton = document.getElementById('back-to-projects'); // Нова кнопка "Назад"
+        const currentProjectTitle = document.getElementById('current-project-title');
+
         const sendButton = document.getElementById('sendButton');
         const userInput = document.getElementById('userInput');
         const chatWindow = document.getElementById('chat-window');
-
-        // Додаємо "слухача" на кнопку "Надіслати"
-        sendButton.addEventListener('click', sendMessage);
-
-        // Додаємо "слухача" на натискання Enter у полі вводу
-        userInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
-
-        // Головна функція для відправки повідомлення
-        async function sendMessage() {
-            const messageText = userInput.value;
-            if (messageText.trim() === '') return; // Не відправляти порожні повідомлення
-
-            // 1. Показуємо повідомлення користувача у чаті
-            addMessageToChat(messageText, 'user');
-            
-            // Очищуємо поле вводу
-            userInput.value = '';
-
-            // 2. Відправляємо повідомлення на наш бекенд-сервер
-            const response = await fetch('/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ message: messageText }), // Відправляємо наш текст у форматі JSON
-            });
-
-            // 3. Отримуємо відповідь від сервера
-            const data = await response.json();
-            const botMessage = data.message;
-
-            // 4. Показуємо відповідь "бота" (наше ехо) у чаті
-            addMessageToChat(botMessage, 'bot');
+        
+        // --- Логіка Логіну (без змін) ---
+        function checkLoginOnLoad() {
+            const savedUser = localStorage.getItem('bookBotUser');
+            if (savedUser) { currentUser = savedUser; showAppScreen(); } else { showLoginScreen(); }
+        }
+        function handleLogin() {
+            const user = loginInput.value.trim();
+            if (user === "") { alert("Логін не може бути порожнім!"); return; }
+            currentUser = user;
+            localStorage.setItem('bookBotUser', user);
+            showAppScreen();
+        }
+        function handleLogout() {
+            currentUser = null;
+            currentProjectID = null;
+            localStorage.removeItem('bookBotUser');
+            chatWindow.innerHTML = ''; 
+            showLoginScreen();
+        }
+        function showLoginScreen() {
+            loginContainer.classList.remove('hidden'); 
+            appContainer.classList.add('hidden'); 
         }
 
-        // Допоміжна функція для малювання повідомлень у чаті
+        // --- ОНОВЛЕНА ЛОГІКА ДОДАТКУ ---
+        
+        function showAppScreen() {
+            loginContainer.classList.add('hidden'); 
+            appContainer.classList.remove('hidden'); 
+            usernameDisplay.textContent = currentUser;
+            showProjectsList(); // Показуємо список проєктів
+            loadProjects(currentUser); // Завантажуємо їх
+        }
+
+        // НОВА ФУНКЦІЯ: Показує екран списку проєктів
+        function showProjectsList() {
+            chatContainer.classList.add('hidden');
+            projectsContainer.classList.remove('hidden');
+            currentProjectID = null; // Скидаємо вибір проєкту
+        }
+
+        // ОНОВЛЕНО: Завантажує список проєктів
+        async function loadProjects(user) {
+            projectsList.innerHTML = '<li>Завантаження...</li>'; 
+            try {
+                const response = await fetch(`/get-projects?user=${user}`);
+                if (!response.ok) throw new Error('Помилка мережі');
+                
+                const projects = await response.json();
+                projectsList.innerHTML = ''; 
+
+                if (projects.length === 0) {
+                    projectsList.innerHTML = '<li>У вас ще немає проєктів.</li>';
+                } else {
+                    projects.forEach(project => {
+                        const li = document.createElement('li');
+                        li.textContent = project.title;
+                        li.dataset.projectId = project.id; 
+                        
+                        li.onclick = () => {
+                            // TODO: Завантажити історію чату для цього проєкту
+                            openChatForProject(project.id, project.title);
+                        };
+                        projectsList.appendChild(li);
+                    });
+                }
+            } catch (error) {
+                console.error('Не вдалося завантажити проєкти:', error);
+                projectsList.innerHTML = '<li>Не вдалося завантажити проєкти.</li>';
+            }
+        }
+
+        // НОВА ФУНКЦІЯ: Відкриває екран чату для проєкту
+        function openChatForProject(projectId, projectTitle) {
+            currentProjectID = projectId;
+            currentProjectTitle.textContent = projectTitle;
+            
+            // Ховаємо список проєктів і показуємо чат
+            projectsContainer.classList.add('hidden');
+            chatContainer.classList.remove('hidden');
+            
+            // TODO: Завантажити історію чату
+            alert(`Завантажуємо чат для проєкту: ${projectTitle}. (Функціонал завантаження історії наступний)`);
+            chatWindow.innerHTML = ''; // Очищуємо чат для нового проєкту
+        }
+
+        // ОНОВЛЕНО: Обробник кнопки "Створити проєкт"
+        async function handleCreateProject() {
+            const title = prompt("Введіть назву для вашої нової книги:", "Нова книга " + new Date().toLocaleDateString());
+            if (!title || title.trim() === "") return; 
+
+            try {
+                // Відправляємо запит на наш новий маршрут
+                const response = await fetch('/create-project', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user: currentUser, title: title.trim() })
+                });
+
+                if (!response.ok) throw new Error('Сервер не зміг створити проєкт.');
+
+                const newProject = await response.json(); // Отримуємо { id, title }
+
+                // 1. Оновлюємо список проєктів у фоновому режимі
+                loadProjects(currentUser); 
+                
+                // 2. Одразу відкриваємо чат для щойно створеного проєкту
+                openChatForProject(newProject.id, newProject.title);
+
+            } catch (error) {
+                console.error('Помилка при створенні проєкту:', error);
+                alert('Не вдалося створити проєкт. Дивіться консоль.');
+            }
+        }
+
+        // --- Прив'язка подій ---
+        document.addEventListener('DOMContentLoaded', checkLoginOnLoad);
+        loginButton.addEventListener('click', handleLogin);
+        logoutButton.addEventListener('click', handleLogout);
+        loginInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleLogin(); } });
+        
+        createProjectButton.addEventListener('click', handleCreateProject);
+        backToProjectsButton.addEventListener('click', showProjectsList); // Кнопка "Назад"
+        
+        // --- Функції чату (поки не чіпаємо) ---
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') { sendMessage(); } });
+
+        async function sendMessage() {
+            if (!currentProjectID || !currentUser) {
+                alert("Помилка: не обрано користувача або проєкт.");
+                return;
+            }
+            // TODO: Нам потрібно буде змінити цю функцію,
+            // щоб вона надсилала `currentUser`, `projectID` та `message` на сервер
+            alert(`Відправка повідомлення для проєкту ${currentProjectID}. (Функціонал ще не реалізовано)`);
+        }
+
         function addMessageToChat(text, sender) {
             const messageElement = document.createElement('div');
             messageElement.classList.add('message', sender);
             messageElement.textContent = text;
             chatWindow.appendChild(messageElement);
-            // Автоматично прокручуємо вниз
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }
 
-        // НОВЕ: Функція для завантаження історії при старті
-        async function loadHistory() {
-            console.log('Завантажую історію...');
-            const response = await fetch('/get-history');
-            const history = await response.json();
-
-            if (history.length > 0) {
-                // Малюємо кожне повідомлення з історії
-                history.forEach(message => {
-                    const sender = message.role === 'model' ? 'bot' : 'user';
-                    const text = message.parts[0].text;
-                    addMessageToChat(text, sender);
-                });
-                console.log('Історію успішно завантажено!');
-            } else {
-                // Якщо історії немає (перший запуск), показуємо вітання бота
-                addMessageToChat("Я Опус, ваш літературний наставник. З якої великої ідеї ми почнемо сьогодні? ✍️", "bot");
-            }
-        }
-
-        // НОВЕ: Кажемо браузеру виконати функцію loadHistory()
-        // щойно сторінка буде готова
-        document.addEventListener('DOMContentLoaded', loadHistory);
-
-    </script> 
+    </script>
 </body>
 </html>

@@ -101,29 +101,80 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-// НОВЕ: Створюємо endpoint для отримання історії чату
-app.get('/get-history', async (req, res) => {
-  try {
-    const projectDocRef = db.collection('projects').doc(PROJECT_ID);
-    const doc = await projectDocRef.get();
-
-    if (doc.exists) {
-      // Історія існує. Завантажуємо її.
-      const fullHistory = doc.data().history;
-      
-      // ВІДПРАВЛЯЄМО ІСТОРІЮ НА ФРОНТЕНД
-      // Ми "відрізаємо" перший елемент (системний промпт), 
-      // бо користувачу не потрібно його бачити.
-      res.json(fullHistory.slice(1)); 
-    } else {
-      // Якщо історії ще немає, відправляємо порожній масив
-      res.json([]);
+// НОВЕ: Маршрут для отримання списку проєктів для конкретного користувача
+app.get('/get-projects', async (req, res) => {
+    // Ми очікуємо на запит типу: /get-projects?user=Mikhailo_V
+    const user = req.query.user; 
+    
+    if (!user) {
+        return res.status(400).json({ message: "Необхідно вказати користувача (user)" });
     }
-  } catch (error) {
-    console.error("Помилка при отриманні історії:", error);
-    res.status(500).json({ message: "Не вдалося завантажити історію." });
-  }
+
+    try {
+        const projectsRef = db.collection('projects');
+        // Головний запит: шукаємо всі проєкти, де поле 'owner' == 'Mikhailo_V'
+        const snapshot = await projectsRef.where('owner', '==', user).get();
+
+        if (snapshot.empty) {
+            console.log(`Проєктів для ${user} не знайдено.`);
+            return res.json([]); // Повертаємо порожній масив, це не помилка
+        }
+
+        const projects = [];
+        snapshot.forEach(doc => {
+            // Збираємо список проєктів, відправляємо ID та title
+            projects.push({
+                id: doc.id,
+                title: doc.data().title || 'Проєкт без назви' // '||' - на випадок, якщо назви немає
+            });
+        });
+        
+        console.log(`Надсилаю ${projects.length} проєкт(ів) для ${user}`);
+        res.json(projects);
+    } catch (error) {
+        console.error("Помилка при отриманні проєктів:", error);
+        res.status(500).json({ message: "Не вдалося завантажити проєкти." });
+    }
 });
+
+// НОВЕ: Маршрут для СТВОРЕННЯ нового проєкту
+app.post('/create-project', async (req, res) => {
+    // Ми очікуємо отримати { user: "Mykhailo", title: "Нова книга" }
+    const { user, title } = req.body;
+
+    if (!user || !title) {
+        return res.status(400).json({ message: "Необхідно вказати 'user' та 'title'" });
+    }
+
+    try {
+        // Створюємо нову, свіжу історію для цього проєкту
+        const initialHistory = [
+            { role: "user", parts: [{ text: botPersona }] },
+            { role: "model", parts: [{ text: `Я Опус. Радий почати роботу над вашою новою книгою "${title}"! З якої ідеї почнемо? ✍️` }] }
+        ];
+
+        // Додаємо новий документ в колекцію 'projects'
+        const newProjectRef = await db.collection('projects').add({
+            owner: user,
+            title: title,
+            history: initialHistory,
+            createdAt: new Date() // Додамо дату створення, це корисно
+        });
+
+        console.log(`Створено новий проєкт: ${newProjectRef.id} для ${user}`);
+        
+        // Повертаємо ID та title нового проєкту на фронтенд
+        res.status(201).json({ id: newProjectRef.id, title: title });
+
+    } catch (error) {
+        console.error("Помилка при створенні проєкту:", error);
+        res.status(500).json({ message: "Не вдалося створити проєкт." });
+    }
+});
+
+// ПРИМІТКА: Нам потрібно, щоб botPersona була доступна
+// Переконайтеся, що змінна `botPersona` визначена на самому початку вашого server.js,
+// щоб цей новий маршрут міг її "бачити". (У нашому коді вона вже там, так що все гаразд).
 
 // === 4. ЗАПУСК СЕРВЕРА ===
 app.listen(port, () => {

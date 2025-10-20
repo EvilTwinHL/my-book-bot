@@ -177,7 +177,32 @@ app.post('/chat', async (req, res) => {
 });
 
 
+
 // === 4. ЗАПУСК СЕРВЕРА ===
 app.listen(port, () => {
-  console.log(`✅ Сервер успішно запущено! http://localhost:${port}`);
+  console.log(`✅ Сервер успішно запущено! Працюэмо на Render.com${port}`);
+});// НОВИЙ МАРШРУТ: Видалення проєкту
+app.post('/delete-project', async (req, res) => {
+    // Ми очікуємо отримати { projectID: "..." }
+    const { projectID } = req.body; 
+
+    if (!projectID) {
+        return res.status(400).json({ message: "Необхідно вказати projectID" });
+    }
+
+    try {
+        // Знаходимо документ за ID і видаляємо його
+        await db.collection('projects').doc(projectID).delete();
+        
+        console.log(`Проєкт ${projectID} успішно видалено.`);
+        res.status(200).json({ message: 'Проєкт видалено' });
+
+    } catch (error) {
+        console.error("Помилка при видаленні проєкту:", error);
+        res.status(500).json({ message: "Не вдалося видалити проєкт." });
+    }
 });
+
+// === 4. ЗАПУСК СЕРВЕРА ===
+app.listen(port, () => {
+// ... і так далі

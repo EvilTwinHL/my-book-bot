@@ -1,0 +1,56 @@
+body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 10px; background-color: #f4f4f4; }
+.container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+.hidden { display: none; }
+input[type="text"] { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+button:hover { background-color: #0056b3; }
+button:disabled { background-color: #ccc; } 
+
+#projects-list { list-style: none; padding: 0; }
+#projects-list li {
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    padding: 10px; 
+    border-bottom: 1px solid #eee; 
+}
+#projects-list li span { 
+    cursor: pointer;
+    flex-grow: 1; 
+}
+#projects-list li span:hover { color: #0056b3; }
+
+/* Об'єднуємо кнопки в один контейнер */
+.project-buttons {
+    display: flex;
+    gap: 5px; /* Відстань між кнопками */
+    margin-left: 10px;
+}
+
+/* Базовий стиль для кнопок-іконок */
+.btn-icon {
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    cursor: pointer;
+    width: auto;
+    color: white;
+}
+
+/* Стиль для кнопки експорту */
+.export-btn {
+    background-color: #28a745; /* Зелений */
+}
+.export-btn:hover { background-color: #218838; }
+
+/* Стиль для кнопки видалення */
+.delete-btn {
+    background-color: #dc3545; /* Червоний */
+}
+.delete-btn:hover { background-color: #c82333; }
+
+/* Стилі чату (без змін) */
+#chat-window { height: 300px; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; overflow-y: scroll; background-color: #fafafa; }
+.message { margin-bottom: 5px; }
+.user { text-align: right; color: blue; }
+.bot { color: green; }

@@ -5,85 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мій Бот-Співавтор</title>
     
-    <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 10px; background-color: #f4f4f4; }
-        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .hidden { display: none; }
-        input[type="text"] { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background-color: #0056b3; }
-        button:disabled { background-color: #ccc; } 
-        
-        #projects-list { list-style: none; padding: 0; }
-        #projects-list li {
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            padding: 10px; 
-            border-bottom: 1px solid #eee; 
-        }
-        #projects-list li span { 
-            cursor: pointer;
-            flex-grow: 1; 
-        }
-        #projects-list li span:hover { color: #0056b3; }
-
-        /* Об'єднуємо кнопки в один контейнер */
-        .project-buttons {
-            display: flex;
-            gap: 5px; /* Відстань між кнопками */
-            margin-left: 10px;
-        }
-        
-        /* Базовий стиль для кнопок-іконок */
-        .btn-icon {
-            border: none;
-            border-radius: 4px;
-            padding: 5px 10px;
-            cursor: pointer;
-            width: auto;
-            color: white;
-        }
-        
-        /* НОВИЙ: Стиль для кнопки експорту */
-        .export-btn {
-            background-color: #28a745; /* Зелений */
-        }
-        .export-btn:hover { background-color: #218838; }
-
-        /* Стиль для кнопки видалення */
-        .delete-btn {
-            background-color: #dc3545; /* Червоний */
-        }
-        .delete-btn:hover { background-color: #c82333; }
-
-
-        #chat-window { height: 300px; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; overflow-y: scroll; background-color: #fafafa; }
-        .message { margin-bottom: 5px; }
-        .user { text-align: right; color: blue; }
-        .bot { color: green; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div id="login-container" class="container">
         <h2>Вітаю!</h2>
         <p>Будь ласка, введіть ваш унікальний логін, щоб почати.</p>
-        <input type="text" id="login-input" placeholder="Наприклад, Mikhailo_V">
+        <input type="text" id="login-input" placeholder="Наприклад, John Doe">
         <button id="login-button">Увійти</button>
     </div>
 
     <div id="app-container" class="container hidden">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <p>Ви увійшли як: <b id="username-display"></b></p>
-            <button id="logout-button" style="width: auto; background-color: #dc3545;">Вийти</button>
+            <button id="logout-button" style="width: auto; background-color: #c03946;">Вийти</button>
         </div>
         
         <hr style="margin: 20px 0;">
 
         <div id="projects-container">
             <h2>Ваші проєкти</h2>
-            <button id="create-project-button" style="width: auto; background-color: #28a745;">[ + ] Створити нову книгу</button>
+            <button id="create-project-button" style="width: auto; background-color: #469759;">[ + ] Створити нову книгу</button>
             <ul id="projects-list">
                 </ul>
         </div>
@@ -101,179 +44,6 @@
         </div>
     </div>
 
-
-    <script>
-        // Глобальні змінні
-        let currentUser = null;
-        let currentProjectID = null;
-
-        // --- Елементи DOM ---
-        const loginContainer = document.getElementById('login-container');
-        const appContainer = document.getElementById('app-container');
-        const loginInput = document.getElementById('login-input');
-        const loginButton = document.getElementById('login-button');
-        const logoutButton = document.getElementById('logout-button');
-        const usernameDisplay = document.getElementById('username-display');
-        
-        const projectsContainer = document.getElementById('projects-container'); 
-        const projectsList = document.getElementById('projects-list');
-        const createProjectButton = document.getElementById('create-project-button');
-        
-        const chatContainer = document.getElementById('chat-container');
-        const backToProjectsButton = document.getElementById('back-to-projects'); 
-        const currentProjectTitle = document.getElementById('current-project-title');
-
-        const sendButton = document.getElementById('sendButton');
-        const userInput = document.getElementById('userInput');
-        const chatWindow = document.getElementById('chat-window');
-        
-        // --- Логіка Логіну (без змін) ---
-        function checkLoginOnLoad() { const savedUser = localStorage.getItem('bookBotUser'); if (savedUser) { currentUser = savedUser; showAppScreen(); } else { showLoginScreen(); } }
-        function handleLogin() { const user = loginInput.value.trim(); if (user === "") { alert("Логін не може бути порожнім!"); return; } currentUser = user; localStorage.setItem('bookBotUser', user); showAppScreen(); }
-        function handleLogout() { currentUser = null; currentProjectID = null; localStorage.removeItem('bookBotUser'); chatWindow.innerHTML = ''; showLoginScreen(); }
-        function showLoginScreen() { loginContainer.classList.remove('hidden'); appContainer.classList.add('hidden'); }
-        function showAppScreen() { loginContainer.classList.add('hidden'); appContainer.classList.remove('hidden'); usernameDisplay.textContent = currentUser; showProjectsList(); loadProjects(currentUser); }
-        function showProjectsList() { chatContainer.classList.add('hidden'); projectsContainer.classList.remove('hidden'); currentProjectID = null; }
-
-        // --- Логіка Картотеки ---
-        
-        // ОНОВЛЕНО: Завантажує список проєктів
-        async function loadProjects(user) {
-            projectsList.innerHTML = '<li>Завантаження...</li>'; 
-            try {
-                const response = await fetch(`/get-projects?user=${user}`);
-                if (!response.ok) throw new Error('Помилка мережі');
-                
-                const projects = await response.json();
-                projectsList.innerHTML = ''; 
-
-                if (projects.length === 0) {
-                    projectsList.innerHTML = '<li>У вас ще немає проєктів.</li>';
-                } else {
-                    projects.forEach(project => {
-                        const li = document.createElement('li');
-                        
-                        // Назва проєкту
-                        const titleSpan = document.createElement('span');
-                        titleSpan.textContent = project.title;
-                        titleSpan.onclick = () => {
-                            openChatForProject(project.id, project.title);
-                        };
-
-                        // Контейнер для кнопок
-                        const buttonsDiv = document.createElement('div');
-                        buttonsDiv.className = 'project-buttons';
-
-                        // НОВА КНОПКА: Експорт
-                        const exportBtn = document.createElement('button');
-                        exportBtn.textContent = 'Експорт';
-                        exportBtn.className = 'btn-icon export-btn';
-                        exportBtn.onclick = (e) => {
-                            e.stopPropagation();
-                            // Просто відкриваємо посилання, браузер сам завантажить файл
-                            window.open(`/export-project?projectID=${project.id}`, '_blank');
-                        };
-
-                        // Кнопка видалення
-                        const deleteBtn = document.createElement('button');
-                        deleteBtn.textContent = 'Видалити';
-                        deleteBtn.className = 'btn-icon delete-btn';
-                        deleteBtn.onclick = (e) => {
-                            e.stopPropagation(); 
-                            handleDeleteProject(project.id, project.title);
-                        };
-
-                        // Додаємо кнопки в контейнер, а контейнер в li
-                        buttonsDiv.appendChild(exportBtn);
-                        buttonsDiv.appendChild(deleteBtn);
-                        li.appendChild(titleSpan);
-                        li.appendChild(buttonsDiv);
-                        projectsList.appendChild(li);
-                    });
-                }
-            } catch (error) {
-                console.error('Не вдалося завантажити проєкти:', error);
-                projectsList.innerHTML = '<li>Не вдалося завантажити проєкти.</li>';
-            }
-        }
-
-        async function handleCreateProject() {
-            const title = prompt("Введіть назву для вашої нової книги:", "Нова книга " + new Date().toLocaleDateString());
-            if (!title || title.trim() === "") return; 
-
-            try {
-                const response = await fetch('/create-project', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user: currentUser, title: title.trim() }) });
-                if (!response.ok) throw new Error('Сервер не зміг створити проєкт.');
-                const newProject = await response.json(); 
-                loadProjects(currentUser); 
-                openChatForProject(newProject.id, newProject.title);
-            } catch (error) { console.error('Помилка при створенні проєкту:', error); alert('Не вдалося створити проєкт. Дивіться консоль.'); }
-        }
-
-        async function handleDeleteProject(projectID, title) {
-            if (!confirm(`Ви впевнені, що хочете видалити проєкт "${title}"? Цю дію неможливо скасувати.`)) { return; }
-            try {
-                const response = await fetch('/delete-project', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectID: projectID }) });
-                if (!response.ok) throw new Error('Сервер не зміг видалити проєкт.');
-                loadProjects(currentUser);
-            } catch (error) { console.error('Помилка при видаленні:', error); alert('Не вдалося видалити проєкт.'); }
-        }
-        
-        // --- Логіка Чату (без змін) ---
-        async function openChatForProject(projectId, projectTitle) {
-            currentProjectID = projectId;
-            currentProjectTitle.textContent = projectTitle;
-            projectsContainer.classList.add('hidden');
-            chatContainer.classList.remove('hidden');
-            chatWindow.innerHTML = 'Завантаження історії...'; 
-
-            try {
-                const response = await fetch(`/chat-history?projectID=${projectId}`);
-                if (!response.ok) throw new Error('Не вдалося завантажити історію');
-                const history = await response.json();
-                chatWindow.innerHTML = ''; 
-                history.forEach(message => {
-                    const sender = message.role === 'model' ? 'bot' : 'user';
-                    const text = message.parts[0].text;
-                    addMessageToChat(text, sender);
-                });
-            } catch (error) { console.error("Помилка завантаження історії:", error); chatWindow.innerHTML = 'Не вдалося завантажити історію.'; }
-        }
-        
-        async function sendMessage() {
-            const messageText = userInput.value.trim();
-            if (messageText === "" || !currentProjectID || !currentUser) return;
-            addMessageToChat(messageText, 'user');
-            userInput.value = '';
-            sendButton.disabled = true; 
-            try {
-                const response = await fetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectID: currentProjectID, message: messageText, user: currentUser }) });
-                if (!response.ok) throw new Error('Сервер повернув помилку');
-                const data = await response.json();
-                const botMessage = data.message;
-                addMessageToChat(botMessage, 'bot');
-            } catch (error) { console.error("Помилка відправки повідомлення:", error); addMessageToChat("Ой, сталася помилка. Спробуйте ще раз.", 'bot');
-            } finally { sendButton.disabled = false; }
-        }
-
-        function addMessageToChat(text, sender) {
-            const messageElement = document.createElement('div');
-            messageElement.classList.add('message', sender);
-            messageElement.textContent = text;
-            chatWindow.appendChild(messageElement);
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-        }
-
-        // --- Прив'язка подій (без змін) ---
-        document.addEventListener('DOMContentLoaded', checkLoginOnLoad);
-        loginButton.addEventListener('click', handleLogin);
-        logoutButton.addEventListener('click', handleLogout);
-        loginInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleLogin(); } });
-        createProjectButton.addEventListener('click', handleCreateProject);
-        backToProjectsButton.addEventListener('click', showProjectsList); 
-        sendButton.addEventListener('click', sendMessage);
-        userInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') { sendMessage(); } });
-
-    </script>
+    <script src="client.js" defer></script>
 </body>
 </html>

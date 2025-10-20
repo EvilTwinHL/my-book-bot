@@ -13,13 +13,17 @@ app.use(express.static('.'));
 // --- Налаштування Firebase ---
 const serviceAccount = require('./serviceAccountKey.json');
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+    credential: admin.credential.cert(serviceAccount)
 });
 const db = admin.firestore();
 
 // --- Налаштування Gemini ---
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Ваша робоча модель
+// ЗМІНЕНО/ДОДАНО: Використовуємо generationModel для чату
+const generationModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); 
+// ДОДАНО: Модель для Embeddings (навіть якщо використовуємо keyword-RAG, її краще вказати)
+const embeddingModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
+const model = generationModel; // Ваша робоча модель (тепер generationModel)
 
 // --- Персона Бота (залишається) ---
 const botPersona = `
@@ -28,11 +32,82 @@ const botPersona = `
 
 // --- Початкова історія (залишається) ---
 const createInitialHistory = (title) => {
-  return [
-    { role: "user", parts: [{ text: botPersona }] },
-    { role: "model", parts: [{ text: `Я Опус. Радий почати роботу над вашою новою книгою "${title}"! З якої ідеї почнемо? ✍️` }] }
-  ];
+    return [
+        { role: "user", parts: [{ text: botPersona }] },
+        { role: "model", parts: [{ text: `Я Опус. Радий почати роботу над вашою новою книгою "${title}"! З якої ідеї почнемо? ✍️` }] }
+    ];
 };
+
+// =======================================================
+// НОВА ФУНКЦІЯ: РОЗУМНИЙ ПОШУК КОНТЕКСТУ (SMART RAG)
+// =======================================================
+
+/**
+ * Виконує пошук релевантного контексту у ВСІХ проєктах, фільтруючи за ключовими словами.
+ * @param {string} query Промпт користувача для RAG-пошуку.
+ * @param {string} currentProjectTitle Назва поточного проєкту для пріоритету.
+ * @returns {string} Форматований рядок з найбільш релевантними уривками.
+ */
+async function getRelevantContext(query, currentProjectTitle) {
+    const CHUNKS_TO_RETRIEVE = 3;
+    const queryLower = query.toLowerCase();
+    
+    // 1. Отримуємо всі уривки з бази (лише 100 для продуктивності)
+    const allProjectsSnapshot = await db.collection('projects').limit(100).get();
+    let allSnippets = [];
+
+    allProjectsSnapshot.forEach(doc => {
+        const title = doc.data().title || '';
+        const history = doc.data().history;
+        
+        // Витягуємо лише відповіді бота для натхнення
+        history.forEach(msg => {
+            if (msg.role === 'model' && msg.parts[0].text) {
+                // Додаємо інформацію про те, чи збігається тема/назва проєкту, щоб пізніше дати пріоритет
+                allSnippets.push({
+                    text: msg.parts[0].text,
+                    isRelevantProject: title.toLowerCase().includes(currentProjectTitle.toLowerCase()) 
+                                        || currentProjectTitle.toLowerCase().includes(title.toLowerCase())
+                });
+            }
+        });
+    });
+
+    if (allSnippets.length === 0) return "";
+    
+    // 2. Фільтрація: Комбінуємо релевантність проєкту та збіг ключових слів
+    const queryWords = queryLower.split(/\s+/).filter(w => w.length > 3);
+    
+    const relevantSnippets = allSnippets
+        .map(snippet => {
+            let score = 0;
+            // Рахуємо бали за збіг ключових слів
+            queryWords.forEach(word => {
+                if (snippet.text.toLowerCase().includes(word)) {
+                    score += 1;
+                }
+            });
+            // Даємо високий пріоритет, якщо уривок з релевантного проєкту
+            if (snippet.isRelevantProject) {
+                score += 5; // Високий бонус
+            }
+            return { text: snippet.text, score: score };
+        })
+        .filter(s => s.score > 0) // Вибираємо лише ті, що мають бал
+        .sort((a, b) => b.score - a.score); // Сортуємо за балами
+    
+    // 3. Обмежуємо та форматуємо результат
+    const contextText = relevantSnippets
+        .slice(0, CHUNKS_TO_RETRIEVE)
+        .map(s => s.text)
+        .join('\n---\n');
+
+    if (contextText) {
+        return `\n\n[УРИВКИ КОЛЕКТИВНОГО РОЗУМУ (для натхнення): \n${contextText}\n]\n\n`;
+    }
+    
+    return "";
+}
 
 // === 3. МАРШРУТИ API ===
 
@@ -79,7 +154,7 @@ app.post('/create-project', async (req, res) => {
     }
 });
 
-// --- НОВИЙ Маршрут: Отримання історії чату для проєкту ---
+// --- Маршрут: Отримання історії чату для проєкту (Без змін) ---
 app.get('/chat-history', async (req, res) => {
     const projectID = req.query.projectID;
     if (!projectID) {
@@ -104,65 +179,56 @@ app.get('/chat-history', async (req, res) => {
     }
 });
 
-// --- НОВИЙ Маршрут: Відправка повідомлення в чат (з "навчанням") ---
+// --- ОНОВЛЕННЯ: Маршрут /chat з RAG-логікою ---
 app.post('/chat', async (req, res) => {
-    const { projectID, message, user } = req.body; // 'user' нам потрібен для RAG
+    const { projectID, message, user } = req.body; 
     if (!projectID || !message || !user) {
         return res.status(400).json({ message: "Необхідні projectID, message та user" });
     }
 
     try {
-        // --- КРОК 1: Отримуємо поточну історію проєкту ---
+        // КРОК 1: Отримуємо поточну історію проєкту
         const projectDocRef = db.collection('projects').doc(projectID);
         const doc = await projectDocRef.get();
         if (!doc.exists) {
             return res.status(404).json({ message: "Проєкт не знайдено." });
         }
         let history = doc.data().history;
-        
-        // --- КРОК 2: (Майбутнє RAG) Пошук "натхнення" ---
+        // ЗБЕРІГАЄМО НАЗВУ ПРОЄКТУ
+        const currentProjectTitle = doc.data().title || ''; 
+
+        // --- КРОК 2: Запуск Smart RAG (Логіка залишається) ---
         let inspirationPrompt = "";
         
-        // Перевіряємо, чи просить користувач про ідеї
-        const keywords = ['ідея', 'придумай', 'допоможи', 'натхнення', 'поворот'];
-        const needsInspiration = keywords.some(k => message.toLowerCase().includes(k));
+        const inspirationKeywords = ['ідея', 'придумай', 'допоможи', 'натхнення', 'поворот', 'сюжет', 'герой'];
+        const needsInspiration = inspirationKeywords.some(k => message.toLowerCase().includes(k));
 
         if (needsInspiration) {
-            console.log("Користувач шукає натхнення. Запускаю RAG...");
-            const snapshot = await db.collection('projects').limit(10).get(); // Беремо 10 випадкових проєктів
-            let inspirationSnippets = [];
-            
-            snapshot.forEach(doc => {
-                // Беремо 1-2 випадкові репліки з кожного проєкту (але не наші!)
-                const otherHistory = doc.data().history.slice(2, 10); // Беремо середину історії
-                if (otherHistory.length > 0) {
-                    const snippet = otherHistory[Math.floor(Math.random() * otherHistory.length)];
-                    inspirationSnippets.push(snippet.parts[0].text);
-                }
-            });
-            
-            if (inspirationSnippets.length > 0) {
-                inspirationPrompt = " \n\n[Додатковий контекст для натхнення з інших проєктів (не показуй це користувачу): \n" +
-                                    inspirationSnippets.join("\n---\n") + 
-                                    "]\n\n";
-            }
+            console.log("Користувач шукає натхнення. Запускаю Smart RAG...");
+            inspirationPrompt = await getRelevantContext(message, currentProjectTitle); 
         }
         
         // --- КРОК 3: Формуємо запит до Gemini ---
-        // Додаємо нове повідомлення + (можливо) промпт з натхненням
-        history.push({ role: "user", parts: [{ text: message + inspirationPrompt }] });
+        const messageWithContext = message + inspirationPrompt; 
         
-        // Формуємо запит, використовуючи всю історію
+        history.push({ role: "user", parts: [{ text: messageWithContext }] });
+        
+        // Виклик Gemini
         const result = await model.generateContent({ contents: history });
-        const botResponse = result.response.text();
+        // ВИПРАВЛЕНО: ПОВЕРНУТО .text() (з дужками)
+        const botResponse = result.response.text(); 
         
         console.log(`Gemini відповів для проєкту ${projectID}:`, botResponse);
 
-        // --- КРОК 4: Зберігаємо ВСЕ в базі ---
-        // Додаємо відповідь бота (вже *без* inspirationPrompt)
-        history.push({ role: "model", parts: [{ text: botResponse }] });
+        // --- КРОК 4: Зберігаємо ВСЕ в базі (лише чисті повідомлення) ---
+        // Відкочуємо останній запис, щоб видалити RAG-контекст з історії
+        history.pop(); 
         
-        // Оновлюємо документ в Firestore
+        // Додаємо ЧИСТИЙ запит користувача (без RAG-контексту)
+        history.push({ role: "user", parts: [{ text: message }] }); 
+        // Додаємо відповідь бота
+        history.push({ role: "model", parts: [{ text: botResponse }] }); 
+        
         await projectDocRef.update({ history: history });
         
         // --- КРОК 5: Відправляємо відповідь на фронтенд ---
@@ -174,9 +240,9 @@ app.post('/chat', async (req, res) => {
     }
 });
 
-// НОВИЙ МАРШРУТ: Видалення проєкту
+
+// НОВИЙ МАРШРУТ: Видалення проєкту (Без змін)
 app.post('/delete-project', async (req, res) => {
-    // Ми очікуємо отримати { projectID: "..." }
     const { projectID } = req.body; 
 
     if (!projectID) {
@@ -184,7 +250,6 @@ app.post('/delete-project', async (req, res) => {
     }
 
     try {
-        // Знаходимо документ за ID і видаляємо його
         await db.collection('projects').doc(projectID).delete();
         
         console.log(`Проєкт ${projectID} успішно видалено.`);
@@ -196,9 +261,8 @@ app.post('/delete-project', async (req, res) => {
     }
 });
 
-// НОВИЙ МАРШРУТ: Експорт проєкту в .txt
+// НОВИЙ МАРШРУТ: Експорт проєкту в .txt (Без змін)
 app.get('/export-project', async (req, res) => {
-    // Очікуємо ID проєкту з параметрів URL
     const { projectID } = req.query; 
 
     if (!projectID) {
@@ -206,7 +270,6 @@ app.get('/export-project', async (req, res) => {
     }
 
     try {
-        // 1. Отримуємо документ проєкту
         const docRef = db.collection('projects').doc(projectID);
         const doc = await docRef.get();
 
@@ -218,12 +281,10 @@ app.get('/export-project', async (req, res) => {
         const history = projectData.history;
         const title = projectData.title || 'Untitled Project';
 
-        // 2. Форматуємо історію в читабельний текст
         let fileContent = `Проєкт: ${title}\n`;
         fileContent += "========================================\n\n";
 
         history.forEach(message => {
-            // Пропускаємо початковий системний промпт
             if (message.role === 'user' && message.parts[0].text.startsWith('Ти — "Опус"')) {
                 return;
             }
@@ -234,8 +295,6 @@ app.get('/export-project', async (req, res) => {
             fileContent += `${sender}:\n${text}\n\n---\n\n`;
         });
 
-        // 3. Відправляємо файл браузеру
-        // Встановлюємо "заголовки", які кажуть браузеру "Це файл, завантаж його"
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.setHeader('Content-Disposition', `attachment; filename="${title.replace(/[^a-z0-9]/gi, '_')}.txt"`);
         res.send(fileContent);
@@ -246,16 +305,15 @@ app.get('/export-project', async (req, res) => {
     }
 });
 
-// НОВИЙ МАРШРУТ: Оновлення назви проєкту
+// НОВИЙ МАРШРУТ: Оновлення назви проєкту (Без змін)
 app.post('/update-title', async (req, res) => {
-    const { projectID, newTitle } = req.body; // Очікуємо ID та нову назву
+    const { projectID, newTitle } = req.body; 
 
     if (!projectID || !newTitle) {
         return res.status(400).json({ message: "Необхідно вказати projectID та newTitle" });
     }
 
     try {
-        // Знаходимо документ і оновлюємо *лише* поле 'title'
         await db.collection('projects').doc(projectID).update({
             title: newTitle
         });
@@ -271,5 +329,6 @@ app.post('/update-title', async (req, res) => {
 
 // === 4. ЗАПУСК СЕРВЕРА ===
 app.listen(port, () => {
-  console.log(`✅ The server was successfully started. https://gemini-opusai.onrender.com:${port}`);
+    // ПОВЕРНУТО до оригінального рядка
+    console.log(`✅ The server was successfully started. https://gemini-opusai.onrender.com:${port}`);
 });

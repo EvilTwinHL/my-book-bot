@@ -196,7 +196,57 @@ app.post('/delete-project', async (req, res) => {
     }
 });
 
+// НОВИЙ МАРШРУТ: Експорт проєкту в .txt
+app.get('/export-project', async (req, res) => {
+    // Очікуємо ID проєкту з параметрів URL
+    const { projectID } = req.query; 
+
+    if (!projectID) {
+        return res.status(400).send("Необхідно вказати projectID");
+    }
+
+    try {
+        // 1. Отримуємо документ проєкту
+        const docRef = db.collection('projects').doc(projectID);
+        const doc = await docRef.get();
+
+        if (!doc.exists) {
+            return res.status(404).send("Проєкт не знайдено");
+        }
+
+        const projectData = doc.data();
+        const history = projectData.history;
+        const title = projectData.title || 'Untitled Project';
+
+        // 2. Форматуємо історію в читабельний текст
+        let fileContent = `Проєкт: ${title}\n`;
+        fileContent += "========================================\n\n";
+
+        history.forEach(message => {
+            // Пропускаємо початковий системний промпт
+            if (message.role === 'user' && message.parts[0].text.startsWith('Ти — "Опус"')) {
+                return;
+            }
+            
+            const sender = message.role === 'model' ? 'Опус' : 'Користувач';
+            const text = message.parts[0].text;
+            
+            fileContent += `${sender}:\n${text}\n\n---\n\n`;
+        });
+
+        // 3. Відправляємо файл браузеру
+        // Встановлюємо "заголовки", які кажуть браузеру "Це файл, завантаж його"
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${title.replace(/[^a-z0-9]/gi, '_')}.txt"`);
+        res.send(fileContent);
+
+    } catch (error) {
+        console.error("Помилка при експорті проєкту:", error);
+        res.status(500).send("Не вдалося експортувати проєкт.");
+    }
+});
+
 // === 4. ЗАПУСК СЕРВЕРА ===
 app.listen(port, () => {
-  console.log(`✅ Сервер успішно запущено! http://localhost:${port}`);
+  console.log(`✅ The server was successfully started. https://gemini-opusai.onrender.com:${port}`);
 });

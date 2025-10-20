@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мій Бот-Співавтор</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 20px auto; }
+        #chat-window {
+            height: 300px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            overflow-y: scroll; /* Додає прокрутку */
+        }
+        .message { margin-bottom: 5px; }
+        .user { text-align: right; color: blue; }
+        .bot { color: green; }
+    </style>
+</head>
+<body>
+
+    <h1>🤖 Бот-Співавтор "Опус"</h1>
+
+    <div id="chat-window">
+        </div>
+
+    <input type="text" id="userInput" placeholder="Напишіть щось..." style="width: 70%;">
+    <button id="sendButton">Надіслати</button>
+
+    <script>
+        // Знаходимо наші елементи на сторінці
+        const sendButton = document.getElementById('sendButton');
+        const userInput = document.getElementById('userInput');
+        const chatWindow = document.getElementById('chat-window');
+
+        // Додаємо "слухача" на кнопку "Надіслати"
+        sendButton.addEventListener('click', sendMessage);
+
+        // Додаємо "слухача" на натискання Enter у полі вводу
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Головна функція для відправки повідомлення
+        async function sendMessage() {
+            const messageText = userInput.value;
+            if (messageText.trim() === '') return; // Не відправляти порожні повідомлення
+
+            // 1. Показуємо повідомлення користувача у чаті
+            addMessageToChat(messageText, 'user');
+            
+            // Очищуємо поле вводу
+            userInput.value = '';
+
+            // 2. Відправляємо повідомлення на наш бекенд-сервер
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: messageText }), // Відправляємо наш текст у форматі JSON
+            });
+
+            // 3. Отримуємо відповідь від сервера
+            const data = await response.json();
+            const botMessage = data.message;
+
+            // 4. Показуємо відповідь "бота" (наше ехо) у чаті
+            addMessageToChat(botMessage, 'bot');
+        }
+
+        // Допоміжна функція для малювання повідомлень у чаті
+        function addMessageToChat(text, sender) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', sender);
+            messageElement.textContent = text;
+            chatWindow.appendChild(messageElement);
+            // Автоматично прокручуємо вниз
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        // НОВЕ: Функція для завантаження історії при старті
+        async function loadHistory() {
+            console.log('Завантажую історію...');
+            const response = await fetch('/get-history');
+            const history = await response.json();
+
+            if (history.length > 0) {
+                // Малюємо кожне повідомлення з історії
+                history.forEach(message => {
+                    const sender = message.role === 'model' ? 'bot' : 'user';
+                    const text = message.parts[0].text;
+                    addMessageToChat(text, sender);
+                });
+                console.log('Історію успішно завантажено!');
+            } else {
+                // Якщо історії немає (перший запуск), показуємо вітання бота
+                addMessageToChat("Я Опус, ваш літературний наставник. З якої великої ідеї ми почнемо сьогодні? ✍️", "bot");
+            }
+        }
+
+        // НОВЕ: Кажемо браузеру виконати функцію loadHistory()
+        // щойно сторінка буде готова
+        document.addEventListener('DOMContentLoaded', loadHistory);
+
+    </script> 
+</body>
+</html>

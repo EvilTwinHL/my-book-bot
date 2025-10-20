@@ -1,0 +1,8 @@
+# Папка з модулями
+node_modules
+
+# Наш ключ API
+.env
+
+# Наш ключ до бази даних
+serviceAccountKey.json

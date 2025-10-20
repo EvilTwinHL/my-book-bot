@@ -49,6 +49,13 @@ button:disabled { background-color: #ccc; }
 }
 .delete-btn:hover { background-color: #c82333; }
 
+/* НОВИЙ: Стиль для кнопки редагування */
+.edit-btn {
+    background-color: #ffc107; /* Жовтий */
+    color: #212529; /* Темний текст для жовтого фону */
+}
+.edit-btn:hover { background-color: #e0a800; }
+
 /* Стилі чату (без змін) */
 #chat-window { height: 300px; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; overflow-y: scroll; background-color: #fafafa; }
 .message { margin-bottom: 5px; }

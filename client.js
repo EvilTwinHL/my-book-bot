@@ -99,6 +99,15 @@ async function loadProjects(user) {
 
                 const buttonsDiv = document.createElement('div');
                 buttonsDiv.className = 'project-buttons';
+                
+                // НОВА КНОПКА: Редагувати
+                const editBtn = document.createElement('button');
+                editBtn.textContent = 'Змінити'; // Або можете використати іконку 📝
+                editBtn.className = 'btn-icon edit-btn';
+                editBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    handleEditTitle(project.id, project.title);
+                };
 
                 const exportBtn = document.createElement('button');
                 exportBtn.textContent = 'Експорт';
@@ -149,6 +158,34 @@ async function handleDeleteProject(projectID, title) {
         if (!response.ok) throw new Error('Сервер не зміг видалити проєкт.');
         loadProjects(currentUser);
     } catch (error) { console.error('Помилка при видаленні:', error); alert('Не вдалося видалити проєкт.'); }
+}
+
+// НОВА ФУНКЦІЯ: Оновлення назви проєкту
+async function handleEditTitle(projectID, oldTitle) {
+    // Викликаємо prompt, щоб запитати нову назву
+    const newTitle = prompt(`Введіть нову назву для проєкту "${oldTitle}":`, oldTitle);
+    
+    if (!newTitle || newTitle.trim() === "" || newTitle === oldTitle) {
+        return; // Користувач скасував, ввів порожній рядок або не змінив назву
+    }
+
+    try {
+        // Викликаємо наш новий маршрут на бекенді
+        const response = await fetch('/update-title', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projectID: projectID, newTitle: newTitle.trim() })
+        });
+        
+        if (!response.ok) throw new Error('Сервер не зміг оновити назву.');
+        
+        // Успіх! Оновлюємо список, щоб побачити зміни
+        loadProjects(currentUser);
+        
+    } catch (error) {
+        console.error('Помилка при оновленні назви:', error);
+        alert('Не вдалося оновити назву.');
+    }
 }
 
 // --- Логіка Чату ---

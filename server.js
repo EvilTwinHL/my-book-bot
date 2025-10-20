@@ -246,6 +246,29 @@ app.get('/export-project', async (req, res) => {
     }
 });
 
+// НОВИЙ МАРШРУТ: Оновлення назви проєкту
+app.post('/update-title', async (req, res) => {
+    const { projectID, newTitle } = req.body; // Очікуємо ID та нову назву
+
+    if (!projectID || !newTitle) {
+        return res.status(400).json({ message: "Необхідно вказати projectID та newTitle" });
+    }
+
+    try {
+        // Знаходимо документ і оновлюємо *лише* поле 'title'
+        await db.collection('projects').doc(projectID).update({
+            title: newTitle
+        });
+        
+        console.log(`Назву проєкту ${projectID} оновлено на: ${newTitle}`);
+        res.status(200).json({ message: 'Назву оновлено' });
+
+    } catch (error) {
+        console.error("Помилка при оновленні назви:", error);
+        res.status(500).json({ message: "Не вдалося оновити назву." });
+    }
+});
+
 // === 4. ЗАПУСК СЕРВЕРА ===
 app.listen(port, () => {
   console.log(`✅ The server was successfully started. https://gemini-opusai.onrender.com:${port}`);

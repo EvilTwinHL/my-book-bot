@@ -92,14 +92,14 @@
 
             <div id="characters-tab" class="tab-content">
                 <h3>👥 Персонажі</h3>
-                <div class="characters-layout">
-                    <div class="characters-list-pane">
+                <div class="list-editor-layout">
+                    <div class="list-pane">
                         <button id="add-character-btn" class="btn-icon export-btn" style="width: 100%; background-color: #28a745;">[ + ] Новий персонаж</button>
-                        <ul id="characters-list">
+                        <ul id="characters-list" class="item-list">
                             </ul>
                     </div>
                     
-                    <div id="character-editor-pane" class="character-editor-pane hidden">
+                    <div id="character-editor-pane" class="editor-pane hidden">
                         <h4 id="character-editor-title">Редагування</h4>
                         
                         <label for="character-name-input">Ім'я:</label>
@@ -114,7 +114,7 @@
                         <button id="delete-character-btn" class="btn-icon delete-btn" style="width: auto; margin-top: 10px;">Видалити персонажа</button>
                     </div>
                     
-                    <div id="character-editor-placeholder" class="character-editor-pane">
+                    <div id="character-editor-placeholder" class="editor-pane-placeholder">
                         <p>← Оберіть персонажа зі списку або створіть нового.</p>
                     </div>
                 </div>
@@ -122,7 +122,42 @@
             
             <div id="chapters-tab" class="tab-content">
                 <h3>📝 Розділи</h3>
-                <p>(Цей функціонал буде додано незабаром)</p>
+                 <div class="list-editor-layout">
+                    <div class="list-pane">
+                        <button id="add-chapter-btn" class="btn-icon export-btn" style="width: 100%; background-color: #28a745;">[ + ] Новий розділ</button>
+                        <ul id="chapters-list" class="item-list">
+                            </ul>
+                    </div>
+                    
+                    <div id="chapter-editor-pane" class="editor-pane hidden">
+                        <h4 id="chapter-editor-title">Редагування</h4>
+                        
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="chapter-title-input">Назва розділу:</label>
+                                <input type="text" id="chapter-title-input" placeholder="Назва...">
+                            </div>
+                            <div class="input-group">
+                                <label for="chapter-status-input">Статус:</label>
+                                <select id="chapter-status-input">
+                                    <option value="Чернетка">Чернетка</option>
+                                    <option value="Ідея">Ідея</option>
+                                    <option value="Редакція">Редакція</option>
+                                    <option value="Завершено">Завершено</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <label for="chapter-text-input">Текст розділу:</label>
+                        <textarea id="chapter-text-input" rows="15" placeholder="Почніть писати тут..."></textarea>
+                        
+                        <button id="delete-chapter-btn" class="btn-icon delete-btn" style="width: auto; margin-top: 10px;">Видалити розділ</button>
+                    </div>
+                    
+                    <div id="chapter-editor-placeholder" class="editor-pane-placeholder">
+                        <p>← Оберіть розділ зі списку або створіть новий.</p>
+                    </div>
+                </div>
             </div>
 
             <div id="notes-tab" class="tab-content">

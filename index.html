@@ -71,6 +71,8 @@
             <button class="tab-btn active" data-tab="core-tab">💡 Ядро</button>
             <button class="tab-btn" data-tab="characters-tab">👥 Персонажі</button>
             <button class="tab-btn" data-tab="chapters-tab">📝 Розділи</button>
+            <button class="tab-btn" data-tab="locations-tab">🗺️ Локації</button>
+            <button class="tab-btn" data-tab="plotlines-tab">🧵 Сюжетні лінії</button>
             <button class="tab-btn" data-tab="notes-tab">📓 Нотатки</button>
             <button class="tab-btn" data-tab="chat-tab">💬 Чат з Опусом</button>
         </nav>
@@ -95,25 +97,18 @@
                 <div class="list-editor-layout">
                     <div class="list-pane">
                         <button id="add-character-btn" class="btn-icon export-btn" style="width: 100%; background-color: #28a745;">[ + ] Новий персонаж</button>
-                        <ul id="characters-list" class="item-list">
-                            </ul>
+                        <ul id="characters-list" class="item-list"></ul>
                     </div>
-                    
                     <div id="character-editor-pane" class="editor-pane hidden">
                         <h4 id="character-editor-title">Редагування</h4>
-                        
                         <label for="character-name-input">Ім'я:</label>
                         <input type="text" id="character-name-input" placeholder="Ім'я, прізвисько...">
-                        
                         <label for="character-desc-input">Опис:</label>
                         <textarea id="character-desc-input" rows="6" placeholder="Зовнішність, мотивація, звички..."></textarea>
-                        
                         <label for="character-arc-input">Сюжетна арка:</label>
                         <textarea id="character-arc-input" rows="4" placeholder="Як цей персонаж зміниться протягом історії?"></textarea>
-                        
                         <button id="delete-character-btn" class="btn-icon delete-btn" style="width: auto; margin-top: 10px;">Видалити персонажа</button>
                     </div>
-                    
                     <div id="character-editor-placeholder" class="editor-pane-placeholder">
                         <p>← Оберіть персонажа зі списку або створіть нового.</p>
                     </div>
@@ -125,13 +120,10 @@
                  <div class="list-editor-layout">
                     <div class="list-pane">
                         <button id="add-chapter-btn" class="btn-icon export-btn" style="width: 100%; background-color: #28a745;">[ + ] Новий розділ</button>
-                        <ul id="chapters-list" class="item-list">
-                            </ul>
+                        <ul id="chapters-list" class="item-list"></ul>
                     </div>
-                    
                     <div id="chapter-editor-pane" class="editor-pane hidden">
                         <h4 id="chapter-editor-title">Редагування</h4>
-                        
                         <div class="input-row">
                             <div class="input-group">
                                 <label for="chapter-title-input">Назва розділу:</label>
@@ -147,18 +139,58 @@
                                 </select>
                             </div>
                         </div>
-
                         <label for="chapter-text-input">Текст розділу:</label>
                         <textarea id="chapter-text-input" rows="15" placeholder="Почніть писати тут..."></textarea>
-                        
                         <button id="delete-chapter-btn" class="btn-icon delete-btn" style="width: auto; margin-top: 10px;">Видалити розділ</button>
                     </div>
-                    
                     <div id="chapter-editor-placeholder" class="editor-pane-placeholder">
                         <p>← Оберіть розділ зі списку або створіть новий.</p>
                     </div>
                 </div>
             </div>
+
+            <div id="locations-tab" class="tab-content">
+                <h3>🗺️ Локації</h3>
+                 <div class="list-editor-layout">
+                    <div class="list-pane">
+                        <button id="add-location-btn" class="btn-icon export-btn" style="width: 100%; background-color: #28a745;">[ + ] Нова локація</button>
+                        <ul id="locations-list" class="item-list"></ul>
+                    </div>
+                    <div id="location-editor-pane" class="editor-pane hidden">
+                        <h4 id="location-editor-title">Редагування</h4>
+                        <label for="location-name-input">Назва локації:</label>
+                        <input type="text" id="location-name-input" placeholder="Назва...">
+                        <label for="location-desc-input">Опис:</label>
+                        <textarea id="location-desc-input" rows="10" placeholder="Атмосфера, ключові риси, запахи, звуки..."></textarea>
+                        <button id="delete-location-btn" class="btn-icon delete-btn" style="width: auto; margin-top: 10px;">Видалити локацію</button>
+                    </div>
+                    <div id="location-editor-placeholder" class="editor-pane-placeholder">
+                        <p>← Оберіть локацію зі списку або створіть нову.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="plotlines-tab" class="tab-content">
+                <h3>🧵 Сюжетні лінії</h3>
+                 <div class="list-editor-layout">
+                    <div class="list-pane">
+                        <button id="add-plotline-btn" class="btn-icon export-btn" style="width: 100%; background-color: #28a745;">[ + ] Нова лінія</button>
+                        <ul id="plotlines-list" class="item-list"></ul>
+                    </div>
+                    <div id="plotline-editor-pane" class="editor-pane hidden">
+                        <h4 id="plotline-editor-title">Редагування</h4>
+                        <label for="plotline-title-input">Назва (A-Plot, B-Plot, арка персонажа):</label>
+                        <input type="text" id="plotline-title-input" placeholder="Назва...">
+                        <label for="plotline-desc-input">Опис / Ключові події:</label>
+                        <textarea id="plotline-desc-input" rows="10" placeholder="Опишіть ключові точки цієї сюжетної лінії..."></textarea>
+                        <button id="delete-plotline-btn" class="btn-icon delete-btn" style="width: auto; margin-top: 10px;">Видалити лінію</button>
+                    </div>
+                    <div id="plotline-editor-placeholder" class="editor-pane-placeholder">
+                        <p>← Оберіть сюжетну лінію або створіть нову.</p>
+                    </div>
+                </div>
+            </div>
+
 
             <div id="notes-tab" class="tab-content">
                 <h3>📓 Нотатки та Дослідження</h3>
@@ -183,6 +215,12 @@
                 </div>
             </div>
 
-        </div> </div> <script src="client.js" defer></script>
+        </div> </div> <footer id="app-footer">
+        <p>
+            Gemini OpusAI | v<span id="version-number">0.0.0</span> | &copy; 2025 Mykhailo Voronianskyi
+        </p>
+    </footer>
+
+    <script src="client.js" defer></script>
 </body>
 </html>

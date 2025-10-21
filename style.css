@@ -285,3 +285,16 @@ select {
 }
 .modal-buttons .btn-secondary:hover { background-color: #5a6268; }
 .modal-content button { width: auto; }
+
+/* ===================================== */
+/* --- НОВИЙ СТИЛЬ: ФУТЕР --- */
+/* ===================================== */
+#app-footer {
+    text-align: center;
+    margin-top: 30px;
+    color: #999;
+    font-size: 0.9em;
+}
+#app-footer p {
+    margin: 5px;
+}

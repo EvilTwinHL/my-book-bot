@@ -182,9 +182,8 @@ select {
     border: 1px solid #ddd;
     border-radius: 6px;
     margin-bottom: 5px;
-    cursor: pointer;
+    cursor: grab; /* Змінити курсор на "взяти" */
     font-weight: 500;
-    /* НОВЕ: для довгих назв */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -197,10 +196,13 @@ select {
     border-color: #007bff;
     color: #0056b3;
 }
-.editor-pane h4 {
-    margin-top: 0;
-    font-size: 1.2em;
+
+/* НОВИЙ СТИЛЬ: "Привид" елемента, який перетягують */
+.sortable-ghost {
+    opacity: 0.4;
+    background: #c0e1ff;
 }
+
 
 /* Специфічно для Розділів */
 .input-row {
@@ -286,9 +288,7 @@ select {
 .modal-buttons .btn-secondary:hover { background-color: #5a6268; }
 .modal-content button { width: auto; }
 
-/* ===================================== */
-/* --- НОВИЙ СТИЛЬ: ФУТЕР --- */
-/* ===================================== */
+/* --- ФУТЕР --- */
 #app-footer {
     text-align: center;
     margin-top: 30px;

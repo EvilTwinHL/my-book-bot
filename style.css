@@ -1,6 +1,6 @@
 body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 10px; background-color: #f4f4f4; }
 .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
-.hidden { display: none; }
+.hidden { display: none !important; }
 input[type="text"] { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
 button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
 button:hover { background-color: #0056b3; }
@@ -62,4 +62,138 @@ button:disabled { background-color: #ccc; }
 .user { text-align: right; color: blue; }
 .bot { color: green; }
 
+
+/* --- Спінер (Індикатор завантаження) --- */
+#spinner-overlay {
+    position: fixed; /* Поверх усього */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.7); /* Напівпрозорий фон */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* Найвищий шар */
+}
+.spinner {
+    border: 8px solid #f3f3f3; /* Світле кільце */
+    border-top: 8px solid #007bff; /* Синє кільце (колір кнопки) */
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite; /* Анімація обертання */
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* --- Спливаючі Повідомлення (Toast) --- */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1001; /* Ще вище, ніж спінер */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.toast {
+    padding: 15px 20px;
+    border-radius: 5px;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    opacity: 0.9;
+    /* Анімація появи */
+    animation: slideIn 0.3s ease-out;
+}
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 0.9; }
+}
+
+/* Типи повідомлень */
+.toast.success { background-color: #28a745; } /* Зелений */
+.toast.error { background-color: #dc3545; } /* Червоний */
+.toast.info { background-color: #007bff; } /* Синій (за замовчуванням) */
+
+
+/* --- Модальні вікна (Діалоги) --- */
+.modal {
+    position: fixed;
+    z-index: 1002; /* Вище ніж toast, щоб перекривати */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.6); /* Напівпрозорий темний фон */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 30px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 400px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    text-align: center;
+}
+.modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+}
+.modal-content input[type="text"] {
+    width: calc(100% - 20px);
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box; /* Важливо для правильної ширини */
+    font-size: 16px;
+}
+.modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px; /* Відстань між кнопками */
+}
+.modal-buttons .btn-primary {
+    background-color: #007bff; /* Синій */
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.2s ease;
+}
+.modal-buttons .btn-primary:hover {
+    background-color: #0056b3;
+}
+.modal-buttons .btn-secondary {
+    background-color: #6c757d; /* Сірий */
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.2s ease;
+}
+.modal-buttons .btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+/* Переконаємось, що існуючі кнопки не перебивають стилі модальних кнопок */
+.modal-content button {
+    width: auto; /* Скасувати width: 100% */
+}
+
 /* test test test */
+

@@ -3,10 +3,15 @@ let currentUser = null;
 let currentProjectID = null;
 
 // --- Елементи DOM ---
-// Ми "знайдемо" їх, коли сторінка завантажиться
 let loginContainer, appContainer, loginInput, loginButton, logoutButton, usernameDisplay,
     projectsContainer, projectsList, createProjectButton, chatContainer, backToProjectsButton,
-    currentProjectTitle, sendButton, userInput, chatWindow;
+    currentProjectTitle, sendButton, userInput, chatWindow,
+    spinnerOverlay, toastContainer;
+
+// НОВІ ЕЛЕМЕНТИ ДЛЯ МОДАЛЬНИХ ВІКОН
+let createEditModal, createEditModalTitle, createEditInput, createEditConfirmBtn, createEditCancelBtn,
+    confirmModal, confirmModalMessage, confirmOkBtn, confirmCancelBtn;
+
 
 // --- Головна функція, яка запускається при завантаженні ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -26,12 +31,30 @@ document.addEventListener('DOMContentLoaded', () => {
     sendButton = document.getElementById('sendButton');
     userInput = document.getElementById('userInput');
     chatWindow = document.getElementById('chat-window');
+    spinnerOverlay = document.getElementById('spinner-overlay');
+    toastContainer = document.getElementById('toast-container');
     
+    // ЗНАХОДИМО НОВІ ЕЛЕМЕНТИ МОДАЛОК
+    createEditModal = document.getElementById('create-edit-modal');
+    createEditModalTitle = document.getElementById('create-edit-modal-title');
+    createEditInput = document.getElementById('create-edit-input');
+    createEditConfirmBtn = document.getElementById('create-edit-confirm-btn');
+    createEditCancelBtn = document.getElementById('create-edit-cancel-btn');
+
+    confirmModal = document.getElementById('confirm-modal');
+    confirmModalMessage = document.getElementById('confirm-modal-message');
+    confirmOkBtn = document.getElementById('confirm-ok-btn');
+    confirmCancelBtn = document.getElementById('confirm-cancel-btn');
+
+
     // --- Прив'язка подій ---
     loginButton.addEventListener('click', handleLogin);
     logoutButton.addEventListener('click', handleLogout);
     loginInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleLogin(); } });
-    createProjectButton.addEventListener('click', handleCreateProject);
+    
+    // createProjectButton тепер буде викликати showCreateEditModal
+    createProjectButton.addEventListener('click', () => showCreateEditModal('create')); 
+    
     backToProjectsButton.addEventListener('click', showProjectsList); 
     sendButton.addEventListener('click', sendMessage);
     userInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') { sendMessage(); } });
@@ -43,25 +66,38 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- Логіка Логіну ---
 function checkLoginOnLoad() {
     const savedUser = localStorage.getItem('bookBotUser');
-    if (savedUser) { currentUser = savedUser; showAppScreen(); } else { showLoginScreen(); }
+    if (savedUser) { 
+        currentUser = savedUser; 
+        showAppScreen(); 
+    } else { 
+        showLoginScreen(); 
+    }
 }
+
 function handleLogin() {
     const user = loginInput.value.trim();
-    if (user === "") { alert("Логін не може бути порожнім!"); return; }
+    if (user === "") {
+        showToast("Логін не може бути порожнім!", 'error');
+        return;
+    }
     currentUser = user;
     localStorage.setItem('bookBotUser', user);
     showAppScreen();
 }
+
 function handleLogout() {
-    currentUser = null; currentProjectID = null;
+    currentUser = null; 
+    currentProjectID = null;
     localStorage.removeItem('bookBotUser');
     chatWindow.innerHTML = ''; 
     showLoginScreen();
 }
+
 function showLoginScreen() {
     loginContainer.classList.remove('hidden'); 
     appContainer.classList.add('hidden'); 
 }
+
 function showAppScreen() {
     loginContainer.classList.add('hidden'); 
     appContainer.classList.remove('hidden'); 
@@ -69,11 +105,13 @@ function showAppScreen() {
     showProjectsList(); 
     loadProjects(currentUser); 
 }
+
 function showProjectsList() {
     chatContainer.classList.add('hidden');
     projectsContainer.classList.remove('hidden');
     currentProjectID = null; 
 }
+
 
 // --- Логіка Картотеки ---
 async function loadProjects(user) {
@@ -93,37 +131,27 @@ async function loadProjects(user) {
                 
                 const titleSpan = document.createElement('span');
                 titleSpan.textContent = project.title;
-                titleSpan.onclick = () => {
-                    openChatForProject(project.id, project.title);
-                };
+                titleSpan.onclick = () => { openChatForProject(project.id, project.title); };
 
                 const buttonsDiv = document.createElement('div');
                 buttonsDiv.className = 'project-buttons';
-                
-                // НОВА КНОПКА: Редагувати
+
                 const editBtn = document.createElement('button');
-                editBtn.textContent = 'Змінити'; // Або можете використати іконку 📝
+                editBtn.textContent = 'Змінити';
                 editBtn.className = 'btn-icon edit-btn';
-                editBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    handleEditTitle(project.id, project.title);
-                };
+                // handleEditTitle тепер викликається через showCreateEditModal
+                editBtn.onclick = (e) => { e.stopPropagation(); showCreateEditModal('edit', project.id, project.title); };
 
                 const exportBtn = document.createElement('button');
                 exportBtn.textContent = 'Експорт';
                 exportBtn.className = 'btn-icon export-btn';
-                exportBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    window.open(`/export-project?projectID=${project.id}`, '_blank');
-                };
+                exportBtn.onclick = (e) => { e.stopPropagation(); window.open(`/export-project?projectID=${project.id}`, '_blank'); };
 
                 const deleteBtn = document.createElement('button');
                 deleteBtn.textContent = 'Видалити';
                 deleteBtn.className = 'btn-icon delete-btn';
-                deleteBtn.onclick = (e) => {
-                    e.stopPropagation(); 
-                    handleDeleteProject(project.id, project.title);
-                };
+                // handleDeleteProject тепер викликається через showConfirmModal
+                deleteBtn.onclick = (e) => { e.stopPropagation(); showConfirmModal(`Ви впевнені, що хочете видалити проєкт "${project.title}"?`, () => handleDeleteProject(project.id, project.title)); };
 
                 buttonsDiv.appendChild(editBtn);
                 buttonsDiv.appendChild(exportBtn);
@@ -136,56 +164,67 @@ async function loadProjects(user) {
     } catch (error) {
         console.error('Не вдалося завантажити проєкти:', error);
         projectsList.innerHTML = '<li>Не вдалося завантажити проєкти.</li>';
+        showToast('Не вдалося завантажити проєкти.', 'error');
     }
 }
 
-async function handleCreateProject() {
-    const title = prompt("Введіть назву для вашої нової книги:", "Нова книга " + new Date().toLocaleDateString());
-    if (!title || title.trim() === "") return; 
+// handleCreateProject тепер викликається з параметром title
+async function handleCreateProject(title) {
+    if (!title || title.trim() === "") {
+        showToast("Назва не може бути порожньою!", 'error');
+        return;
+    }
 
+    showSpinner(); 
     try {
         const response = await fetch('/create-project', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user: currentUser, title: title.trim() }) });
         if (!response.ok) throw new Error('Сервер не зміг створити проєкт.');
         const newProject = await response.json(); 
-        loadProjects(currentUser); 
+        await loadProjects(currentUser); // Використовуємо await, щоб список оновився перед відкриттям чату
         openChatForProject(newProject.id, newProject.title);
-    } catch (error) { console.error('Помилка при створенні проєкту:', error); alert('Не вдалося створити проєкт. Дивіться консоль.'); }
+        showToast('Проєкт створено!', 'success'); 
+    } catch (error) { 
+        console.error('Помилка при створенні проєкту:', error);
+        showToast('Не вдалося створити проєкт.', 'error');
+    } finally {
+        hideSpinner(); 
+    }
 }
 
-async function handleDeleteProject(projectID, title) {
-    if (!confirm(`Ви впевнені, що хочете видалити проєкт "${title}"? Цю дію неможливо скасувати.`)) { return; }
+// handleDeleteProject тепер отримує ID та викликається після підтвердження
+async function handleDeleteProject(projectID) {
+    showSpinner(); 
     try {
         const response = await fetch('/delete-project', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectID: projectID }) });
         if (!response.ok) throw new Error('Сервер не зміг видалити проєкт.');
         loadProjects(currentUser);
-    } catch (error) { console.error('Помилка при видаленні:', error); alert('Не вдалося видалити проєкт.'); }
+        showToast('Проєкт видалено.', 'success'); 
+    } catch (error) { 
+        console.error('Помилка при видаленні:', error); 
+        showToast('Не вдалося видалити проєкт.', 'error');
+    } finally {
+        hideSpinner(); 
+    }
 }
 
-// НОВА ФУНКЦІЯ: Оновлення назви проєкту
-async function handleEditTitle(projectID, oldTitle) {
-    // Викликаємо prompt, щоб запитати нову назву
-    const newTitle = prompt(`Введіть нову назву для проєкту "${oldTitle}":`, oldTitle);
-    
-    if (!newTitle || newTitle.trim() === "" || newTitle === oldTitle) {
-        return; // Користувач скасував, ввів порожній рядок або не змінив назву
+// handleEditTitle тепер отримує ID та нову назву
+async function handleEditTitle(projectID, newTitle) {
+    if (!newTitle || newTitle.trim() === "") {
+        showToast("Назва не може бути порожньою!", 'error');
+        return;
     }
 
+    showSpinner(); 
     try {
-        // Викликаємо наш новий маршрут на бекенді
-        const response = await fetch('/update-title', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ projectID: projectID, newTitle: newTitle.trim() })
-        });
-        
+        const response = await fetch('/update-title', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectID: projectID, newTitle: newTitle.trim() }) });
         if (!response.ok) throw new Error('Сервер не зміг оновити назву.');
-        
-        // Успіх! Оновлюємо список, щоб побачити зміни
         loadProjects(currentUser);
-        
+        showToast('Назву оновлено.', 'success'); 
     } catch (error) {
         console.error('Помилка при оновленні назви:', error);
-        alert('Не вдалося оновити назву.');
+        showToast('Не вдалося оновити назву.', 'error');
+    } finally {
+        hideSpinner(); 
     }
 }
 
@@ -207,9 +246,13 @@ async function openChatForProject(projectId, projectTitle) {
             const text = message.parts[0].text;
             addMessageToChat(text, sender);
         });
-    } catch (error) { console.error("Помилка завантаження історії:", error); chatWindow.innerHTML = 'Не вдалося завантажити історію.'; }
+    } catch (error) { 
+        console.error("Помилка завантаження історії:", error); 
+        chatWindow.innerHTML = 'Не вдалося завантажити історію.';
+        showToast('Не вдалося завантажити історію.', 'error');
+    }
 }
-
+        
 async function sendMessage() {
     const messageText = userInput.value.trim();
     if (messageText === "" || !currentProjectID || !currentUser) return;
@@ -222,8 +265,12 @@ async function sendMessage() {
         const data = await response.json();
         const botMessage = data.message;
         addMessageToChat(botMessage, 'bot');
-    } catch (error) { console.error("Помилка відправки повідомлення:", error); addMessageToChat("Ой, сталася помилка. Спробуйте ще раз.", 'bot');
-    } finally { sendButton.disabled = false; }
+    } catch (error) { 
+        console.error("Помилка відправки повідомлення:", error);
+        showToast("Ой, сталася помилка. Спробуйте ще раз.", 'error');
+    } finally { 
+        sendButton.disabled = false; 
+    }
 }
 
 function addMessageToChat(text, sender) {
@@ -232,4 +279,118 @@ function addMessageToChat(text, sender) {
     messageElement.textContent = text;
     chatWindow.appendChild(messageElement);
     chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+
+// === ДОПОМІЖНІ ФУНКЦІЇ ДЛЯ UI ===
+
+function showSpinner() {
+    spinnerOverlay.classList.remove('hidden');
+}
+
+function hideSpinner() {
+    spinnerOverlay.classList.add('hidden');
+}
+
+/**
+ * Показує спливаюче повідомлення
+ * @param {string} message - Текст повідомлення
+ * @param {string} type - 'info' (синій), 'success' (зелений), або 'error' (червоний)
+ */
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+
+    toastContainer.appendChild(toast);
+
+    // Автоматично видалити повідомлення через 3 секунди
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+
+// === НОВІ ФУНКЦІЇ ДЛЯ КАСТОМНИХ МОДАЛЬНИХ ВІКОН ===
+
+/**
+ * Показує модальне вікно для створення або редагування назви.
+ * @param {string} mode - 'create' або 'edit'
+ * @param {string} [projectID=null] - ID проєкту, якщо режим 'edit'
+ * @param {string} [oldTitle=''] - Поточна назва, якщо режим 'edit'
+ */
+function showCreateEditModal(mode, projectID = null, oldTitle = '') {
+    createEditModal.classList.remove('hidden'); // Показати модалку
+
+    if (mode === 'create') {
+        createEditModalTitle.textContent = "Введіть назву для нової книги:";
+        createEditInput.value = "Нова книга " + new Date().toLocaleDateString();
+    } else if (mode === 'edit') {
+        createEditModalTitle.textContent = `Змінити назву "${oldTitle}":`;
+        createEditInput.value = oldTitle;
+    }
+    createEditInput.focus(); // Фокус на полі введення
+
+    // Очистити попередні обробники, щоб уникнути багаторазових викликів
+    createEditConfirmBtn.onclick = null;
+    createEditCancelBtn.onclick = null;
+    createEditInput.onkeypress = null;
+
+    // Обробник для кнопки "OK"
+    createEditConfirmBtn.onclick = () => {
+        const newValue = createEditInput.value.trim();
+        hideCreateEditModal();
+        if (mode === 'create') {
+            handleCreateProject(newValue); // Викликати з новою назвою
+        } else if (mode === 'edit') {
+            if (newValue !== oldTitle) { // Змінюємо тільки якщо назва змінилася
+                handleEditTitle(projectID, newValue);
+            }
+        }
+    };
+
+    // Обробник для кнопки "Відміна"
+    createEditCancelBtn.onclick = () => {
+        hideCreateEditModal();
+    };
+
+    // Обробник для натискання Enter у полі введення
+    createEditInput.onkeypress = (e) => {
+        if (e.key === 'Enter') {
+            createEditConfirmBtn.click(); // Імітувати натискання OK
+        }
+    };
+}
+
+function hideCreateEditModal() {
+    createEditModal.classList.add('hidden');
+}
+
+/**
+ * Показує модальне вікно для підтвердження дії.
+ * @param {string} message - Повідомлення для відображення
+ * @param {function} onConfirm - Функція, яка буде викликана при натисканні "Так"
+ */
+function showConfirmModal(message, onConfirm) {
+    confirmModal.classList.remove('hidden'); // Показати модалку
+    confirmModalMessage.textContent = message;
+
+    // Очистити попередні обробники
+    confirmOkBtn.onclick = null;
+    confirmCancelBtn.onclick = null;
+
+    // Обробник для кнопки "Так"
+    confirmOkBtn.onclick = () => {
+        hideConfirmModal();
+        onConfirm(); // Викликати функцію підтвердження
+    };
+
+    // Обробник для кнопки "Ні"
+    confirmCancelBtn.onclick = () => {
+        hideConfirmModal();
+    };
+}
+
+function hideConfirmModal() {
+    confirmModal.classList.add('hidden');
 }

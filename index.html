@@ -4,29 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мій Бот-Співавтор</title>
-    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+    <div id="spinner-overlay" class="hidden">
+        <div class="spinner"></div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <div id="create-edit-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3 id="create-edit-modal-title"></h3>
+            <input type="text" id="create-edit-input" placeholder="Введіть назву">
+            <div class="modal-buttons">
+                <button id="create-edit-confirm-btn" class="btn-primary">OK</button>
+                <button id="create-edit-cancel-btn" class="btn-secondary">Відміна</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirm-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3 id="confirm-modal-message"></h3>
+            <div class="modal-buttons">
+                <button id="confirm-ok-btn" class="btn-primary">Так</button>
+                <button id="confirm-cancel-btn" class="btn-secondary">Ні</button>
+            </div>
+        </div>
+    </div>
+    
     <div id="login-container" class="container">
         <h2>Вітаю!</h2>
         <p>Будь ласка, введіть ваш унікальний логін, щоб почати.</p>
-        <input type="text" id="login-input" placeholder="Наприклад, John Doe">
+        <input type="text" id="login-input" placeholder="Наприклад, Arthur Clarke ">
         <button id="login-button">Увійти</button>
     </div>
 
     <div id="app-container" class="container hidden">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <p>Ви увійшли як: <b id="username-display"></b></p>
-            <button id="logout-button" style="width: auto; background-color: #c03946;">Вийти</button>
+            <button id="logout-button" style="width: auto; background-color: #dc3545;">Вийти</button>
         </div>
         
         <hr style="margin: 20px 0;">
 
         <div id="projects-container">
             <h2>Ваші проєкти</h2>
-            <button id="create-project-button" style="width: auto; background-color: #469759;">[ + ] Створити нову книгу</button>
+            <button id="create-project-button" style="width: auto; background-color: #28a745;">[ + ] Створити нову книгу</button>
             <ul id="projects-list">
                 </ul>
         </div>

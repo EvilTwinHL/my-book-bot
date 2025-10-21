@@ -1,69 +1,123 @@
-// Глобальні змінні
+// === ГЛОБАЛЬНІ ЗМІННІ ===
 let currentUser = null;
 let currentProjectID = null;
+/** @type {object | null} Зберігає ВСІ дані поточного проєкту */
+let currentProjectData = null; 
 
-// --- Елементи DOM ---
+// === ЕЛЕМЕНТИ DOM ===
+// (Ми будемо знаходити їх всі в 'DOMContentLoaded')
 let loginContainer, appContainer, loginInput, loginButton, logoutButton, usernameDisplay,
-    projectsContainer, projectsList, createProjectButton, chatContainer, backToProjectsButton,
-    currentProjectTitle, sendButton, userInput, chatWindow,
-    spinnerOverlay, toastContainer;
-
-// НОВІ ЕЛЕМЕНТИ ДЛЯ МОДАЛЬНИХ ВІКОН
-let createEditModal, createEditModalTitle, createEditInput, createEditConfirmBtn, createEditCancelBtn,
+    projectsContainer, projectsList, createProjectButton,
+    spinnerOverlay, toastContainer,
+    createEditModal, createEditModalTitle, createEditInput, createEditConfirmBtn, createEditCancelBtn,
     confirmModal, confirmModalMessage, confirmOkBtn, confirmCancelBtn;
 
+// НОВІ ЕЛЕМЕНТИ РОБОЧОГО ПРОСТОРУ
+let workspaceContainer, workspaceTitle, backToProjectsButton, workspaceNav,
+    chatWindow, userInput, sendButton,
+    corePremiseInput, coreThemeInput, coreArcInput,
+    notesGeneralInput, notesResearchInput;
 
-// --- Головна функція, яка запускається при завантаженні ---
+
+// === ГОЛОВНИЙ ЗАПУСК ===
 document.addEventListener('DOMContentLoaded', () => {
-    // Знаходимо всі елементи один раз
+    // Знаходимо всі елементи
+    bindUIElements();
+    // Прив'язуємо всі обробники подій
+    bindEventListeners();
+    // Перевіряємо, чи користувач вже увійшов
+    checkLoginOnLoad();
+});
+
+/** Знаходить всі елементи DOM і зберігає їх у глобальні змінні */
+function bindUIElements() {
+    // Екрани
     loginContainer = document.getElementById('login-container');
     appContainer = document.getElementById('app-container');
+    projectsContainer = document.getElementById('projects-container'); 
+    workspaceContainer = document.getElementById('workspace-container');
+    
+    // Елементи UI
+    spinnerOverlay = document.getElementById('spinner-overlay');
+    toastContainer = document.getElementById('toast-container');
+    
+    // Елементи логіну / виходу
     loginInput = document.getElementById('login-input');
     loginButton = document.getElementById('login-button');
     logoutButton = document.getElementById('logout-button');
     usernameDisplay = document.getElementById('username-display');
-    projectsContainer = document.getElementById('projects-container'); 
+    
+    // Список проєктів
     projectsList = document.getElementById('projects-list');
     createProjectButton = document.getElementById('create-project-button');
-    chatContainer = document.getElementById('chat-container');
-    backToProjectsButton = document.getElementById('back-to-projects'); 
-    currentProjectTitle = document.getElementById('current-project-title');
-    sendButton = document.getElementById('sendButton');
-    userInput = document.getElementById('userInput');
-    chatWindow = document.getElementById('chat-window');
-    spinnerOverlay = document.getElementById('spinner-overlay');
-    toastContainer = document.getElementById('toast-container');
     
-    // ЗНАХОДИМО НОВІ ЕЛЕМЕНТИ МОДАЛОК
+    // Модалки (Створення/Редагування)
     createEditModal = document.getElementById('create-edit-modal');
     createEditModalTitle = document.getElementById('create-edit-modal-title');
     createEditInput = document.getElementById('create-edit-input');
     createEditConfirmBtn = document.getElementById('create-edit-confirm-btn');
     createEditCancelBtn = document.getElementById('create-edit-cancel-btn');
-
+    
+    // Модалки (Підтвердження)
     confirmModal = document.getElementById('confirm-modal');
     confirmModalMessage = document.getElementById('confirm-modal-message');
     confirmOkBtn = document.getElementById('confirm-ok-btn');
     confirmCancelBtn = document.getElementById('confirm-cancel-btn');
 
+    // Елементи робочого простору
+    workspaceTitle = document.getElementById('workspace-title');
+    backToProjectsButton = document.getElementById('back-to-projects');
+    workspaceNav = document.getElementById('workspace-nav');
+    
+    // Вкладка "Чат"
+    chatWindow = document.getElementById('chat-window');
+    userInput = document.getElementById('userInput');
+    sendButton = document.getElementById('sendButton');
+    
+    // Вкладка "Ядро"
+    corePremiseInput = document.getElementById('core-premise-input');
+    coreThemeInput = document.getElementById('core-theme-input');
+    coreArcInput = document.getElementById('core-arc-input');
 
-    // --- Прив'язка подій ---
+    // Вкладка "Нотатки"
+    notesGeneralInput = document.getElementById('notes-general-input');
+    notesResearchInput = document.getElementById('notes-research-input');
+}
+
+/** Прив'язує всі обробники подій до елементів */
+function bindEventListeners() {
+    // Логін / Вихід
     loginButton.addEventListener('click', handleLogin);
     logoutButton.addEventListener('click', handleLogout);
-    loginInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleLogin(); } });
-    
-    // createProjectButton тепер буде викликати showCreateEditModal
+    loginInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleLogin(); });
+
+    // Створення проєкту
     createProjectButton.addEventListener('click', () => showCreateEditModal('create')); 
     
+    // Повернення до списку проєктів
     backToProjectsButton.addEventListener('click', showProjectsList); 
+    
+    // Чат
     sendButton.addEventListener('click', sendMessage);
-    userInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') { sendMessage(); } });
+    userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 
-    // Запускаємо перевірку логіну
-    checkLoginOnLoad();
-});
+    // Навігація по вкладках
+    workspaceNav.addEventListener('click', (e) => {
+        if (e.target.classList.contains('tab-btn')) {
+            showTab(e.target.dataset.tab);
+        }
+    });
 
-// --- Логіка Логіну ---
+    // Автозбереження (через 'blur' - коли користувач "вийшов" з поля)
+    corePremiseInput.addEventListener('blur', (e) => handleAutoSave(e.target.dataset.field, e.target.value));
+    coreThemeInput.addEventListener('blur', (e) => handleAutoSave(e.target.dataset.field, e.target.value));
+    coreArcInput.addEventListener('blur', (e) => handleAutoSave(e.target.dataset.field, e.target.value));
+    notesGeneralInput.addEventListener('blur', (e) => handleAutoSave(e.target.dataset.field, e.target.value));
+    notesResearchInput.addEventListener('blur', (e) => handleAutoSave(e.target.dataset.field, e.target.value));
+}
+
+// === ЛОГІКА НАВІГАЦІЇ ===
+
 function checkLoginOnLoad() {
     const savedUser = localStorage.getItem('bookBotUser');
     if (savedUser) { 
@@ -73,7 +127,6 @@ function checkLoginOnLoad() {
         showLoginScreen(); 
     }
 }
-
 function handleLogin() {
     const user = loginInput.value.trim();
     if (user === "") {
@@ -84,45 +137,119 @@ function handleLogin() {
     localStorage.setItem('bookBotUser', user);
     showAppScreen();
 }
-
 function handleLogout() {
     currentUser = null; 
     currentProjectID = null;
+    currentProjectData = null;
     localStorage.removeItem('bookBotUser');
     chatWindow.innerHTML = ''; 
     showLoginScreen();
 }
-
 function showLoginScreen() {
     loginContainer.classList.remove('hidden'); 
     appContainer.classList.add('hidden'); 
+    workspaceContainer.classList.add('hidden');
 }
-
 function showAppScreen() {
     loginContainer.classList.add('hidden'); 
     appContainer.classList.remove('hidden'); 
+    workspaceContainer.classList.add('hidden');
     usernameDisplay.textContent = currentUser;
-    showProjectsList(); 
     loadProjects(currentUser); 
 }
-
 function showProjectsList() {
-    chatContainer.classList.add('hidden');
-    projectsContainer.classList.remove('hidden');
+    workspaceContainer.classList.add('hidden');
+    appContainer.classList.remove('hidden');
     currentProjectID = null; 
+    currentProjectData = null;
+    loadProjects(currentUser); // Оновити список про всяк випадок
+}
+
+/**
+ * НОВА ФУНКЦІЯ: Відкриває робочий простір проєкту
+ */
+async function openProjectWorkspace(projectID) {
+    showSpinner();
+    try {
+        const response = await fetch(`/get-project-content?projectID=${projectID}`);
+        if (!response.ok) throw new Error('Не вдалося завантажити проєкт');
+        
+        currentProjectData = await response.json();
+        currentProjectID = projectID; // Встановити ID
+
+        // Показати/Сховати екрани
+        appContainer.classList.add('hidden');
+        workspaceContainer.classList.remove('hidden');
+
+        // Заповнити даними
+        renderWorkspace();
+
+        // Відкрити першу вкладку за замовчуванням
+        showTab('core-tab');
+
+    } catch (error) {
+        console.error("Помилка при відкритті проєкту:", error);
+        showToast(error.message, 'error');
+    } finally {
+        hideSpinner();
+    }
+}
+
+/**
+ * НОВА ФУНКЦІЯ: Заповнює робочий простір даними з `currentProjectData`
+ */
+function renderWorkspace() {
+    if (!currentProjectData) return;
+
+    // 1. Встановити заголовок
+    workspaceTitle.textContent = currentProjectData.title;
+
+    // 2. Заповнити вкладку "Ядро"
+    const content = currentProjectData.content;
+    corePremiseInput.value = content.premise || '';
+    coreThemeInput.value = content.theme || '';
+    coreArcInput.value = content.mainArc || '';
+
+    // 3. Заповнити вкладку "Нотатки"
+    notesGeneralInput.value = content.notes || '';
+    notesResearchInput.value = content.research || '';
+
+    // 4. Заповнити вкладку "Чат"
+    chatWindow.innerHTML = ''; // Очистити старий чат
+    const chatHistory = currentProjectData.chatHistory;
+    // Пропустити перший системний промпт
+    chatHistory.slice(1).forEach(message => {
+        const sender = message.role === 'model' ? 'bot' : 'user';
+        // Вирізати RAG-контекст з повідомлень користувача, якщо він там є
+        const text = message.parts[0].text.split("--- КОНТЕКСТ ПРОЄКТУ")[0]; 
+        addMessageToChat(text, sender);
+    });
+}
+
+/**
+ * НОВА ФУНКЦІЯ: Логіка перемикання вкладок
+ */
+function showTab(tabId) {
+    // 1. Сховати весь контент і деактивувати всі кнопки
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+    // 2. Показати потрібний контент і активувати кнопку
+    document.getElementById(tabId).classList.add('active');
+    workspaceNav.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
 }
 
 
-// --- Логіка Картотеки ---
+// === ЛОГІКА API (КАРТОТЕКА) ===
+
 async function loadProjects(user) {
     projectsList.innerHTML = '<li>Завантаження...</li>'; 
     try {
         const response = await fetch(`/get-projects?user=${user}`);
         if (!response.ok) throw new Error('Помилка мережі');
-        
         const projects = await response.json();
+        
         projectsList.innerHTML = ''; 
-
         if (projects.length === 0) {
             projectsList.innerHTML = '<li>У вас ще немає проєктів.</li>';
         } else {
@@ -131,28 +258,30 @@ async function loadProjects(user) {
                 
                 const titleSpan = document.createElement('span');
                 titleSpan.textContent = project.title;
-                titleSpan.onclick = () => { openChatForProject(project.id, project.title); };
+                // ОНОВЛЕНО: Викликаємо нову функцію
+                titleSpan.onclick = () => { openProjectWorkspace(project.id); };
 
                 const buttonsDiv = document.createElement('div');
                 buttonsDiv.className = 'project-buttons';
 
+                // Кнопка "Змінити"
                 const editBtn = document.createElement('button');
                 editBtn.textContent = 'Змінити';
                 editBtn.className = 'btn-icon edit-btn';
-                // handleEditTitle тепер викликається через showCreateEditModal
                 editBtn.onclick = (e) => { e.stopPropagation(); showCreateEditModal('edit', project.id, project.title); };
-
+                
+                // Кнопка "Експорт"
                 const exportBtn = document.createElement('button');
                 exportBtn.textContent = 'Експорт';
                 exportBtn.className = 'btn-icon export-btn';
                 exportBtn.onclick = (e) => { e.stopPropagation(); window.open(`/export-project?projectID=${project.id}`, '_blank'); };
-
+                
+                // Кнопка "Видалити"
                 const deleteBtn = document.createElement('button');
                 deleteBtn.textContent = 'Видалити';
                 deleteBtn.className = 'btn-icon delete-btn';
-                // handleDeleteProject тепер викликається через showConfirmModal
-                deleteBtn.onclick = (e) => { e.stopPropagation(); showConfirmModal(`Ви впевнені, що хочете видалити проєкт "${project.title}"?`, () => handleDeleteProject(project.id, project.title)); };
-
+                deleteBtn.onclick = (e) => { e.stopPropagation(); showConfirmModal(`Ви впевнені, що хочете видалити проєкт "${project.title}"?`, () => handleDeleteProject(project.id)); };
+                
                 buttonsDiv.appendChild(editBtn);
                 buttonsDiv.appendChild(exportBtn);
                 buttonsDiv.appendChild(deleteBtn);
@@ -168,20 +297,26 @@ async function loadProjects(user) {
     }
 }
 
-// handleCreateProject тепер викликається з параметром title
 async function handleCreateProject(title) {
     if (!title || title.trim() === "") {
         showToast("Назва не може бути порожньою!", 'error');
         return;
     }
-
     showSpinner(); 
     try {
         const response = await fetch('/create-project', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user: currentUser, title: title.trim() }) });
         if (!response.ok) throw new Error('Сервер не зміг створити проєкт.');
+        
+        // ОНОВЛЕНО: Сервер тепер повертає всі дані, відкриваємо воркспейс
         const newProject = await response.json(); 
-        await loadProjects(currentUser); // Використовуємо await, щоб список оновився перед відкриттям чату
-        openChatForProject(newProject.id, newProject.title);
+        currentProjectData = newProject.data;
+        currentProjectID = newProject.id;
+        
+        appContainer.classList.add('hidden');
+        workspaceContainer.classList.remove('hidden');
+        renderWorkspace();
+        showTab('core-tab'); // Відкрити "Ядро" для нового проєкту
+
         showToast('Проєкт створено!', 'success'); 
     } catch (error) { 
         console.error('Помилка при створенні проєкту:', error);
@@ -191,7 +326,6 @@ async function handleCreateProject(title) {
     }
 }
 
-// handleDeleteProject тепер отримує ID та викликається після підтвердження
 async function handleDeleteProject(projectID) {
     showSpinner(); 
     try {
@@ -207,18 +341,23 @@ async function handleDeleteProject(projectID) {
     }
 }
 
-// handleEditTitle тепер отримує ID та нову назву
 async function handleEditTitle(projectID, newTitle) {
     if (!newTitle || newTitle.trim() === "") {
         showToast("Назва не може бути порожньою!", 'error');
         return;
     }
-
     showSpinner(); 
     try {
         const response = await fetch('/update-title', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectID: projectID, newTitle: newTitle.trim() }) });
         if (!response.ok) throw new Error('Сервер не зміг оновити назву.');
-        loadProjects(currentUser);
+        
+        // ОНОВЛЕНО: Оновити дані, якщо ми в воркспейсі
+        if (currentProjectID === projectID) {
+            currentProjectData.title = newTitle;
+            workspaceTitle.textContent = newTitle;
+        }
+        
+        loadProjects(currentUser); // Оновити список проєктів у фоні
         showToast('Назву оновлено.', 'success'); 
     } catch (error) {
         console.error('Помилка при оновленні назви:', error);
@@ -228,43 +367,76 @@ async function handleEditTitle(projectID, newTitle) {
     }
 }
 
-// --- Логіка Чату ---
-async function openChatForProject(projectId, projectTitle) {
-    currentProjectID = projectId;
-    currentProjectTitle.textContent = projectTitle;
-    projectsContainer.classList.add('hidden');
-    chatContainer.classList.remove('hidden');
-    chatWindow.innerHTML = 'Завантаження історії...'; 
+/**
+ * НОВА ФУНКЦІЯ: Автозбереження
+ */
+async function handleAutoSave(field, value) {
+    if (!currentProjectID || !currentProjectData) return; // Перевірка, що дані завантажені
+    
+    // Визначити, де знаходяться дані (напр. 'notes' з 'content.notes')
+    const fieldName = field.split('.')[1]; 
+    if (currentProjectData.content[fieldName] === value) {
+        // Не зберігати, якщо нічого не змінилося
+        return;
+    }
 
+    console.log(`Збереження... ${field} = ${value.substring(0, 20)}...`);
+    showToast(`Збереження...`, 'info'); // Показати тимчасовий тост
+    
     try {
-        const response = await fetch(`/chat-history?projectID=${projectId}`);
-        if (!response.ok) throw new Error('Не вдалося завантажити історію');
-        const history = await response.json();
-        chatWindow.innerHTML = ''; 
-        history.forEach(message => {
-            const sender = message.role === 'model' ? 'bot' : 'user';
-            const text = message.parts[0].text;
-            addMessageToChat(text, sender);
+        const response = await fetch('/save-project-content', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                projectID: currentProjectID, 
+                field: field, 
+                value: value 
+            })
         });
-    } catch (error) { 
-        console.error("Помилка завантаження історії:", error); 
-        chatWindow.innerHTML = 'Не вдалося завантажити історію.';
-        showToast('Не вдалося завантажити історію.', 'error');
+        if (!response.ok) throw new Error('Помилка збереження');
+
+        // Оновити наші локальні дані
+        currentProjectData.content[fieldName] = value;
+        
+        showToast('Збережено!', 'success');
+
+    } catch (error) {
+        console.error('Помилка автозбереження:', error);
+        showToast('Помилка збереження.', 'error');
     }
 }
+
+// === ЛОГІКА API (ЧАТ) ===
         
 async function sendMessage() {
     const messageText = userInput.value.trim();
-    if (messageText === "" || !currentProjectID || !currentUser) return;
+    if (messageText === "" || !currentProjectID) return;
+    
     addMessageToChat(messageText, 'user');
     userInput.value = '';
     sendButton.disabled = true; 
+    
     try {
-        const response = await fetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectID: currentProjectID, message: messageText, user: currentUser }) });
+        const response = await fetch('/chat', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            // Серверу потрібен лише ID та повідомлення
+            body: JSON.stringify({ 
+                projectID: currentProjectID, 
+                message: messageText 
+            }) 
+        });
         if (!response.ok) throw new Error('Сервер повернув помилку');
+        
         const data = await response.json();
         const botMessage = data.message;
+        
         addMessageToChat(botMessage, 'bot');
+
+        // ОНОВЛЕНО: Додати повідомлення в локальну історію
+        currentProjectData.chatHistory.push({ role: "user", parts: [{ text: messageText }] });
+        currentProjectData.chatHistory.push({ role: "model", parts: [{ text: botMessage }] });
+
     } catch (error) { 
         console.error("Помилка відправки повідомлення:", error);
         showToast("Ой, сталася помилка. Спробуйте ще раз.", 'error');
@@ -276,13 +448,15 @@ async function sendMessage() {
 function addMessageToChat(text, sender) {
     const messageElement = document.createElement('div');
     messageElement.classList.add('message', sender);
-    messageElement.textContent = text;
+    // Проста заміна \n на <br> для переносів рядків
+    messageElement.innerHTML = text.replace(/\n/g, '<br>'); 
     chatWindow.appendChild(messageElement);
     chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
 
-// === ДОПОМІЖНІ ФУНКЦІЇ ДЛЯ UI ===
+// === ДОПОМІЖНІ ФУНКЦІЇ (UI) ===
+// (Всі функції звідси і до кінця - повні, без змін)
 
 function showSpinner() {
     spinnerOverlay.classList.remove('hidden');
@@ -301,17 +475,11 @@ function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
-
     toastContainer.appendChild(toast);
-
-    // Автоматично видалити повідомлення через 3 секунди
     setTimeout(() => {
         toast.remove();
     }, 3000);
 }
-
-
-// === НОВІ ФУНКЦІЇ ДЛЯ КАСТОМНИХ МОДАЛЬНИХ ВІКОН ===
 
 /**
  * Показує модальне вікно для створення або редагування назви.
@@ -343,7 +511,7 @@ function showCreateEditModal(mode, projectID = null, oldTitle = '') {
         if (mode === 'create') {
             handleCreateProject(newValue); // Викликати з новою назвою
         } else if (mode === 'edit') {
-            if (newValue !== oldTitle) { // Змінюємо тільки якщо назва змінилася
+            if (newValue !== oldTitle && newValue !== "") {
                 handleEditTitle(projectID, newValue);
             }
         }

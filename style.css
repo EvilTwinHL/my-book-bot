@@ -1,67 +1,137 @@
-body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 10px; background-color: #f4f4f4; }
-.container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+/* --- БАЗОВІ СТИЛІ --- */
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 20px auto; padding: 10px; background-color: #f7f7f7; }
+.container { background-color: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
 .hidden { display: none !important; }
-input[type="text"] { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
-button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+
+/* --- ЕЛЕМЕНТИ ФОРМ --- */
+input[type="text"] { width: calc(100% - 22px); padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 500; }
 button:hover { background-color: #0056b3; }
 button:disabled { background-color: #ccc; } 
 
+/* Новий стиль для textarea */
+textarea {
+    width: calc(100% - 22px);
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit; /* Наслідувати шрифт */
+    resize: vertical; /* Дозволити змінювати розмір по вертикалі */
+}
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #333;
+}
+
+/* --- СПИСОК ПРОЄКТІВ --- */
+.app-header { display: flex; justify-content: space-between; align-items: center; }
+.app-header p { margin: 0; }
+.app-header button { width: auto; } /* Кнопка "Вийти" */
+
 #projects-list { list-style: none; padding: 0; }
-#projects-list li {
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    padding: 10px; 
-    border-bottom: 1px solid #eee; 
-}
-#projects-list li span { 
-    cursor: pointer;
-    flex-grow: 1; 
-}
+#projects-list li { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
+#projects-list li span { cursor: pointer; flex-grow: 1; font-size: 1.1em; }
 #projects-list li span:hover { color: #0056b3; }
+.project-buttons { display: flex; gap: 5px; margin-left: 10px; }
 
-/* Об'єднуємо кнопки в один контейнер */ 
-.project-buttons {
-    display: flex;
-    gap: 5px; /* Відстань між кнопками */
-    margin-left: 10px;
-}
-
-/* Базовий стиль для кнопок-іконок */
-.btn-icon {
-    border: none;
-    border-radius: 4px;
-    padding: 5px 10px;
-    cursor: pointer;
-    width: auto;
-    color: white;
-}
-
-/* Стиль для кнопки експорту */
-.export-btn {
-    background-color: #28a745; /* Зелений */
-}
+/* Кнопки-іконки */
+.btn-icon { border: none; border-radius: 5px; padding: 6px 12px; cursor: pointer; width: auto; color: white; font-size: 14px; }
+.export-btn { background-color: #28a745; }
 .export-btn:hover { background-color: #218838; }
-
-/* Стиль для кнопки видалення */
-.delete-btn {
-    background-color: #dc3545; /* Червоний */
-}
+.delete-btn { background-color: #dc3545; }
 .delete-btn:hover { background-color: #c82333; }
-
-/* НОВИЙ: Стиль для кнопки редагування */
-.edit-btn {
-    background-color: #ffc107; /* Жовтий */
-    color: #212529; /* Темний текст для жовтого фону */
-}
+.edit-btn { background-color: #ffc107; color: #212529; }
 .edit-btn:hover { background-color: #e0a800; }
 
-/* Стилі чату (без змін) */
-#chat-window { height: 300px; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; overflow-y: scroll; background-color: #fafafa; }
-.message { margin-bottom: 5px; }
-.user { text-align: right; color: blue; }
-.bot { color: green; }
 
+/* ===================================== */
+/* --- НОВІ СТИЛІ: РОБОЧИЙ ПРОСТІР --- */
+/* ===================================== */
+
+#workspace-title { margin: 0; }
+
+/* Навігація по вкладках */
+#workspace-nav {
+    display: flex;
+    gap: 5px;
+    border-bottom: 2px solid #eee;
+    margin: 20px 0;
+    flex-wrap: wrap; /* Для мобільних */
+}
+.tab-btn {
+    width: auto; /* Скасувати 100% */
+    background-color: transparent;
+    color: #555;
+    padding: 10px 15px;
+    border-radius: 6px 6px 0 0; /* Закруглення зверху */
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 15px;
+    font-weight: 500;
+}
+.tab-btn:hover {
+    background-color: #f7f7f7;
+    color: #000;
+}
+/* Активна вкладка */
+.tab-btn.active {
+    color: #007bff;
+    border-bottom: 2px solid #007bff;
+}
+
+/* Контент вкладок */
+.tab-content {
+    display: none; /* Всі вкладки сховані */
+    animation: fadeIn 0.3s ease; /* Анімація появи */
+}
+.tab-content.active {
+    display: block; /* Активна вкладка видима */
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Окремі стилі для вкладки Чату */
+#chat-tab {
+    display: none; /* Сховано за замовчуванням */
+    flex-direction: column;
+    height: 60vh; /* Задати висоту, щоб чат працював */
+    min-height: 400px;
+}
+#chat-tab.active {
+    display: flex; /* Перебити .active, щоб використовувати flex */
+}
+
+#chat-window { 
+    height: 100%; /* Розтягнути на всю висоту вкладки */
+    border: 1px solid #ccc; 
+    padding: 10px; 
+    margin-bottom: 10px; 
+    overflow-y: scroll; 
+    background-color: #fafafa; 
+    border-radius: 6px;
+}
+.chat-input-area {
+    display: flex;
+    gap: 10px;
+}
+.chat-input-area input {
+    flex-grow: 1; /* Поле введення займає максимум місця */
+    margin-bottom: 0;
+}
+.chat-input-area button {
+    width: auto; /* Кнопка "Надіслати" */
+}
+
+/* Стилі чату */
+.message { margin-bottom: 10px; padding: 8px 12px; border-radius: 8px; line-height: 1.4; white-space: pre-wrap; /* Для переносів рядків */ }
+.user { text-align: right; background-color: #e1f0ff; color: #0056b3; margin-left: 20%; }
+.bot { background-color: #f0f0f0; color: #333; margin-right: 20%; }
 
 /* --- Спінер (Індикатор завантаження) --- */
 #spinner-overlay {
@@ -132,6 +202,7 @@ button:disabled { background-color: #ccc; }
     display: flex;
     justify-content: center;
     align-items: center;
+    padding: 10px; /* Відступ для мобільних */
 }
 .modal-content {
     background-color: #fefefe;
@@ -143,6 +214,7 @@ button:disabled { background-color: #ccc; }
     border-radius: 8px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     text-align: center;
+    box-sizing: border-box; /* Включити padding */
 }
 .modal-content h3 {
     margin-top: 0;
@@ -162,6 +234,7 @@ button:disabled { background-color: #ccc; }
     display: flex;
     justify-content: center;
     gap: 15px; /* Відстань між кнопками */
+    flex-wrap: wrap; /* Для мобільних */
 }
 .modal-buttons .btn-primary {
     background-color: #007bff; /* Синій */
@@ -194,6 +267,3 @@ button:disabled { background-color: #ccc; }
 .modal-content button {
     width: auto; /* Скасувати width: 100% */
 }
-
-/* test test test */
-

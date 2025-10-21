@@ -3,29 +3,35 @@ let currentUser = null;
 let currentProjectID = null;
 /** @type {object | null} Зберігає ВСІ дані поточного проєкту */
 let currentProjectData = null; 
+/** @type {number | null} Індекс обраного персонажа в масиві */
+let selectedCharacterIndex = null;
+/** @type {Timeout | null} Таймер для затримки автозбереження */
+let saveTimer = null;
+
 
 // === ЕЛЕМЕНТИ DOM ===
-// (Ми будемо знаходити їх всі в 'DOMContentLoaded')
 let loginContainer, appContainer, loginInput, loginButton, logoutButton, usernameDisplay,
     projectsContainer, projectsList, createProjectButton,
     spinnerOverlay, toastContainer,
     createEditModal, createEditModalTitle, createEditInput, createEditConfirmBtn, createEditCancelBtn,
     confirmModal, confirmModalMessage, confirmOkBtn, confirmCancelBtn;
 
-// НОВІ ЕЛЕМЕНТИ РОБОЧОГО ПРОСТОРУ
+// ЕЛЕМЕНТИ РОБОЧОГО ПРОСТОРУ
 let workspaceContainer, workspaceTitle, backToProjectsButton, workspaceNav,
     chatWindow, userInput, sendButton,
     corePremiseInput, coreThemeInput, coreArcInput,
     notesGeneralInput, notesResearchInput;
 
+// НОВІ ЕЛЕМЕНТИ (ВКЛАДКА ПЕРСОНАЖІВ)
+let charactersList, addCharacterBtn, characterEditorPane,
+    characterEditorPlaceholder, characterEditorTitle, characterNameInput,
+    characterDescInput, characterArcInput, deleteCharacterBtn;
+
 
 // === ГОЛОВНИЙ ЗАПУСК ===
 document.addEventListener('DOMContentLoaded', () => {
-    // Знаходимо всі елементи
     bindUIElements();
-    // Прив'язуємо всі обробники подій
     bindEventListeners();
-    // Перевіряємо, чи користувач вже увійшов
     checkLoginOnLoad();
 });
 
@@ -82,6 +88,17 @@ function bindUIElements() {
     // Вкладка "Нотатки"
     notesGeneralInput = document.getElementById('notes-general-input');
     notesResearchInput = document.getElementById('notes-research-input');
+
+    // НОВІ: Вкладка "Персонажі"
+    charactersList = document.getElementById('characters-list');
+    addCharacterBtn = document.getElementById('add-character-btn');
+    characterEditorPane = document.getElementById('character-editor-pane');
+    characterEditorPlaceholder = document.getElementById('character-editor-placeholder');
+    characterEditorTitle = document.getElementById('character-editor-title');
+    characterNameInput = document.getElementById('character-name-input');
+    characterDescInput = document.getElementById('character-desc-input');
+    characterArcInput = document.getElementById('character-arc-input');
+    deleteCharacterBtn = document.getElementById('delete-character-btn');
 }
 
 /** Прив'язує всі обробники подій до елементів */
@@ -108,12 +125,21 @@ function bindEventListeners() {
         }
     });
 
-    // Автозбереження (через 'blur' - коли користувач "вийшов" з поля)
-    corePremiseInput.addEventListener('blur', (e) => handleAutoSave(e.target.dataset.field, e.target.value));
-    coreThemeInput.addEventListener('blur', (e) => handleAutoSave(e.target.dataset.field, e.target.value));
-    coreArcInput.addEventListener('blur', (e) => handleAutoSave(e.target.dataset.field, e.target.value));
-    notesGeneralInput.addEventListener('blur', (e) => handleAutoSave(e.target.dataset.field, e.target.value));
-    notesResearchInput.addEventListener('blur', (e) => handleAutoSave(e.target.dataset.field, e.target.value));
+    // Автозбереження (прості поля)
+    corePremiseInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
+    coreThemeInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
+    coreArcInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
+    notesGeneralInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
+    notesResearchInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
+    
+    // НОВІ: Обробники для вкладки "Персонажі"
+    addCharacterBtn.addEventListener('click', handleAddNewCharacter);
+    deleteCharacterBtn.addEventListener('click', handleDeleteCharacter);
+    
+    // Автозбереження для полів редактора персонажів (при виході з поля)
+    characterNameInput.addEventListener('blur', (e) => handleCharacterFieldSave('name', e.target.value));
+    characterDescInput.addEventListener('blur', (e) => handleCharacterFieldSave('description', e.target.value));
+    characterArcInput.addEventListener('blur', (e) => handleCharacterFieldSave('arc', e.target.value));
 }
 
 // === ЛОГІКА НАВІГАЦІЇ ===
@@ -177,14 +203,15 @@ async function openProjectWorkspace(projectID) {
         currentProjectData = await response.json();
         currentProjectID = projectID; // Встановити ID
 
-        // Показати/Сховати екрани
+        // Переконатись, що content.characters - це масив
+        if (!currentProjectData.content.characters) {
+            currentProjectData.content.characters = [];
+        }
+
         appContainer.classList.add('hidden');
         workspaceContainer.classList.remove('hidden');
 
-        // Заповнити даними
         renderWorkspace();
-
-        // Відкрити першу вкладку за замовчуванням
         showTab('core-tab');
 
     } catch (error) {
@@ -216,7 +243,7 @@ function renderWorkspace() {
 
     // 4. Заповнити вкладку "Чат"
     chatWindow.innerHTML = ''; // Очистити старий чат
-    const chatHistory = currentProjectData.chatHistory;
+    const chatHistory = currentProjectData.chatHistory || [];
     // Пропустити перший системний промпт
     chatHistory.slice(1).forEach(message => {
         const sender = message.role === 'model' ? 'bot' : 'user';
@@ -224,6 +251,10 @@ function renderWorkspace() {
         const text = message.parts[0].text.split("--- КОНТЕКСТ ПРОЄКТУ")[0]; 
         addMessageToChat(text, sender);
     });
+    
+    // 5. НОВЕ: Заповнити вкладку "Персонажі"
+    renderCharacterList();
+    showCharacterEditor(false); // Сховати редактор спочатку
 }
 
 /**
@@ -368,42 +399,41 @@ async function handleEditTitle(projectID, newTitle) {
 }
 
 /**
- * НОВА ФУНКЦІЯ: Автозбереження
+ * Автозбереження для простих полів (Ядро, Нотатки)
  */
-async function handleAutoSave(field, value) {
-    if (!currentProjectID || !currentProjectData) return; // Перевірка, що дані завантажені
+async function handleSimpleAutoSave(field, value) {
+    if (!currentProjectID || !currentProjectData) return;
     
-    // Визначити, де знаходяться дані (напр. 'notes' з 'content.notes')
+    // Визначити, де знаходяться дані
     const fieldName = field.split('.')[1]; 
     if (currentProjectData.content[fieldName] === value) {
-        // Не зберігати, якщо нічого не змінилося
-        return;
+        return; // Не зберігати, якщо нічого не змінилося
     }
 
     console.log(`Збереження... ${field} = ${value.substring(0, 20)}...`);
-    showToast(`Збереження...`, 'info'); // Показати тимчасовий тост
-    
-    try {
-        const response = await fetch('/save-project-content', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                projectID: currentProjectID, 
-                field: field, 
-                value: value 
-            })
-        });
-        if (!response.ok) throw new Error('Помилка збереження');
+    // Затримка перед збереженням
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+        showToast(`Збереження...`, 'info'); 
+        try {
+            const response = await fetch('/save-project-content', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    projectID: currentProjectID, 
+                    field: field, 
+                    value: value 
+                })
+            });
+            if (!response.ok) throw new Error('Помилка збереження');
 
-        // Оновити наші локальні дані
-        currentProjectData.content[fieldName] = value;
-        
-        showToast('Збережено!', 'success');
-
-    } catch (error) {
-        console.error('Помилка автозбереження:', error);
-        showToast('Помилка збереження.', 'error');
-    }
+            currentProjectData.content[fieldName] = value;
+            showToast('Збережено!', 'success');
+        } catch (error) {
+            console.error('Помилка автозбереження:', error);
+            showToast('Помилка збереження.', 'error');
+        }
+    }, 1000); // Чекати 1 секунду після виходу з поля
 }
 
 // === ЛОГІКА API (ЧАТ) ===
@@ -456,12 +486,10 @@ function addMessageToChat(text, sender) {
 
 
 // === ДОПОМІЖНІ ФУНКЦІЇ (UI) ===
-// (Всі функції звідси і до кінця - повні, без змін)
 
 function showSpinner() {
     spinnerOverlay.classList.remove('hidden');
 }
-
 function hideSpinner() {
     spinnerOverlay.classList.add('hidden');
 }
@@ -561,4 +589,175 @@ function showConfirmModal(message, onConfirm) {
 
 function hideConfirmModal() {
     confirmModal.classList.add('hidden');
+}
+
+
+// ===========================================
+// === НОВІ ФУНКЦІЇ (ВКЛАДКА ПЕРСОНАЖІВ) ===
+// ===========================================
+
+/**
+ * Оновлює список персонажів в UI
+ */
+function renderCharacterList() {
+    if (!currentProjectData) return;
+    
+    charactersList.innerHTML = ''; // Очистити список
+    
+    currentProjectData.content.characters.forEach((character, index) => {
+        const li = document.createElement('li');
+        li.textContent = character.name || 'Персонаж без імені';
+        li.dataset.index = index;
+        
+        // Додати обробник кліку
+        li.addEventListener('click', () => {
+            selectCharacter(index);
+        });
+        
+        // Позначити активного
+        if (index === selectedCharacterIndex) {
+            li.classList.add('active');
+        }
+        
+        charactersList.appendChild(li);
+    });
+}
+
+/**
+ * Показує/ховає редактор персонажів
+ * @param {boolean} show - true, щоб показати, false - щоб сховати
+ */
+function showCharacterEditor(show = true) {
+    if (show) {
+        characterEditorPane.classList.remove('hidden');
+        characterEditorPlaceholder.classList.add('hidden');
+    } else {
+        characterEditorPane.classList.add('hidden');
+        characterEditorPlaceholder.classList.remove('hidden');
+        selectedCharacterIndex = null;
+        renderCharacterList(); // Оновити список, щоб зняти виділення
+    }
+}
+
+/**
+ * Обробник вибору персонажа зі списку
+ * @param {number} index - Індекс персонажа в масиві
+ */
+function selectCharacter(index) {
+    selectedCharacterIndex = index;
+    const character = currentProjectData.content.characters[index];
+    
+    if (!character) return;
+    
+    // Заповнити поля редактора
+    characterEditorTitle.textContent = `Редагування "${character.name}"`;
+    characterNameInput.value = character.name || '';
+    characterDescInput.value = character.description || '';
+    characterArcInput.value = character.arc || '';
+    
+    // Показати редактор
+    showCharacterEditor(true);
+    
+    // Оновити список, щоб виділити активний елемент
+    renderCharacterList();
+}
+
+/**
+ * Створює нового персонажа
+ */
+async function handleAddNewCharacter() {
+    const newCharacter = {
+        // 'id' нам не потрібен, оскільки ми оперуємо по індексу масиву
+        name: "Новий персонаж",
+        description: "",
+        arc: ""
+    };
+    
+    currentProjectData.content.characters.push(newCharacter);
+    
+    // Зберегти весь масив
+    await saveCharactersArray();
+    
+    // Оновити UI
+    const newIndex = currentProjectData.content.characters.length - 1;
+    selectCharacter(newIndex);
+}
+
+/**
+ * Обробник видалення персонажа
+ */
+function handleDeleteCharacter() {
+    if (selectedCharacterIndex === null) return;
+    
+    const characterName = currentProjectData.content.characters[selectedCharacterIndex].name;
+    
+    showConfirmModal(`Ви впевнені, що хочете видалити персонажа "${characterName}"?`, async () => {
+        currentProjectData.content.characters.splice(selectedCharacterIndex, 1);
+        
+        // Зберегти масив
+        await saveCharactersArray();
+        
+        // Оновити UI
+        showCharacterEditor(false); // Сховати редактор
+        renderCharacterList(); // Оновити список
+    });
+}
+
+/**
+ * Обробник збереження поля персонажа (викликається при 'blur')
+ * @param {string} field - 'name', 'description', або 'arc'
+ * @param {string} value - Нове значення
+ */
+async function handleCharacterFieldSave(field, value) {
+    if (selectedCharacterIndex === null) return;
+    
+    const character = currentProjectData.content.characters[selectedCharacterIndex];
+    
+    if (character[field] === value) {
+        return; // Нічого не змінилося
+    }
+    
+    // 1. Оновити локальні дані
+    character[field] = value;
+    
+    // 2. Якщо змінилася назва, оновити заголовок редактора
+    if (field === 'name') {
+        characterEditorTitle.textContent = `Редагування "${value}"`;
+    }
+    
+    // 3. Зберегти весь масив на сервері
+    await saveCharactersArray();
+    
+    // 4. Оновити список (якщо змінилася назва)
+    renderCharacterList();
+}
+
+/**
+ * "Універсальний" збережувач для ВСЬОГО масиву персонажів
+ */
+async function saveCharactersArray() {
+    if (!currentProjectID) return;
+    
+    console.log("Збереження масиву персонажів...");
+    // Ми не будемо використовувати таймер тут, збережемо одразу
+    // (або можемо додати, якщо це буде викликати проблеми)
+    showToast(`Збереження...`, 'info'); 
+        
+    try {
+        const response = await fetch('/save-project-content', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                projectID: currentProjectID, 
+                field: "content.characters", // Зберігаємо ВЕСЬ масив
+                value: currentProjectData.content.characters
+            })
+        });
+        if (!response.ok) throw new Error('Помилка збереження персонажів');
+        
+        showToast('Персонажів збережено!', 'success');
+    } catch (error) {
+        console.error('Помилка автозбереження персонажів:', error);
+        showToast('Помилка збереження.', 'error');
+    }
 }

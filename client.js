@@ -1,5 +1,5 @@
 // === ГЛОБАЛЬНІ ЗМІННІ ===
-const APP_VERSION = "0.5.1"; // ОНОВЛЕНО: v0.5.1
+const APP_VERSION = "0.6.0"; // ОНОВЛЕНО: v0.6.0
 
 let currentUser = null;
 let currentProjectID = null;
@@ -779,25 +779,87 @@ async function saveCharactersArray(immediate = false) {
 
 // === ФУНКЦІЇ: ВКЛАДКА "РОЗДІЛИ" ===
 
+// ОНОВЛЕНО: v0.6.0 - Додано helper для іконок
+/**
+ * Повертає іконку-emoji для статусу розділу
+ * @param {string} status - Статус (напр., "В роботі")
+ * @returns {string} Emoji іконка
+ */
+function getStatusIcon(status) {
+    switch (status) {
+        case "Заплановано": return "🗓️";
+        case "В роботі": return "✏️";
+        case "Завершено": return "✅";
+        case "На редагуванні": return "🔄";
+        case "Потребує уваги": return "❓";
+        default: return "📝";
+    }
+}
+
+// ОНОВЛЕНО: v0.6.0 - ПОВНІСТЮ ПЕРЕПИСАНА ФУНКЦІЯ
 function renderChapterList() {
     if (!currentProjectData) return;
-    chaptersList.innerHTML = ''; 
+    chaptersList.innerHTML = ''; // Очищуємо контейнер
+    
     currentProjectData.content.chapters.forEach((chapter, index) => {
-        const li = document.createElement('li');
-        // ОНОВЛЕНО: v0.4.1 - Додано нумерацію
-        li.textContent = `${index + 1}. ${chapter.title || 'Розділ без назви'}`;
-        li.dataset.index = index;
-        li.addEventListener('click', () => {
+        // --- v0.6.0: Створюємо картку замість <li> ---
+        const card = document.createElement('div');
+        card.className = 'chapter-card';
+        card.dataset.index = index;
+        
+        card.addEventListener('click', (e) => {
+            // Уникаємо кліку, якщо тягнемо за ручку
+            if (e.target.classList.contains('card-drag-handle')) return;
             selectChapter(index);
         });
+        
         if (index === selectedChapterIndex) {
-            li.classList.add('active');
+            card.classList.add('active');
         }
-        chaptersList.appendChild(li);
+        
+        // --- Дані для картки ---
+        const order = index + 1;
+        const title = chapter.title || 'Розділ без назви';
+        const status = chapter.status || 'Заплановано';
+        const icon = getStatusIcon(status);
+        const wordCount = chapter.word_count || 0;
+        
+        let snippet = '';
+        let snippetClass = 'card-snippet';
+        
+        if (status === 'Заплановано') {
+            snippet = chapter.synopsis || 'Немає синопсису...';
+            snippetClass = 'card-snippet synopsis'; // Спеціальний клас для синопсису
+        } else if (chapter.text) {
+            snippet = chapter.text.substring(0, 80) + '...'; // Сніпет тексту
+        } else {
+            snippet = 'Немає тексту...';
+        }
+        
+        // --- Генеруємо HTML картки (на основі image_b1545c.png) ---
+        card.innerHTML = `
+            <div class="card-header">
+                <span>${order}. ${title}</span>
+                <span class="card-drag-handle" title="Перетягнути">::</span>
+            </div>
+            <div class="card-body">
+                <div class="card-meta">
+                    <span>${icon} ${status}</span>
+                    <span>${wordCount} слів</span>
+                </div>
+                <div class="${snippetClass}">
+                    ${snippet}
+                </div>
+            </div>
+        `;
+        
+        chaptersList.appendChild(card);
     });
+    
     // ОНОВЛЕНО: v0.5.1
     updateTotalWordCount();
 }
+
 function showChapterEditor(show = true) {
     if (show) {
         chapterEditorPane.classList.remove('hidden');
@@ -857,12 +919,15 @@ function handleDeleteChapter() {
         updateTotalWordCount();
     });
 }
+
+// ОНОВЛЕНО: v0.6.0 - ПОВНІСТЮ ПЕРЕПИСАНА ФУНКЦІЯ
 async function handleChapterFieldSave(field, value) {
     if (selectedChapterIndex === null) return;
     const chapter = currentProjectData.content.chapters[selectedChapterIndex];
     if (chapter[field] === value) return; 
     
     chapter[field] = value;
+    
     if (field === 'title') {
         chapterEditorTitle.textContent = `Редагування "${value}"`;
     }
@@ -878,10 +943,62 @@ async function handleChapterFieldSave(field, value) {
     chapter.updated_at = new Date().toISOString();
     
     await saveChaptersArray(); // Зберегти з затримкою
-    renderChapterList();
+    
+    // ОНОВЛЕНО: v0.6.0 - Оновлюємо лише одну картку
+    updateSingleChapterCard(selectedChapterIndex);
+    
     // ОНОВЛЕНО: v0.5.1
     updateTotalWordCount();
 }
+
+/**
+ * ОНОВЛЕНО: v0.6.0 - Оновлює одну картку, а не весь список.
+ */
+function updateSingleChapterCard(index) {
+    const chapter = currentProjectData.content.chapters[index];
+    if (!chapter) return;
+
+    const card = chaptersList.querySelector(`[data-index="${index}"]`);
+    if (!card) return; // Картки немає, нічого не робимо
+
+    // --- Оновлюємо дані картки ---
+    const order = index + 1;
+    const title = chapter.title || 'Розділ без назви';
+    const status = chapter.status || 'Заплановано';
+    const icon = getStatusIcon(status);
+    const wordCount = chapter.word_count || 0;
+    
+    let snippet = '';
+    let snippetClass = 'card-snippet';
+    
+    if (status === 'Заплановано') {
+        snippet = chapter.synopsis || 'Немає синопсису...';
+        snippetClass = 'card-snippet synopsis';
+    } else if (chapter.text) {
+        snippet = chapter.text.substring(0, 80) + '...';
+    } else {
+        snippet = 'Немає тексту...';
+    }
+
+    // --- Оновлюємо HTML картки ---
+    card.innerHTML = `
+        <div class="card-header">
+            <span>${order}. ${title}</span>
+            <span class="card-drag-handle" title="Перетягнути">::</span>
+        </div>
+        <div class="card-body">
+            <div class="card-meta">
+                <span>${icon} ${status}</span>
+                <span>${wordCount} слів</span>
+            </div>
+            <div class="${snippetClass}">
+                ${snippet}
+            </div>
+        </div>
+    `;
+}
+
+
 async function saveChaptersArray(immediate = false) {
     await saveArrayToDb("content.chapters", currentProjectData.content.chapters, "розділів", immediate);
 }
@@ -1046,10 +1163,11 @@ async function savePlotlinesArray(immediate = false) {
 function initSortableLists() {
     if (!currentProjectData) return;
 
-    // 1. Сортування Розділів
+    // ОНОВЛЕНО: v0.6.0 - Додано 'handle'
     new Sortable(chaptersList, {
         animation: 150,
-        ghostClass: 'sortable-ghost', // Додано з v0.4.0 style.css
+        ghostClass: 'sortable-ghost',
+        handle: '.card-drag-handle', // Вказуємо "ручку"
         onEnd: async (evt) => {
             const { oldIndex, newIndex } = evt;
             // 1. Оновити локальний масив
@@ -1106,7 +1224,7 @@ function initSortableLists() {
 
 
 // ===========================================
-// === ОНОВЛЕНА УНІВЕРСАЛЬНА ФУНКЦІЯ ЗБЕРЕЖЕННЯ ===
+// === ОНОВЛЕНА УНІВЕРСАЛЬНА ФУНКЦЯ ЗБЕРЕЖЕННЯ ===
 // ===========================================
 
 /**

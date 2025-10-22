@@ -177,6 +177,7 @@ select {
     max-height: 400px;
     overflow-y: auto;
 }
+/* СТИЛІ ДЛЯ СТАРИХ СПИСКІВ (li) */
 .item-list li {
     padding: 12px;
     border: 1px solid #ddd;
@@ -315,4 +316,90 @@ select {
 }
 #app-footer p {
     margin: 5px;
+}
+
+/* ===================================== */
+/* --- ОНОВЛЕННЯ: v0.6.0 - СТИЛІ КАРТОК РОЗДІЛІВ --- */
+/* ===================================== */
+
+/* Скасовуємо старі стилі <ul> для .item-list, якщо це .card-list-container */
+.card-list-container {
+    max-height: 450px; /* Трохи більше місця для карток */
+    overflow-y: auto;
+    margin-top: 15px;
+    /* Натхненно ui-ux-opus.png - темний фон контейнера */
+    background-color: #333; 
+    border-radius: 8px;
+    padding: 10px;
+    border: 1px solid #444;
+}
+
+/* Повністю нові стилі для карток */
+.chapter-card {
+    background-color: #444; /* Темна картка, як у ui-ux-opus.png */
+    border: 1px solid #555;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    padding: 12px 15px;
+    cursor: pointer; /* 'grab' тут не потрібен, бо є ручка */
+    transition: all 0.2s ease;
+    color: #eee;
+}
+.chapter-card:hover {
+    background-color: #4a4a4a;
+    border-color: #777;
+}
+/* Скасування старих стилів .item-list li.active */
+.chapter-card.active {
+    background-color: #5a7b9d; /* Синій, але темніший */
+    border-color: #007bff;
+    color: #fff;
+}
+
+/* Структура картки з image_b1545c.png */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.1em;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+.card-header .card-drag-handle {
+    font-family: monospace;
+    font-size: 1.2em;
+    padding: 0 5px;
+    cursor: grab;
+    color: #aaa;
+}
+.card-header .card-drag-handle:hover {
+    color: #fff;
+}
+.card-meta {
+    font-size: 0.9em;
+    color: #ccc;
+    margin-bottom: 8px;
+}
+/* Додаємо • між елементами */
+.card-meta span:not(:last-child)::after {
+    content: " • ";
+    margin: 0 4px;
+}
+.card-snippet {
+    font-size: 0.95em;
+    color: #ddd;
+    font-style: italic;
+    
+    /* Обрізаємо довгий текст */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.8;
+}
+
+/* Стиль для синопсису, коли статус "Заплановано" */
+.card-snippet.synopsis {
+    font-style: normal;
+    color: #c0dfff; /* Світло-блакитний, щоб виділити */
+    opacity: 1;
 }

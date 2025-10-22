@@ -7,20 +7,16 @@ const admin = require('firebase-admin');
 
 // === 2. НАЛАШТУВАННЯ ===
 const app = express();
-// Render надасть нам свій порт, локально використовуємо 3000
 const port = process.env.PORT || 3000;
-app.use(express.json({ limit: '50mb' })); // Збільшимо ліміт, оскільки 'content' може бути великим
-app.use(express.static('.')); // Для 'index.html', 'style.css', 'client.js'
+app.use(express.json({ limit: '50mb' })); 
+app.use(express.static('.')); 
 
 // --- Налаштування Firebase ---
-// Ми очікуємо, що serviceAccountKey.json або в файлі, або в 'Environment' на Render
 try {
     let serviceAccount;
     if (process.env.SERVICE_ACCOUNT_KEY_JSON) {
-        // Якщо ключ вставлений в Environment Variable на Render
         serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY_JSON);
     } else {
-        // Якщо ми запускаємо локально з файлу
         serviceAccount = require('./serviceAccountKey.json');
     }
     
@@ -29,8 +25,6 @@ try {
     });
 } catch (error) {
     console.error("ПОМИЛКА: Не вдалося завантажити serviceAccountKey.");
-    console.error("Якщо ви на Render, переконайтеся, що змінна SERVICE_ACCOUNT_KEY_JSON існує.");
-    console.error("Якщо ви локально, переконайтеся, що файл serviceAccountKey.json існує.");
     console.error(error.message);
 }
 
@@ -41,7 +35,8 @@ let genAI;
 let model;
 if (process.env.GEMINI_API_KEY) {
     genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    model = genAI.getGenerativeModel({ model: "gemini-2.5-flash"});
+    // ОНОВЛЕНО v0.9.0 (за вашим проханням): Використовуємо 2.5 flash
+    model = genAI.getGenerativeModel({ model: "gemini-2.5-flash"}); // TODO: Змінити на 2.5, коли API дозволить
 } else {
     console.error("ПОМИЛКА: Змінна GEMINI_API_KEY не встановлена.");
 }
@@ -51,40 +46,46 @@ if (process.env.GEMINI_API_KEY) {
 
 // --- Головна сторінка ---
 app.get('/', (req, res) => {
-    // res.send('Сервер працює!'); // Простий тест
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // --- Маршрут для отримання списку проєктів ---
+// ОНОВЛЕНО v1.0.0: Надсилаємо більше даних та сортуємо
 app.get('/get-projects', async (req, res) => {
     const user = req.query.user;
     if (!user) {
         return res.status(400).json({ message: "Необхідно вказати 'user'" });
     }
     try {
-        // ОНОВЛЕНО v0.8.0-fix: Прибрано .orderBy('createdAt', 'desc')
-        // Це вимагає індексу і призводить до збою завантаження,
-        // якщо індекс не створено або дані відсутні.
+        // ОНОВЛЕНО v1.0.0: Повертаємо сортування, але тепер за 'updatedAt'.
+        // **УВАГА**: Це вимагатиме створення індексу у Firebase!
+        // (owner ==, updatedAt DESC)
         const snapshot = await db.collection('projects')
                                 .where('owner', '==', user)
-                                // .orderBy('createdAt', 'desc') // <-- ВИДАЛЕНО, щоб виправити помилку
+                                .orderBy('updatedAt', 'desc') // <-- ПОВЕРНУЛИ СОРТУВАННЯ
                                 .get();
         
         if (snapshot.empty) {
             return res.status(200).json([]);
         }
         
-        // Повертаємо лише ID та назву
+        // ОНОВЛЕНО v1.0.0: Повертаємо більше даних
         const projects = snapshot.docs.map(doc => ({
             id: doc.id,
-            title: doc.data().title 
+            title: doc.data().title,
+            updatedAt: doc.data().updatedAt, // Надсилаємо дату
+            totalWordCount: doc.data().totalWordCount || 0 // Надсилаємо слова
         }));
         
         res.status(200).json(projects);
         
     } catch (error) {
         console.error("Помилка при отриманні проєктів:", error);
-        res.status(500).send("Не вдалося отримати проєкти.");
+        // Якщо помилка FAILED_PRECONDITION - це нормально, просто треба створити індекс
+        if (error.code === 9) { 
+            console.error("ПОТРІБЕН ІНДЕКС! Перейдіть за посиланням у лозі помилки, щоб створити індекс.");
+        }
+        res.status(500).send("Не вдалося отримати проєкти. Перевірте лог сервера на помилку індексу.");
     }
 });
 
@@ -95,9 +96,8 @@ app.post('/create-project', async (req, res) => {
         return res.status(400).json({ message: "Необхідно вказати 'user' та 'title'" });
     }
     
-    // Системний промпт для Опуса
-    const systemPrompt = "Ти — \"Опус\", експертний помічник зі створення книг, літературний критик та співавтор. Твоє завдання — допомагати користувачу структурувати його ідеї, розвивати персонажів, прописувати сюжетні лінії та писати текст книги. Ти завжди звертаєшся до користувача на \"Ви\". Ти маєш доступ до всіх його нотаток: персонажів, локацій, розділів та сюжетних ліній. Використовуй цей контекст, щоб надавати максимально релевантні поради. Твій стиль спілкування: професійний, ввічливий, креативний та підтримуючий.";
-    // Перше повідомлення від бота
+    // ОНОВЛЕНО v0.9.0 (за вашим проханням): Gemini 2.5 Flash
+    const systemPrompt = "Ти — \"Опус\", експертний помічник зі створення книг (на базі Gemini 2.5 Flash), літературний критик та співавтор. Твоє завдання — допомагати користувачу структурувати його ідеї, розвивати персонажів, прописувати сюжетні лінії та писати текст книги. Ти завжди звертаєшся до користувача на \"Ви\". Ти маєш доступ до всіх його нотаток: персонажів, локацій, розділів та сюжетних ліній. Використовуй цей контекст, щоб надавати максимально релевантні поради. Твій стиль спілкування: професійний, ввічливий, креативний та підтримуючий.";
     const firstBotMessage = `Я Опус. Вітаю! Я готовий почати роботу над Вашим новим проєктом \"${title}\". З чого почнемо? ✍️`;
 
     try {
@@ -235,9 +235,7 @@ app.post('/chat', async (req, res) => {
         const botMessage = response.text();
         
         // 6. Оновлюємо історію в Firebase
-        // Додаємо реальне повідомлення користувача (без контексту)
         history.push({ role: "user", parts: [{ text: message }] });
-        // Додаємо відповідь бота
         history.push({ role: "model", parts: [{ text: botMessage }] });
         
         await projectRef.update({ chatHistory: history });
@@ -253,7 +251,7 @@ app.post('/chat', async (req, res) => {
 
 
 // --- Маршрут для збереження будь-якого поля в 'content' ---
-// ОНОВЛЕНО v0.8.0: Тепер також оновлює 'updatedAt' та 'totalWordCount'
+// v0.8.0: Тепер також оновлює 'updatedAt' та 'totalWordCount'
 app.post('/save-project-content', async (req, res) => {
     const { projectID, field, value } = req.body;
     
@@ -264,23 +262,14 @@ app.post('/save-project-content', async (req, res) => {
     try {
         const projectRef = db.collection('projects').doc(projectID);
 
-        // Створюємо об'єкт для оновлення
         let updateData = {};
-
-        // 1. Додаємо основні дані (як і раніше)
-        // 'field' приходить як "content.premise", "content.chapters" і т.д.
         updateData[field] = value;
-
-        // 2. (НОВЕ v0.8.0) Завжди оновлюємо дату останньої зміни
         updateData['updatedAt'] = admin.firestore.FieldValue.serverTimestamp();
 
-        // 3. (НОВЕ v0.8.0) Якщо оновлюються розділи, перераховуємо загальну к-ть слів
         if (field === 'content.chapters') {
             let totalWordCount = 0;
-            // 'value' - це повний масив розділів
             if (Array.isArray(value)) {
                 totalWordCount = value.reduce((sum, chapter) => {
-                    // chapter.word_count - це число, яке ми зберегли з v0.5.1
                     return sum + (chapter.word_count || 0);
                 }, 0);
             }
@@ -288,7 +277,6 @@ app.post('/save-project-content', async (req, res) => {
             console.log(`Проєкт ${projectID}: Загальна к-ть слів оновлена: ${totalWordCount}`);
         }
 
-        // 4. Виконуємо одне атомарне оновлення
         await projectRef.update(updateData);
         
         console.log(`Проєкт ${projectID}: Поле ${field} успішно збережено.`);
@@ -372,9 +360,6 @@ app.get('/export-project', async (req, res) => {
                 fileContent += "----------------------------------------\n\n";
             });
         }
-
-        // 7. Чат (опціонально, поки вимкнено для чистоти)
-        // ... (можна додати, якщо потрібно)
 
         // 3. Відправляємо файл браузеру
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');

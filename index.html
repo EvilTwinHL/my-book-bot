@@ -55,7 +55,7 @@
         <div id="projects-container">
             <h2>Ваші проєкти</h2>
             <button id="create-project-button" class="btn-icon export-btn" style="background-color: #28a745;">[ + ] Створити нову книгу</button>
-            <ul id="projects-list">
+            <ul id="projects-list" class="project-card-list">
                 </ul>
         </div>
     </div>
@@ -69,7 +69,6 @@
 
         <nav id="workspace-nav">
             <button class="tab-btn" data-tab="dashboard-tab">📈 Dashboard</button>
-            
             <button class="tab-btn active" data-tab="core-tab">💡 Ядро</button>
             <button class="tab-btn" data-tab="characters-tab">👥 Персонажі</button>
             <button class="tab-btn" data-tab="chapters-tab">📝 Розділи</button>
@@ -251,14 +250,22 @@
                 </div>
             </div>
 
-        </div> </div> <footer id="app-footer">
+        </div> 
+    </div> 
+    
+    <footer id="app-footer">
         <p>
             Gemini OpusAI | v<span id="version-number">0.0.0</span> | &copy; 2025 Mykhailo Voronianskyi
         </p>
     </footer>
 
+    <div id="project-context-menu" class="context-menu hidden">
+        <button id="context-edit-btn">Змінити назву</button>
+        <button id="context-export-btn">Експортувати (.txt)</button>
+        <button id="context-delete-btn">Видалити проєкт</button>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
-    
     <script src="client.js" defer></script>
 </body>
 </html>

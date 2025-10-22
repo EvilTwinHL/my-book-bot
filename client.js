@@ -1,5 +1,5 @@
 // === ГЛОБАЛЬНІ ЗМІННІ ===
-const APP_VERSION = "0.9.0"; // ОНОВЛЕНО: v0.9.0
+const APP_VERSION = "1.0.0"; // ОНОВЛЕНО: v1.0.0
 
 let currentUser = null;
 let currentProjectID = null;
@@ -34,6 +34,9 @@ let workspaceContainer, workspaceTitle, backToProjectsButton, workspaceNav,
     dashboardProjectTitle, dashboardWriteBtn, dashboardTotalWords,
     dashboardProgressFill, dashboardProgressLabel, dashboardLastUpdated;
 
+// v1.0.0: КОНТЕКСТНЕ МЕНЮ
+let projectContextMenu, contextEditBtn, contextExportBtn, contextDeleteBtn;
+
 // ЕЛЕМЕНТИ (ВКЛАДКА ПЕРСОНАЖІВ)
 let charactersList, addCharacterBtn, characterEditorPane,
     characterEditorPlaceholder, characterEditorTitle, characterNameInput,
@@ -43,7 +46,7 @@ let charactersList, addCharacterBtn, characterEditorPane,
 let chaptersList, addChapterBtn, chapterEditorPane,
     chapterEditorPlaceholder, chapterEditorTitle, chapterTitleInput,
     chapterStatusInput, chapterTextInput, deleteChapterBtn,
-    chaptersTotalWordCount, chapterCurrentWordCount; // <-- v0.5.1
+    chaptersTotalWordCount, chapterCurrentWordCount; 
 
 // ЕЛЕМЕНТИ (ВКЛАДКА ЛОКАЦІЙ)
 let locationsList, addLocationBtn, locationEditorPane,
@@ -101,6 +104,12 @@ function bindUIElements() {
     confirmOkBtn = document.getElementById('confirm-ok-btn');
     confirmCancelBtn = document.getElementById('confirm-cancel-btn');
 
+    // v1.0.0: Контекстне меню
+    projectContextMenu = document.getElementById('project-context-menu');
+    contextEditBtn = document.getElementById('context-edit-btn');
+    contextExportBtn = document.getElementById('context-export-btn');
+    contextDeleteBtn = document.getElementById('context-delete-btn');
+
     // Елементи робочого простору
     workspaceTitle = document.getElementById('workspace-title');
     backToProjectsButton = document.getElementById('back-to-projects');
@@ -149,7 +158,6 @@ function bindUIElements() {
     chapterStatusInput = document.getElementById('chapter-status-input');
     chapterTextInput = document.getElementById('chapter-text-input');
     deleteChapterBtn = document.getElementById('delete-chapter-btn');
-    // v0.5.1
     chaptersTotalWordCount = document.getElementById('chapters-total-word-count');
     chapterCurrentWordCount = document.getElementById('chapter-current-word-count');
 
@@ -207,9 +215,16 @@ function bindEventListeners() {
 
     // v0.8.0: Обробники для "Dashboard"
     dashboardWriteBtn.addEventListener('click', () => {
-        showTab('chapters-tab'); // Кнопка "Писати" просто перемикає на розділи
+        showTab('chapters-tab'); 
     });
     
+    // v1.0.0: Закриття контекстного меню
+    document.addEventListener('click', (e) => {
+        if (!projectContextMenu.classList.contains('hidden')) {
+            hideProjectContextMenu();
+        }
+    });
+
     // Обробники для вкладки "Персонажі"
     addCharacterBtn.addEventListener('click', handleAddNewCharacter);
     deleteCharacterBtn.addEventListener('click', handleDeleteCharacter);
@@ -223,7 +238,6 @@ function bindEventListeners() {
     chapterTitleInput.addEventListener('blur', (e) => handleChapterFieldSave('title', e.target.value));
     chapterStatusInput.addEventListener('change', (e) => handleChapterFieldSave('status', e.target.value)); 
     chapterTextInput.addEventListener('blur', (e) => handleChapterFieldSave('text', e.target.value));
-    // v0.5.1 - Слухач для лічильника в реальному часі
     chapterTextInput.addEventListener('input', handleChapterTextInput);
 
     // Обробники для вкладки "Локації"
@@ -300,7 +314,6 @@ async function openProjectWorkspace(projectID) {
         currentProjectData = await response.json();
         currentProjectID = projectID; 
 
-        // --- Ініціалізація даних (ВАЖЛИВО) ---
         if (!currentProjectData.content) {
             currentProjectData.content = {};
         }
@@ -324,10 +337,8 @@ async function openProjectWorkspace(projectID) {
         workspaceContainer.classList.remove('hidden');
 
         renderWorkspace();
-        // v0.8.0: Відкриваємо Dashboard за замовчуванням
         showTab('dashboard-tab');
         
-        // НОВЕ: Ініціалізуємо сортування, коли воркспейс готовий
         initSortableLists(); 
 
     } catch (error) {
@@ -344,20 +355,16 @@ async function openProjectWorkspace(projectID) {
 function renderWorkspace() {
     if (!currentProjectData) return;
 
-    // 1. Встановити заголовок
     workspaceTitle.textContent = currentProjectData.title;
 
-    // 2. Заповнити вкладку "Ядро"
     const content = currentProjectData.content;
     corePremiseInput.value = content.premise || '';
     coreThemeInput.value = content.theme || '';
     coreArcInput.value = content.mainArc || '';
 
-    // 3. Заповнити вкладку "Нотатки"
     notesGeneralInput.value = content.notes || '';
     notesResearchInput.value = content.research || '';
 
-    // 4. Заповнити вкладку "Чат"
     chatWindow.innerHTML = ''; 
     (currentProjectData.chatHistory || []).slice(1).forEach(message => { 
         const sender = message.role === 'model' ? 'bot' : 'user';
@@ -365,23 +372,18 @@ function renderWorkspace() {
         addMessageToChat(text, sender);
     });
     
-    // 5. Заповнити вкладку "Персонажі"
     renderCharacterList();
     showCharacterEditor(false); 
     
-    // 6. Заповнити вкладку "Розділи"
     renderChapterList();
     showChapterEditor(false); 
     
-    // 7. Заповнити вкладку "Локації"
     renderLocationList();
     showLocationEditor(false);
 
-    // 8. Заповнити вкладку "Сюжетні лінії"
     renderPlotlineList();
     showPlotlineEditor(false);
 
-    // 9. v0.8.0: Заповнити "Dashboard"
     renderDashboard();
 }
 
@@ -399,11 +401,14 @@ function showTab(tabId) {
 
 // === ЛОГІКА API (КАРТОТЕКА) ===
 
+/**
+ * ОНОВЛЕНО v1.0.0: Повністю переписано для створення карток
+ */
 async function loadProjects(user) {
     projectsList.innerHTML = '<li>Завантаження...</li>'; 
     try {
         const response = await fetch(`/get-projects?user=${user}`);
-        if (!response.ok) throw new Error('Помилка мережі');
+        if (!response.ok) throw new Error('Помилка мережі. Перевірте лог сервера.');
         const projects = await response.json();
         
         projectsList.innerHTML = ''; 
@@ -412,41 +417,48 @@ async function loadProjects(user) {
         } else {
             projects.forEach(project => {
                 const li = document.createElement('li');
+                li.className = 'project-card';
                 
-                const titleSpan = document.createElement('span');
-                titleSpan.textContent = project.title;
-                titleSpan.onclick = () => { openProjectWorkspace(project.id); };
+                // --- Форматуємо дані ---
+                const wordCount = project.totalWordCount.toLocaleString('uk-UA');
+                let lastUpdated = 'нещодавно';
+                if (project.updatedAt) {
+                    const date = new Date(project.updatedAt._seconds * 1000);
+                    lastUpdated = date.toLocaleDateString('uk-UA'); // '10.22.2025'
+                }
 
-                const buttonsDiv = document.createElement('div');
-                buttonsDiv.className = 'project-buttons';
+                // --- Створюємо HTML картки ---
+                li.innerHTML = `
+                    <div class="project-card-header">
+                        <h3 class="project-card-title">${project.title}</h3>
+                        <button class="project-card-menu-btn" aria-label="Дії з проєктом">...</button>
+                    </div>
+                    <div class="project-card-footer">
+                        <span>${wordCount} слів</span>
+                        <span>Оновлено: ${lastUpdated}</span>
+                    </div>
+                `;
 
-                const editBtn = document.createElement('button');
-                editBtn.textContent = 'Змінити';
-                editBtn.className = 'btn-icon edit-btn';
-                editBtn.onclick = (e) => { e.stopPropagation(); showCreateEditModal('edit', project.id, project.title); };
+                // --- Додаємо обробники подій ---
                 
-                const exportBtn = document.createElement('button');
-                exportBtn.textContent = 'Експорт';
-                exportBtn.className = 'btn-icon export-btn';
-                exportBtn.onclick = (e) => { e.stopPropagation(); window.open(`/export-project?projectID=${project.id}`, '_blank'); };
-                
-                const deleteBtn = document.createElement('button');
-                deleteBtn.textContent = 'Видалити';
-                deleteBtn.className = 'btn-icon delete-btn';
-                deleteBtn.onclick = (e) => { e.stopPropagation(); showConfirmModal(`Ви впевнені, що хочете видалити проєкт "${project.title}"?`, () => handleDeleteProject(project.id)); };
-                
-                buttonsDiv.appendChild(editBtn);
-                buttonsDiv.appendChild(exportBtn);
-                buttonsDiv.appendChild(deleteBtn);
-                li.appendChild(titleSpan);
-                li.appendChild(buttonsDiv);
+                // Клік на назву відкриває проєкт
+                li.querySelector('.project-card-title').addEventListener('click', () => {
+                    openProjectWorkspace(project.id);
+                });
+
+                // Клік на кнопку "..." відкриває меню
+                li.querySelector('.project-card-menu-btn').addEventListener('click', (e) => {
+                    e.stopPropagation(); // Зупиняємо клік, щоб не закрилося одразу
+                    showProjectContextMenu(e, project);
+                });
+
                 projectsList.appendChild(li);
             });
         }
     } catch (error) {
         console.error('Не вдалося завантажити проєкти:', error);
         projectsList.innerHTML = '<li>Не вдалося завантажити проєкти.</li>';
-        showToast('Не вдалося завантажити проєкти.', 'error');
+        showToast(error.message, 'error');
     }
 }
 
@@ -467,10 +479,8 @@ async function handleCreateProject(title) {
         appContainer.classList.add('hidden');
         workspaceContainer.classList.remove('hidden');
         renderWorkspace();
-        // v0.8.0: Відкриваємо Dashboard за замовчуванням
         showTab('dashboard-tab'); 
 
-        // НОВЕ: Ініціалізуємо сортування і для нового проєкту
         initSortableLists();
 
         showToast('Проєкт створено!', 'success'); 
@@ -675,35 +685,47 @@ function hideConfirmModal() {
     confirmModal.classList.add('hidden');
 }
 
+// === v1.0.0: НОВІ ФУНКЦІЇ КОНТЕКСТНОГО МЕНЮ ===
+
+function showProjectContextMenu(event, project) {
+    projectContextMenu.classList.remove('hidden');
+    
+    // Позиціонування
+    projectContextMenu.style.top = `${event.pageY}px`;
+    projectContextMenu.style.left = `${event.pageX}px`;
+
+    // Прив'язка дій
+    contextEditBtn.onclick = () => {
+        showCreateEditModal('edit', project.id, project.title);
+    };
+    contextExportBtn.onclick = () => {
+        window.open(`/export-project?projectID=${project.id}`, '_blank');
+    };
+    contextDeleteBtn.onclick = () => {
+        showConfirmModal(`Ви впевнені, що хочете видалити проєкт "${project.title}"?`, () => handleDeleteProject(project.id));
+    };
+}
+
+function hideProjectContextMenu() {
+    projectContextMenu.classList.add('hidden');
+}
 
 // === v0.5.1 - ФУНКЦІЇ ЛІЧИЛЬНИКА СЛІВ ===
 
-/**
- * Допоміжна функція для підрахунку слів.
- * @param {string} text - Текст для підрахунку.
- * @returns {number} Кількість слів.
- */
 function countWords(text) {
     if (!text || text.trim() === "") {
         return 0;
     }
-    // Розбиваємо по пробілах, нових рядках та інших роздільниках
     const words = text.trim().split(/\s+/);
     return words.length;
 }
 
-/**
- * Оновлює лічильник у редакторі розділів в реальному часі.
- */
 function handleChapterTextInput(e) {
     if (selectedChapterIndex === null) return;
     const count = countWords(e.target.value);
     chapterCurrentWordCount.textContent = `${count} слів`;
 }
 
-/**
- * Розраховує та відображає загальну кількість слів у всіх розділах.
- */
 function updateTotalWordCount() {
     if (!currentProjectData || !currentProjectData.content.chapters) {
         chaptersTotalWordCount.textContent = 'Загалом: 0 слів';
@@ -711,7 +733,6 @@ function updateTotalWordCount() {
     }
     
     const totalCount = currentProjectData.content.chapters.reduce((sum, chapter) => {
-        // Додаємо `word_count` якщо воно є, інакше рахуємо на льоту
         const count = chapter.word_count || countWords(chapter.text);
         return sum + count;
     }, 0);
@@ -721,31 +742,22 @@ function updateTotalWordCount() {
 
 // === v0.8.0: НОВА ФУНКЦІЯ DASHBOARD ===
 
-/**
- * v0.8.0: Розраховує та відображає статистику на Dashboard.
- */
 function renderDashboard() {
     if (!currentProjectData) return;
 
-    const GOAL_WORDS = 50000; // Наша умовна мета
+    const GOAL_WORDS = 50000; 
     const totalCount = currentProjectData.totalWordCount || 0;
     
-    // Оновлюємо заголовок
     dashboardProjectTitle.textContent = currentProjectData.title || "Без назви";
-    
-    // Оновлюємо загальну к-ть слів
-    dashboardTotalWords.textContent = totalCount.toLocaleString('uk-UA'); // 45 234
+    dashboardTotalWords.textContent = totalCount.toLocaleString('uk-UA'); 
 
-    // Оновлюємо дату
     if (currentProjectData.updatedAt) {
-        // Конвертуємо Firebase Timestamp у JS Date
         const date = new Date(currentProjectData.updatedAt._seconds * 1000);
         dashboardLastUpdated.textContent = date.toLocaleString('uk-UA');
     } else {
         dashboardLastUpdated.textContent = 'Ще не зберігалось';
     }
 
-    // Оновлюємо прогрес-бар
     const progressPercent = Math.min((totalCount / GOAL_WORDS) * 100, 100);
     dashboardProgressFill.style.width = `${progressPercent}%`;
     dashboardProgressLabel.textContent = `${Math.floor(progressPercent)}% до мети (${GOAL_WORDS.toLocaleString('uk-UA')} слів)`;
@@ -759,7 +771,6 @@ function renderCharacterList() {
     charactersList.innerHTML = ''; 
     currentProjectData.content.characters.forEach((character, index) => {
         const li = document.createElement('li');
-        // v0.4.1 - Додано нумерацію
         li.textContent = `${index + 1}. ${character.name || 'Персонаж без імені'}`;
         li.dataset.index = index;
         li.addEventListener('click', () => {
@@ -800,7 +811,7 @@ async function handleAddNewCharacter() {
         arc: ""
     };
     currentProjectData.content.characters.push(newCharacter);
-    await saveCharactersArray(true); // Негайно зберегти
+    await saveCharactersArray(true); 
     const newIndex = currentProjectData.content.characters.length - 1;
     selectCharacter(newIndex);
 }
@@ -809,7 +820,7 @@ function handleDeleteCharacter() {
     const characterName = currentProjectData.content.characters[selectedCharacterIndex].name;
     showConfirmModal(`Ви впевнені, що хочете видалити персонажа "${characterName}"?`, async () => {
         currentProjectData.content.characters.splice(selectedCharacterIndex, 1);
-        await saveCharactersArray(true); // Негайно зберегти
+        await saveCharactersArray(true); 
         showCharacterEditor(false); 
         renderCharacterList(); 
     });
@@ -823,7 +834,7 @@ async function handleCharacterFieldSave(field, value) {
     if (field === 'name') {
         characterEditorTitle.textContent = `Редагування "${value}"`;
     }
-    await saveCharactersArray(); // Зберегти з затримкою
+    await saveCharactersArray(); 
     renderCharacterList();
 }
 async function saveCharactersArray(immediate = false) {
@@ -832,12 +843,6 @@ async function saveCharactersArray(immediate = false) {
 
 // === ФУНКЦІЇ: ВКЛАДКА "РОЗДІЛИ" ===
 
-// v0.6.0 - Додано helper для іконок
-/**
- * Повертає іконку-emoji для статусу розділу
- * @param {string} status - Статус (напр., "В роботі")
- * @returns {string} Emoji іконка
- */
 function getStatusIcon(status) {
     switch (status) {
         case "Заплановано": return "🗓️";
@@ -849,19 +854,16 @@ function getStatusIcon(status) {
     }
 }
 
-// v0.6.0 - ПОВНІСТЮ ПЕРЕПИСАНА ФУНКЦІЯ
 function renderChapterList() {
     if (!currentProjectData) return;
-    chaptersList.innerHTML = ''; // Очищуємо контейнер
+    chaptersList.innerHTML = ''; 
     
     currentProjectData.content.chapters.forEach((chapter, index) => {
-        // --- v0.6.0: Створюємо картку замість <li> ---
         const card = document.createElement('div');
         card.className = 'chapter-card';
         card.dataset.index = index;
         
         card.addEventListener('click', (e) => {
-            // Уникаємо кліку, якщо тягнемо за ручку
             if (e.target.classList.contains('card-drag-handle')) return;
             selectChapter(index);
         });
@@ -870,7 +872,6 @@ function renderChapterList() {
             card.classList.add('active');
         }
         
-        // --- Дані для картки ---
         const order = index + 1;
         const title = chapter.title || 'Розділ без назви';
         const status = chapter.status || 'Заплановано';
@@ -882,14 +883,13 @@ function renderChapterList() {
         
         if (status === 'Заплановано') {
             snippet = chapter.synopsis || 'Немає синопсису...';
-            snippetClass = 'card-snippet synopsis'; // Спеціальний клас для синопсису
+            snippetClass = 'card-snippet synopsis'; 
         } else if (chapter.text) {
-            snippet = chapter.text.substring(0, 80) + '...'; // Сніпет тексту
+            snippet = chapter.text.substring(0, 80) + '...'; 
         } else {
             snippet = 'Немає тексту...';
         }
         
-        // --- Генеруємо HTML картки (на основі image_b1545c.png) ---
         card.innerHTML = `
             <div class="card-header">
                 <span>${order}. ${title}</span>
@@ -909,7 +909,6 @@ function renderChapterList() {
         chaptersList.appendChild(card);
     });
     
-    // v0.5.1
     updateTotalWordCount();
 }
 
@@ -921,7 +920,6 @@ function showChapterEditor(show = true) {
         chapterEditorPane.classList.add('hidden');
         chapterEditorPlaceholder.classList.remove('hidden');
         selectedChapterIndex = null;
-        // v0.5.1
         chapterCurrentWordCount.textContent = '0 слів';
         renderChapterList(); 
     }
@@ -933,20 +931,17 @@ function selectChapter(index) {
     
     chapterEditorTitle.textContent = `Редагування "${chapter.title}"`;
     chapterTitleInput.value = chapter.title || '';
-    // v0.5.0 - Новий статус за замовчуванням
     chapterStatusInput.value = chapter.status || 'Заплановано';
     chapterTextInput.value = chapter.text || '';
     
-    // v0.5.1 - Встановлюємо лічильник при виборі
     const count = chapter.word_count || countWords(chapter.text || '');
-    chapter.word_count = count; // Переконуємось, що це число є в об'єкті
+    chapter.word_count = count; 
     chapterCurrentWordCount.textContent = `${count} слів`;
 
     showChapterEditor(true);
     renderChapterList();
 }
 async function handleAddNewChapter() {
-    // v0.5.0 - Додано нові поля
     const newChapter = {
         title: "Новий розділ",
         status: "Заплановано",
@@ -956,7 +951,7 @@ async function handleAddNewChapter() {
         updated_at: new Date().toISOString()
     };
     currentProjectData.content.chapters.push(newChapter);
-    await saveChaptersArray(true); // Негайно зберегти
+    await saveChaptersArray(true); 
     const newIndex = currentProjectData.content.chapters.length - 1;
     selectChapter(newIndex);
 }
@@ -965,16 +960,14 @@ function handleDeleteChapter() {
     const chapterTitle = currentProjectData.content.chapters[selectedChapterIndex].title;
     showConfirmModal(`Ви впевнені, що хочете видалити розділ "${chapterTitle}"?`, async () => {
         currentProjectData.content.chapters.splice(selectedChapterIndex, 1);
-        await saveChaptersArray(true); // Негайно зберегти
+        await saveChaptersArray(true); 
         showChapterEditor(false); 
         renderChapterList();
-        // v0.5.1
         updateTotalWordCount();
-        renderDashboard(); // v0.8.0
+        renderDashboard(); 
     });
 }
 
-// v0.6.0 - ПОВНІСТЮ ПЕРЕПИСАНА ФУНКЦІЯ
 async function handleChapterFieldSave(field, value) {
     if (selectedChapterIndex === null) return;
     const chapter = currentProjectData.content.chapters[selectedChapterIndex];
@@ -986,37 +979,29 @@ async function handleChapterFieldSave(field, value) {
         chapterEditorTitle.textContent = `Редагування "${value}"`;
     }
     
-    // v0.5.1 - Зберігаємо лічильник слів при зміні тексту
     if (field === 'text') {
         const count = countWords(value);
         chapter.word_count = count;
         chapterCurrentWordCount.textContent = `${count} слів`;
     }
 
-    // v0.5.0 - Оновлюємо дату
     chapter.updated_at = new Date().toISOString();
     
-    await saveChaptersArray(); // Зберегти з затримкою
+    await saveChaptersArray(); 
     
-    // v0.6.0 - Оновлюємо лише одну картку
     updateSingleChapterCard(selectedChapterIndex);
     
-    // v0.5.1
     updateTotalWordCount();
-    renderDashboard(); // v0.8.0
+    renderDashboard(); 
 }
 
-/**
- * v0.6.0 - Оновлює одну картку, а не весь список.
- */
 function updateSingleChapterCard(index) {
     const chapter = currentProjectData.content.chapters[index];
     if (!chapter) return;
 
     const card = chaptersList.querySelector(`[data-index="${index}"]`);
-    if (!card) return; // Картки немає, нічого не робимо
+    if (!card) return; 
 
-    // --- Оновлюємо дані картки ---
     const order = index + 1;
     const title = chapter.title || 'Розділ без назви';
     const status = chapter.status || 'Заплановано';
@@ -1035,7 +1020,6 @@ function updateSingleChapterCard(index) {
         snippet = 'Немає тексту...';
     }
 
-    // --- Оновлюємо HTML картки ---
     card.innerHTML = `
         <div class="card-header">
             <span>${order}. ${title}</span>
@@ -1066,7 +1050,6 @@ function renderLocationList() {
     locationsList.innerHTML = ''; 
     currentProjectData.content.locations.forEach((location, index) => {
         const li = document.createElement('li');
-        // v0.4.1 - Додано нумерацію
         li.textContent = `${index + 1}. ${location.name || 'Локація без назви'}`;
         li.dataset.index = index;
         li.addEventListener('click', () => {
@@ -1105,7 +1088,7 @@ async function handleAddNewLocation() {
         description: ""
     };
     currentProjectData.content.locations.push(newLocation);
-    await saveLocationsArray(true); // Негайно зберегти
+    await saveLocationsArray(true); 
     const newIndex = currentProjectData.content.locations.length - 1;
     selectLocation(newIndex);
 }
@@ -1114,7 +1097,7 @@ function handleDeleteLocation() {
     const locationName = currentProjectData.content.locations[selectedLocationIndex].name;
     showConfirmModal(`Ви впевнені, що хочете видалити локацію "${locationName}"?`, async () => {
         currentProjectData.content.locations.splice(selectedLocationIndex, 1);
-        await saveLocationsArray(true); // Негайно зберегти
+        await saveLocationsArray(true); 
         showLocationEditor(false); 
         renderLocationList(); 
     });
@@ -1128,7 +1111,7 @@ async function handleLocationFieldSave(field, value) {
     if (field === 'name') {
         locationEditorTitle.textContent = `Редагування "${value}"`;
     }
-    await saveLocationsArray(); // Зберегти з затримкою
+    await saveLocationsArray(); 
     renderLocationList();
 }
 async function saveLocationsArray(immediate = false) {
@@ -1142,7 +1125,6 @@ function renderPlotlineList() {
     plotlinesList.innerHTML = ''; 
     currentProjectData.content.plotlines.forEach((plotline, index) => {
         const li = document.createElement('li');
-        // v0.4.1 - Додано нумерацію
         li.textContent = `${index + 1}. ${plotline.title || 'Лінія без назви'}`;
         li.dataset.index = index;
         li.addEventListener('click', () => {
@@ -1181,7 +1163,7 @@ async function handleAddNewPlotline() {
         description: ""
     };
     currentProjectData.content.plotlines.push(newPlotline);
-    await savePlotlinesArray(true); // Негайно зберегти
+    await savePlotlinesArray(true); 
     const newIndex = currentProjectData.content.plotlines.length - 1;
     selectPlotline(newIndex);
 }
@@ -1190,7 +1172,7 @@ function handleDeletePlotline() {
     const plotlineTitle = currentProjectData.content.plotlines[selectedPlotlineIndex].title;
     showConfirmModal(`Ви впевнені, що хочете видалити сюжетну лінію "${plotlineTitle}"?`, async () => {
         currentProjectData.content.plotlines.splice(selectedPlotlineIndex, 1);
-        await savePlotlinesArray(true); // Негайно зберегти
+        await savePlotlinesArray(true); 
         showPlotlineEditor(false); 
         renderPlotlineList(); 
     });
@@ -1204,7 +1186,7 @@ async function handlePlotlineFieldSave(field, value) {
     if (field === 'name') {
         plotlineEditorTitle.textContent = `Редагування "${value}"`;
     }
-    await savePlotlinesArray(); // Зберегти з затримкою
+    await savePlotlinesArray(); 
     renderPlotlineList();
 }
 async function savePlotlinesArray(immediate = false) {
@@ -1218,26 +1200,19 @@ async function savePlotlinesArray(immediate = false) {
 function initSortableLists() {
     if (!currentProjectData) return;
 
-    // v0.6.0 - Додано 'handle'
     new Sortable(chaptersList, {
         animation: 150,
         ghostClass: 'sortable-ghost',
-        handle: '.card-drag-handle', // Вказуємо "ручку"
+        handle: '.card-drag-handle', 
         onEnd: async (evt) => {
             const { oldIndex, newIndex } = evt;
-            // 1. Оновити локальний масив
             const [item] = currentProjectData.content.chapters.splice(oldIndex, 1);
             currentProjectData.content.chapters.splice(newIndex, 0, item);
-            
-            // 2. Негайно зберегти (true)
             await saveChaptersArray(true);
-
-            // 3. Оновити UI, щоб індекси були правильні
             renderChapterList();
         }
     });
 
-    // 2. Сортування Персонажів
     new Sortable(charactersList, {
         animation: 150,
         ghostClass: 'sortable-ghost',
@@ -1250,7 +1225,6 @@ function initSortableLists() {
         }
     });
 
-    // 3. Сортування Локацій
     new Sortable(locationsList, {
         animation: 150,
         ghostClass: 'sortable-ghost',
@@ -1263,7 +1237,6 @@ function initSortableLists() {
         }
     });
 
-    // 4. Сортування Сюжетних ліній
     new Sortable(plotlinesList, {
         animation: 150,
         ghostClass: 'sortable-ghost',
@@ -1284,15 +1257,13 @@ function initSortableLists() {
 
 /**
  * Універсальна функція для збереження масивів
- * @param {boolean} [immediate=false] - Якщо true, зберегти негайно без таймера
  */
 async function saveArrayToDb(field, array, nameForToast, immediate = false) {
     if (!currentProjectID) return;
     console.log(`Запит на збереження ${nameForToast}. Негайно: ${immediate}`);
 
-    clearTimeout(saveTimer); // Завжди скасовуємо попередній таймер
+    clearTimeout(saveTimer); 
 
-    // Функція, яка власне і зберігає
     const doSave = async () => {
         showToast(`Збереження...`, 'info'); 
         try {
@@ -1307,16 +1278,14 @@ async function saveArrayToDb(field, array, nameForToast, immediate = false) {
             });
 
             // ОНОВЛЕНО v0.8.0: Отримуємо оновлені дані (для updatedAt, totalWordCount)
-            // Це потрібно, бо сервер тепер генерує дані (timestamp)
             const updatedProjectResponse = await fetch(`/get-project-content?projectID=${currentProjectID}`);
             if (!updatedProjectResponse.ok) throw new Error('Не вдалося оновити локальні дані');
             currentProjectData = await updatedProjectResponse.json();
-            // Оновлюємо Dashboard новими даними з сервера
             renderDashboard(); 
             
             if (!response.ok) throw new Error(`Помилка збереження ${nameForToast}`);
             
-            // ОНОВЛЕНО v0.8.0-fix: Виправлено одрук 'nameForTest' -> 'nameForToast'
+            // v0.8.0-fix: Виправлено одрук 'nameForTest' -> 'nameForToast'
             showToast(`${nameForToast.charAt(0).toUpperCase() + nameForToast.slice(1)} збережено!`, 'success');
         } catch (error) {
             console.error(`Помилка автозбереження ${nameForToast}:`, error);
@@ -1325,10 +1294,8 @@ async function saveArrayToDb(field, array, nameForToast, immediate = false) {
     };
 
     if (immediate) {
-        // Якщо негайно - просто викликаємо
         await doSave();
     } else {
-        // Якщо ні - ставимо таймер, як і раніше
-        saveTimer = setTimeout(doSave, 1000); // Затримка 1 сек (для полів вводу)
+        saveTimer = setTimeout(doSave, 1000); 
     }
 }

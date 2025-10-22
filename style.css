@@ -62,50 +62,109 @@ button:disabled {
     color: #999;
 } 
 
-/* --- СПИСОК ПРОЄКТІВ (ТЕМНА ТЕМА) --- */
+/* --- v1.0.0: СПИСОК ПРОЄКТІВ (КАРТКИ) --- */
 .app-header { display: flex; justify-content: space-between; align-items: center; }
 .app-header p { margin: 0; }
 .app-header button { width: auto; } /* Кнопка "Вийти" */
 
-#projects-list { list-style: none; padding: 0; }
-#projects-list li { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #444; }
-#projects-list li span { cursor: pointer; flex-grow: 1; font-size: 1.1em; }
-#projects-list li span:hover { color: #ffc107; } /* Жовтий акцент */
-.project-buttons { display: flex; gap: 5px; margin-left: 10px; }
+/* v1.0.0: Нова сітка для карток */
+.project-card-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+/* v1.0.0: Стиль картки проєкту */
+.project-card {
+    background-color: #444;
+    border: 1px solid #555;
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+}
+.project-card:hover {
+    border-color: #ffc107;
+}
+/* v1.0.0: Верхня частина картки (назва + кнопка) */
+.project-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 25px;
+}
+.project-card-title {
+    font-size: 1.25em;
+    font-weight: 600;
+    color: #eee;
+    margin: 0;
+    cursor: pointer;
+}
+.project-card-title:hover {
+    color: #ffc107;
+}
+/* v1.0.0: Кнопка "..." */
+.project-card-menu-btn {
+    width: auto;
+    background: transparent;
+    color: #aaa;
+    border: none;
+    padding: 0 5px;
+    font-size: 1.5em;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+}
+.project-card-menu-btn:hover {
+    background-color: #555;
+    color: #fff;
+}
+/* v1.0.0: Нижня частина (статистика) */
+.project-card-footer {
+    font-size: 0.9em;
+    color: #aaa;
+}
+.project-card-footer span:not(:last-child)::after {
+    content: " • ";
+    margin: 0 5px;
+}
+
 
 /* Кнопки-іконки (ТЕМНА ТЕМА) */
 .btn-icon { border: none; border-radius: 5px; padding: 6px 12px; cursor: pointer; width: auto; color: white; font-size: 14px; }
 .export-btn { background-color: #28a745; }
 .export-btn:hover { background-color: #218838; }
-.delete-btn { background-color: #dc3545; } /* Червоний (з ui-ux-opus.png) */
+.delete-btn { background-color: #dc3545; }
 .delete-btn:hover { background-color: #c82333; }
 .edit-btn { background-color: #ffc107; color: #212529; }
 .edit-btn:hover { background-color: #e0a800; }
-/* Спеціальні кнопки */
-#login-button { background-color: #007bff; color: white; } /* Лишаємо синім для логіну */
+#login-button { background-color: #007bff; color: white; }
 #login-button:hover { background-color: #0056b3; }
 
 
 /* ===================================== */
-/* --- РОБОЧЙ ПРОСТІР (ТЕМНА ТЕМА) --- */
+/* --- РОБОЧИЙ ПРОСТІР (ТЕМНА ТЕМА) --- */
 /* ===================================== */
 
-#workspace-title { margin: 0; color: #fff; } /* Яскравіший заголовок */
+#workspace-title { margin: 0; color: #fff; }
 #back-to-projects { background-color: #6c757d; color: white; }
 #back-to-projects:hover { background-color: #5a6268; }
 
-/* Навігація по вкладках (ТЕМНА ТЕМА) */
 #workspace-nav {
     display: flex;
     gap: 5px;
-    border-bottom: 2px solid #444; /* Темний роздільник */
+    border-bottom: 2px solid #444;
     margin: 20px 0;
     flex-wrap: wrap; 
 }
 .tab-btn {
     width: auto; 
     background-color: transparent;
-    color: #aaa; /* Сірий неактивний */
+    color: #aaa;
     padding: 10px 15px;
     border-radius: 6px 6px 0 0; 
     border: none;
@@ -117,13 +176,11 @@ button:disabled {
     background-color: #3a3a3a;
     color: #eee;
 }
-/* Активна вкладка (ТЕМНА ТЕМА) */
 .tab-btn.active {
-    color: #ffc107; /* Жовтий акцент */
+    color: #ffc107;
     border-bottom: 2px solid #ffc107;
 }
 
-/* Контент вкладок */
 .tab-content {
     display: none; 
     animation: fadeIn 0.3s ease; 
@@ -136,7 +193,6 @@ button:disabled {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Вкладка Чату (ТЕМНА ТЕМА) */
 #chat-tab {
     display: none; 
     flex-direction: column;
@@ -148,11 +204,11 @@ button:disabled {
 }
 #chat-window { 
     height: 100%; 
-    border: 1px solid #555; /* Темний бордер */
+    border: 1px solid #555;
     padding: 10px; 
     margin-bottom: 10px; 
     overflow-y: scroll; 
-    background-color: #2b2b2b; /* Най темніший фон */
+    background-color: #2b2b2b;
     border-radius: 6px;
 }
 .chat-input-area {
@@ -165,14 +221,13 @@ button:disabled {
 }
 .chat-input-area button {
     width: auto; 
-    background-color: #007bff; /* Синя кнопка "Надіслати" */
+    background-color: #007bff;
     color: white;
 }
 .chat-input-area button:hover { background-color: #0056b3; }
 
-/* Стилі чату (ТЕМНА ТЕМА) */
 .message { margin-bottom: 10px; padding: 8px 12px; border-radius: 8px; line-height: 1.4; white-space: pre-wrap; }
-.user { text-align: right; background-color: #405a74; color: #eee; margin-left: 20%; } /* Темно-синій */
+.user { text-align: right; background-color: #405a74; color: #eee; margin-left: 20%; }
 .bot { background-color: #444; color: #ddd; margin-right: 20%; }
 
 
@@ -180,60 +235,47 @@ button:disabled {
 /* --- v0.9.0: РЕДАКТОРИ СПИСКІВ (3 КОЛОНКИ) --- */
 /* ===================================== */
 
-/* v0.9.0: Новий flex-контейнер для 3-колонного макету */
 .list-editor-layout {
     display: flex;
-    gap: 0; /* Прибираємо gap */
-    /* min-height: 400px; ПРИБРАНО */
-    height: 70vh; /* Займаємо висоту екрану */
+    gap: 0;
+    height: 70vh; 
     min-height: 500px;
-    border: 1px solid #444; /* Загальна рамка */
+    border: 1px solid #444;
     border-radius: 8px;
-    background-color: #3a3a3a; /* Фон для всього редактора */
+    background-color: #3a3a3a;
 }
-
-/* v0.9.0: Панель списку (Колонка 1) */
 .list-pane {
-    flex: 0 0 300px; /* Фіксована ширина 300px */
-    border-right: 1px solid #444; /* Темний роздільник */
-    padding: 15px; /* Внутрішній відступ */
+    flex: 0 0 300px;
+    border-right: 1px solid #444;
+    padding: 15px;
     display: flex;
-    flex-direction: column; /* Кнопка зверху, список знизу */
-    overflow: hidden; /* Ховаємо те, що не влізло */
+    flex-direction: column;
+    overflow: hidden;
 }
-
-/* v0.9.0: Панель редактора (Колонка 2) */
 .editor-pane {
-    flex: 1; /* Займає решту місця */
+    flex: 1;
     padding: 20px;
-    display: flex; /* v0.9.0: Додано */
-    flex-direction: column; /* v0.9.0: Додано */
+    display: flex;
+    flex-direction: column;
 }
-
-/* v0.9.0: Заглушка, коли нічого не обрано */
 .editor-pane-placeholder {
-    flex: 1; /* Займає решту місця */
-    color: #888; /* Світліший текст-заглушка */
+    flex: 1;
+    color: #888;
     font-size: 1.1em;
     text-align: center;
     margin-top: 50px;
-    display: flex; /* v0.9.0: Додано */
-    justify-content: center; /* v0.9.0: Додано */
-    align-items: center; /* v0.9.0: Додано */
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
-
-/* v0.9.0: Контейнер для списку (ul або div) */
 .item-list {
     list-style: none;
     padding: 0;
     margin-top: 15px;
-    /* max-height: 400px; ПРИБРАНО v0.9.0 */
-    overflow-y: auto; /* v0.9.0: Тепер це єдиний скрол */
-    flex-grow: 1; /* v0.9.0: Займає весь доступний простір */
-    padding-right: 5px; /* Відступ для скролбару */
+    overflow-y: auto;
+    flex-grow: 1;
+    padding-right: 5px;
 }
-
-/* СТИЛІ ДЛЯ СТАРИХ СПИСКІВ (li) - (Без змін) */
 .item-list li {
     padding: 12px;
     border: 1px solid #555;
@@ -244,76 +286,68 @@ button:disabled {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: #ddd; /* Світлий текст */
-    background-color: #444; /* Фон елемента */
+    color: #ddd;
+    background-color: #444;
 }
 .item-list li:hover {
     background-color: #4a4a4a;
 }
 .item-list li.active {
-    background-color: #5a7b9d; /* Синій акцент (як у картках) */
+    background-color: #5a7b9d;
     border-color: #007bff;
     color: #fff;
 }
-
-/* "Привид" елемента, який перетягують */
 .sortable-ghost {
     opacity: 0.4;
     background: #5a7b9d;
 }
-
-/* Лічильники слів (ТЕМНА ТЕМА) */
 .list-summary {
     text-align: right;
     font-size: 0.9em;
-    color: #aaa; /* Світло-сірий */
+    color: #aaa;
     font-weight: 500;
     margin-top: 10px;
     padding-right: 5px;
-    flex-shrink: 0; /* v0.9.0: Не стискати лічильник */
+    flex-shrink: 0;
 }
 .editor-word-count {
     text-align: right;
     font-size: 0.9em;
-    color: #aaa; /* Світло-сірий */
+    color: #aaa;
     margin-top: -10px; 
     margin-bottom: 10px;
     padding-right: 5px;
-    flex-shrink: 0; /* v0.9.0: Не стискати лічильник */
+    flex-shrink: 0;
 }
-
-
-/* Специфічно для Розділів */
 .input-row {
     display: flex;
     gap: 15px;
-    flex-shrink: 0; /* v0.9.0: Не стискати */
+    flex-shrink: 0;
 }
 .input-group {
     flex: 1;
 }
-/* v0.9.0: Поля textarea тепер розтягуються */
 #chapter-text-input {
     min-height: 250px; 
-    flex-grow: 1; /* v0.9.0: Займає весь простір */
+    flex-grow: 1;
 }
 #character-desc-input, #character-arc-input, 
 #location-desc-input, #plotline-desc-input {
-    flex-grow: 1; /* v0.9.0: Займає весь простір */
-    min-height: 150px; /* v0.9.0: Мінімальна висота */
+    flex-grow: 1;
+    min-height: 150px;
 }
 
 
 /* --- СПІНЕР (ТЕМНА ТЕМА) --- */
 #spinner-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.7); /* Темне тло */
+    background: rgba(0, 0, 0, 0.7);
     display: flex;
     justify-content: center; align-items: center; z-index: 1000;
 }
 .spinner {
-    border: 8px solid #555; /* Темний фон */
-    border-top: 8px solid #ffc107; /* Жовтий акцент */
+    border: 8px solid #555;
+    border-top: 8px solid #ffc107;
     border-radius: 50%; width: 60px; height: 60px;
     animation: spin 1s linear infinite;
 }
@@ -344,13 +378,13 @@ button:disabled {
 /* --- МОДАЛЬНІ ВІКНА (ТЕМНА ТЕМА) --- */
 .modal {
     position: fixed; z-index: 1002; left: 0; top: 0;
-    width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); /* Темніше тло */
+    width: 100%; height: 100%; background-color: rgba(0,0,0,0.8);
     display: flex; justify-content: center; align-items: center; padding: 10px;
 }
 .modal-content {
-    background-color: #3a3a3a; /* Темний фон модалки */
+    background-color: #3a3a3a;
     margin: auto; padding: 30px;
-    border: 1px solid #555; /* Темний бордер */
+    border: 1px solid #555;
     width: 80%; max-width: 400px;
     border-radius: 8px; 
     text-align: center; box-sizing: border-box;
@@ -360,7 +394,6 @@ button:disabled {
     display: flex; justify-content: center;
     gap: 15px; flex-wrap: wrap;
 }
-/* Кнопки в модалках лишаємо акцентними */
 .modal-buttons .btn-primary {
     background-color: #ffc107; color: #212529; padding: 10px 20px;
     font-size: 16px;
@@ -377,7 +410,7 @@ button:disabled {
 #app-footer {
     text-align: center;
     margin-top: 30px;
-    color: #888; /* Світліший текст футера */
+    color: #888;
     font-size: 0.9em;
 }
 #app-footer p {
@@ -388,16 +421,9 @@ button:disabled {
 /* --- v0.6.0 - СТИЛІ КАРТОК РОЗДІЛІВ --- */
 /* ===================================== */
 
-/* v0.9.0: Контейнер карток тепер є .item-list */
 .card-list-container {
-    /* max-height: 450px; ПРИБРАНО v0.9.0 */
-    /* background-color: #333; ПРИБРАНО v0.9.0 (тепер фон у .list-pane) */
-    /* border-radius: 8px; ПРИБРАНО v0.9.0 */
-    padding: 0; /* v0.9.0: Прибрано, щоб картки були впритул */
-    /* border: 1px solid #444; ПРИБРАНО v0.9.0 */
+    padding: 0;
 }
-
-/* Картка розділу (Без змін) */
 .chapter-card {
     background-color: #444; 
     border: 1px solid #555;
@@ -413,12 +439,10 @@ button:disabled {
     border-color: #777;
 }
 .chapter-card.active {
-    background-color: #5a7b9d; /* Синій акцент */
+    background-color: #5a7b9d;
     border-color: #007bff;
     color: #fff;
 }
-
-/* Структура картки (Без змін) */
 .card-header {
     display: flex;
     justify-content: space-between;
@@ -485,10 +509,8 @@ button:disabled {
     text-transform: uppercase;
     font-size: 0.9em;
 }
-
-/* Велика кнопка "Писати" */
 .widget-full {
-    grid-column: 1 / -1; /* Зайняти весь рядок */
+    grid-column: 1 / -1;
 }
 .btn-primary-large {
     width: 100%;
@@ -505,8 +527,6 @@ button:disabled {
 .btn-primary-large:hover {
     background-color: #e0a800;
 }
-
-/* Статистика (цифри) */
 .stat-number {
     font-size: 2.5em;
     font-weight: 600;
@@ -516,8 +536,6 @@ button:disabled {
     font-size: 1.1em;
     color: #ccc;
 }
-
-/* Прогрес-бар */
 .progress-bar {
     width: 100%;
     height: 10px;
@@ -528,8 +546,46 @@ button:disabled {
 }
 .progress-fill {
     height: 100%;
-    width: 0%; /* Буде керуватися через JS */
+    width: 0%;
     background-color: #ffc107;
     border-radius: 5px;
     transition: width 0.5s ease;
+}
+
+/* ===================================== */
+/* --- v1.0.0: КОНТЕКСТНЕ МЕНЮ --- */
+/* ===================================== */
+.context-menu {
+    position: fixed;
+    z-index: 1003;
+    background-color: #3a3a3a;
+    border: 1px solid #555;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.context-menu button {
+    width: 100%;
+    background: transparent;
+    color: #eee;
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    border-radius: 4px;
+}
+.context-menu button:hover {
+    background-color: #555;
+}
+/* Спеціальний колір для видалення */
+#context-delete-btn {
+    color: #ff8b8b;
+}
+#context-delete-btn:hover {
+    background-color: #dc3545;
+    color: #fff;
 }

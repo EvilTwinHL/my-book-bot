@@ -4,8 +4,6 @@
 
 body { 
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-    /* max-width: 800px; ПРИБРАНО */
-    /* margin: 20px auto; ПРИБРАНО */
     padding: 10px; 
     background-color: #2b2b2b; /* Новий фон */
     color: #eee; /* Новий текст */
@@ -14,7 +12,6 @@ body {
     background-color: #333; /* Новий фон контейнера */
     padding: 25px; 
     border-radius: 12px; 
-    /* box-shadow: 0 4px 12px rgba(0,0,0,0.05); ПРИБРАНО */
     margin: 20px auto; /* Залишаємо auto-margin */
     width: 95%; /* Нова ширина */
     max-width: 1600px; /* Новий максимум */
@@ -90,7 +87,7 @@ button:disabled {
 
 
 /* ===================================== */
-/* --- РОБОЧИЙ ПРОСТІР (ТЕМНА ТЕМА) --- */
+/* --- РОБОЧЙ ПРОСТІР (ТЕМНА ТЕМА) --- */
 /* ===================================== */
 
 #workspace-title { margin: 0; color: #fff; } /* Яскравіший заголовок */
@@ -180,36 +177,63 @@ button:disabled {
 
 
 /* ===================================== */
-/* --- РЕДАКТОРИ СПИСКІВ (ТЕМНА ТЕМА) --- */
+/* --- v0.9.0: РЕДАКТОРИ СПИСКІВ (3 КОЛОНКИ) --- */
 /* ===================================== */
+
+/* v0.9.0: Новий flex-контейнер для 3-колонного макету */
 .list-editor-layout {
     display: flex;
-    gap: 20px;
-    min-height: 400px; /* Залишаємо */
+    gap: 0; /* Прибираємо gap */
+    /* min-height: 400px; ПРИБРАНО */
+    height: 70vh; /* Займаємо висоту екрану */
+    min-height: 500px;
+    border: 1px solid #444; /* Загальна рамка */
+    border-radius: 8px;
+    background-color: #3a3a3a; /* Фон для всього редактора */
 }
+
+/* v0.9.0: Панель списку (Колонка 1) */
 .list-pane {
-    flex: 1; 
+    flex: 0 0 300px; /* Фіксована ширина 300px */
     border-right: 1px solid #444; /* Темний роздільник */
-    padding-right: 20px;
+    padding: 15px; /* Внутрішній відступ */
+    display: flex;
+    flex-direction: column; /* Кнопка зверху, список знизу */
+    overflow: hidden; /* Ховаємо те, що не влізло */
 }
+
+/* v0.9.0: Панель редактора (Колонка 2) */
 .editor-pane {
-    flex: 2; 
+    flex: 1; /* Займає решту місця */
+    padding: 20px;
+    display: flex; /* v0.9.0: Додано */
+    flex-direction: column; /* v0.9.0: Додано */
 }
+
+/* v0.9.0: Заглушка, коли нічого не обрано */
 .editor-pane-placeholder {
-    flex: 2; 
+    flex: 1; /* Займає решту місця */
     color: #888; /* Світліший текст-заглушка */
     font-size: 1.1em;
     text-align: center;
     margin-top: 50px;
+    display: flex; /* v0.9.0: Додано */
+    justify-content: center; /* v0.9.0: Додано */
+    align-items: center; /* v0.9.0: Додано */
 }
+
+/* v0.9.0: Контейнер для списку (ul або div) */
 .item-list {
     list-style: none;
     padding: 0;
     margin-top: 15px;
-    max-height: 400px; /* ЦЕ ОБМЕЖЕННЯ МИ СКОРО ПРИБЕРЕМО (у v0.9.0) */
-    overflow-y: auto;
+    /* max-height: 400px; ПРИБРАНО v0.9.0 */
+    overflow-y: auto; /* v0.9.0: Тепер це єдиний скрол */
+    flex-grow: 1; /* v0.9.0: Займає весь доступний простір */
+    padding-right: 5px; /* Відступ для скролбару */
 }
-/* СТИЛІ ДЛЯ СТАРИХ СПИСКІВ (li) - ТЕПЕР ТЕМНІ */
+
+/* СТИЛІ ДЛЯ СТАРИХ СПИСКІВ (li) - (Без змін) */
 .item-list li {
     padding: 12px;
     border: 1px solid #555;
@@ -246,6 +270,7 @@ button:disabled {
     font-weight: 500;
     margin-top: 10px;
     padding-right: 5px;
+    flex-shrink: 0; /* v0.9.0: Не стискати лічильник */
 }
 .editor-word-count {
     text-align: right;
@@ -254,6 +279,7 @@ button:disabled {
     margin-top: -10px; 
     margin-bottom: 10px;
     padding-right: 5px;
+    flex-shrink: 0; /* v0.9.0: Не стискати лічильник */
 }
 
 
@@ -261,12 +287,20 @@ button:disabled {
 .input-row {
     display: flex;
     gap: 15px;
+    flex-shrink: 0; /* v0.9.0: Не стискати */
 }
 .input-group {
     flex: 1;
 }
+/* v0.9.0: Поля textarea тепер розтягуються */
 #chapter-text-input {
     min-height: 250px; 
+    flex-grow: 1; /* v0.9.0: Займає весь простір */
+}
+#character-desc-input, #character-arc-input, 
+#location-desc-input, #plotline-desc-input {
+    flex-grow: 1; /* v0.9.0: Займає весь простір */
+    min-height: 150px; /* v0.9.0: Мінімальна висота */
 }
 
 
@@ -351,21 +385,19 @@ button:disabled {
 }
 
 /* ===================================== */
-/* --- v0.6.0 - СТИЛІ КАРТОК РОЗДІЛІВ (Без змін) --- */
+/* --- v0.6.0 - СТИЛІ КАРТОК РОЗДІЛІВ --- */
 /* ===================================== */
 
-/* Контейнер карток - стилі v0.6.0 вже темні! */
+/* v0.9.0: Контейнер карток тепер є .item-list */
 .card-list-container {
-    max-height: 450px; 
-    overflow-y: auto;
-    margin-top: 15px;
-    background-color: #333; /* Цей стиль вже був, ідеально */
-    border-radius: 8px;
-    padding: 10px;
-    border: 1px solid #444; /* Цей стиль вже був */
+    /* max-height: 450px; ПРИБРАНО v0.9.0 */
+    /* background-color: #333; ПРИБРАНО v0.9.0 (тепер фон у .list-pane) */
+    /* border-radius: 8px; ПРИБРАНО v0.9.0 */
+    padding: 0; /* v0.9.0: Прибрано, щоб картки були впритул */
+    /* border: 1px solid #444; ПРИБРАНО v0.9.0 */
 }
 
-/* Картка розділу - стилі v0.6.0 вже темні! */
+/* Картка розділу (Без змін) */
 .chapter-card {
     background-color: #444; 
     border: 1px solid #555;

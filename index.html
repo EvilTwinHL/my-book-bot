@@ -121,6 +121,7 @@
                     <div class="list-pane">
                         <button id="add-chapter-btn" class="btn-icon export-btn" style="width: 100%; background-color: #28a745;">[ + ] Новий розділ</button>
                         <ul id="chapters-list" class="item-list"></ul>
+                        <div class="list-summary" id="chapters-total-word-count"></div>
                     </div>
                     <div id="chapter-editor-pane" class="editor-pane hidden">
                         <h4 id="chapter-editor-title">Редагування</h4>
@@ -132,16 +133,17 @@
                             <div class="input-group">
                                 <label for="chapter-status-input">Статус:</label>
                                 <select id="chapter-status-input">
-                                   <option value="Заплановано">🗓️ Заплановано</option>
-                                   <option value="В роботі">✏️ В роботі</option>
-                                   <option value="Завершено">✅ Завершено</option>
-                                   <option value="На редагуванні">🔄 На редагуванні</option>
-                                   <option value="Потребує уваги">❓ Потребує уваги</option>
+                                    <option value="Заплановано">🗓️ Заплановано</option>
+                                    <option value="В роботі">✏️ В роботі</option>
+                                    <option value="Завершено">✅ Завершено</option>
+                                    <option value="На редагуванні">🔄 На редагуванні</option>
+                                    <option value="Потребує уваги">❓ Потребує уваги</option>
                                 </select>
                             </div>
                         </div>
                         <label for="chapter-text-input">Текст розділу:</label>
                         <textarea id="chapter-text-input" rows="15" placeholder="Почніть писати тут..."></textarea>
+                        <div class="editor-word-count" id="chapter-current-word-count">0 слів</div>
                         <button id="delete-chapter-btn" class="btn-icon delete-btn" style="width: auto; margin-top: 10px;">Видалити розділ</button>
                     </div>
                     <div id="chapter-editor-placeholder" class="editor-pane-placeholder">

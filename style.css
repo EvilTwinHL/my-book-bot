@@ -203,6 +203,24 @@ select {
     background: #c0e1ff;
 }
 
+/* ОНОВЛЕНО: v0.5.1 - Нові стилі лічильників слів */
+.list-summary {
+    text-align: right;
+    font-size: 0.9em;
+    color: #555;
+    font-weight: 500;
+    margin-top: 10px;
+    padding-right: 5px;
+}
+.editor-word-count {
+    text-align: right;
+    font-size: 0.9em;
+    color: #777;
+    margin-top: -10px; /* Підтягнути ближче до textarea */
+    margin-bottom: 10px;
+    padding-right: 5px;
+}
+
 
 /* Специфічно для Розділів */
 .input-row {

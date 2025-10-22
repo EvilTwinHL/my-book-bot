@@ -1,5 +1,5 @@
 // === ГЛОБАЛЬНІ ЗМІННІ ===
-const APP_VERSION = "0.5.0"; // Встановлюємо нову версію
+const APP_VERSION = "0.5.1"; // ОНОВЛЕНО: v0.5.1
 
 let currentUser = null;
 let currentProjectID = null;
@@ -39,7 +39,8 @@ let charactersList, addCharacterBtn, characterEditorPane,
 // ЕЛЕМЕНТИ (ВКЛАДКА РОЗДІЛІВ)
 let chaptersList, addChapterBtn, chapterEditorPane,
     chapterEditorPlaceholder, chapterEditorTitle, chapterTitleInput,
-    chapterStatusInput, chapterTextInput, deleteChapterBtn;
+    chapterStatusInput, chapterTextInput, deleteChapterBtn,
+    chaptersTotalWordCount, chapterCurrentWordCount; // <-- ОНОВЛЕНО: v0.5.1
 
 // ЕЛЕМЕНТИ (ВКЛАДКА ЛОКАЦІЙ)
 let locationsList, addLocationBtn, locationEditorPane,
@@ -137,6 +138,9 @@ function bindUIElements() {
     chapterStatusInput = document.getElementById('chapter-status-input');
     chapterTextInput = document.getElementById('chapter-text-input');
     deleteChapterBtn = document.getElementById('delete-chapter-btn');
+    // ОНОВЛЕНО: v0.5.1
+    chaptersTotalWordCount = document.getElementById('chapters-total-word-count');
+    chapterCurrentWordCount = document.getElementById('chapter-current-word-count');
 
     // Вкладка "Локації"
     locationsList = document.getElementById('locations-list');
@@ -203,6 +207,8 @@ function bindEventListeners() {
     chapterTitleInput.addEventListener('blur', (e) => handleChapterFieldSave('title', e.target.value));
     chapterStatusInput.addEventListener('change', (e) => handleChapterFieldSave('status', e.target.value)); 
     chapterTextInput.addEventListener('blur', (e) => handleChapterFieldSave('text', e.target.value));
+    // ОНОВЛЕНО: v0.5.1 - Слухач для лічильника в реальному часі
+    chapterTextInput.addEventListener('input', handleChapterTextInput);
 
     // Обробники для вкладки "Локації"
     addLocationBtn.addEventListener('click', handleAddNewLocation);
@@ -649,6 +655,50 @@ function hideConfirmModal() {
 }
 
 
+// === ОНОВЛЕНО: v0.5.1 - ДОДАНО НОВІ ФУНКЦІЇ ЛІЧИЛЬНИКА СЛІВ ===
+
+/**
+ * Допоміжна функція для підрахунку слів.
+ * @param {string} text - Текст для підрахунку.
+ * @returns {number} Кількість слів.
+ */
+function countWords(text) {
+    if (!text || text.trim() === "") {
+        return 0;
+    }
+    // Розбиваємо по пробілах, нових рядках та інших роздільниках
+    const words = text.trim().split(/\s+/);
+    return words.length;
+}
+
+/**
+ * Оновлює лічильник у редакторі розділів в реальному часі.
+ */
+function handleChapterTextInput(e) {
+    if (selectedChapterIndex === null) return;
+    const count = countWords(e.target.value);
+    chapterCurrentWordCount.textContent = `${count} слів`;
+}
+
+/**
+ * Розраховує та відображає загальну кількість слів у всіх розділах.
+ */
+function updateTotalWordCount() {
+    if (!currentProjectData || !currentProjectData.content.chapters) {
+        chaptersTotalWordCount.textContent = 'Загалом: 0 слів';
+        return;
+    }
+    
+    const totalCount = currentProjectData.content.chapters.reduce((sum, chapter) => {
+        // Додаємо `word_count` якщо воно є, інакше рахуємо на льоту
+        const count = chapter.word_count || countWords(chapter.text);
+        return sum + count;
+    }, 0);
+    
+    chaptersTotalWordCount.textContent = `Загалом: ${totalCount} слів`;
+}
+
+
 // === ФУНКЦІЇ: ВКЛАДКА "ПЕРСОНАЖІ" ===
 
 function renderCharacterList() {
@@ -656,7 +706,7 @@ function renderCharacterList() {
     charactersList.innerHTML = ''; 
     currentProjectData.content.characters.forEach((character, index) => {
         const li = document.createElement('li');
-        // Відображаємо номер (індекс + 1)
+        // ОНОВЛЕНО: v0.4.1 - Додано нумерацію
         li.textContent = `${index + 1}. ${character.name || 'Персонаж без імені'}`;
         li.dataset.index = index;
         li.addEventListener('click', () => {
@@ -734,7 +784,7 @@ function renderChapterList() {
     chaptersList.innerHTML = ''; 
     currentProjectData.content.chapters.forEach((chapter, index) => {
         const li = document.createElement('li');
-        // Відображаємо номер (індекс + 1)
+        // ОНОВЛЕНО: v0.4.1 - Додано нумерацію
         li.textContent = `${index + 1}. ${chapter.title || 'Розділ без назви'}`;
         li.dataset.index = index;
         li.addEventListener('click', () => {
@@ -745,6 +795,8 @@ function renderChapterList() {
         }
         chaptersList.appendChild(li);
     });
+    // ОНОВЛЕНО: v0.5.1
+    updateTotalWordCount();
 }
 function showChapterEditor(show = true) {
     if (show) {
@@ -754,6 +806,8 @@ function showChapterEditor(show = true) {
         chapterEditorPane.classList.add('hidden');
         chapterEditorPlaceholder.classList.remove('hidden');
         selectedChapterIndex = null;
+        // ОНОВЛЕНО: v0.5.1
+        chapterCurrentWordCount.textContent = '0 слів';
         renderChapterList(); 
     }
 }
@@ -764,20 +818,27 @@ function selectChapter(index) {
     
     chapterEditorTitle.textContent = `Редагування "${chapter.title}"`;
     chapterTitleInput.value = chapter.title || '';
-    chapterStatusInput.value = chapter.status || 'Заплановано'; // <-- ЗМІНЕНО
+    // ОНОВЛЕНО: v0.5.0 - Новий статус за замовчуванням
+    chapterStatusInput.value = chapter.status || 'Заплановано';
     chapterTextInput.value = chapter.text || '';
     
+    // ОНОВЛЕНО: v0.5.1 - Встановлюємо лічильник при виборі
+    const count = chapter.word_count || countWords(chapter.text || '');
+    chapter.word_count = count; // Переконуємось, що це число є в об'єкті
+    chapterCurrentWordCount.textContent = `${count} слів`;
+
     showChapterEditor(true);
     renderChapterList();
 }
 async function handleAddNewChapter() {
+    // ОНОВЛЕНО: v0.5.0 - Додано нові поля
     const newChapter = {
         title: "Новий розділ",
-        status: "Заплановано", // <-- ЗМІНЕНО
+        status: "Заплановано",
         text: "",
-        synopsis: "", // <-- ДОДАНО
-        word_count: 0, // <-- ДОДАНО
-        updated_at: new Date().toISOString() // <-- ДОДАНО
+        synopsis: "", 
+        word_count: 0,
+        updated_at: new Date().toISOString()
     };
     currentProjectData.content.chapters.push(newChapter);
     await saveChaptersArray(true); // Негайно зберегти
@@ -791,7 +852,9 @@ function handleDeleteChapter() {
         currentProjectData.content.chapters.splice(selectedChapterIndex, 1);
         await saveChaptersArray(true); // Негайно зберегти
         showChapterEditor(false); 
-        renderChapterList(); 
+        renderChapterList();
+        // ОНОВЛЕНО: v0.5.1
+        updateTotalWordCount();
     });
 }
 async function handleChapterFieldSave(field, value) {
@@ -804,10 +867,20 @@ async function handleChapterFieldSave(field, value) {
         chapterEditorTitle.textContent = `Редагування "${value}"`;
     }
     
-    chapter.updated_at = new Date().toISOString(); // <-- ДОДАНО ЦЕЙ РЯДОК
+    // ОНОВЛЕНО: v0.5.1 - Зберігаємо лічильник слів при зміні тексту
+    if (field === 'text') {
+        const count = countWords(value);
+        chapter.word_count = count;
+        chapterCurrentWordCount.textContent = `${count} слів`;
+    }
 
+    // ОНОВЛЕНО: v0.5.0 - Оновлюємо дату
+    chapter.updated_at = new Date().toISOString();
+    
     await saveChaptersArray(); // Зберегти з затримкою
     renderChapterList();
+    // ОНОВЛЕНО: v0.5.1
+    updateTotalWordCount();
 }
 async function saveChaptersArray(immediate = false) {
     await saveArrayToDb("content.chapters", currentProjectData.content.chapters, "розділів", immediate);
@@ -821,7 +894,7 @@ function renderLocationList() {
     locationsList.innerHTML = ''; 
     currentProjectData.content.locations.forEach((location, index) => {
         const li = document.createElement('li');
-        // Відображаємо номер (індекс + 1)
+        // ОНОВЛЕНО: v0.4.1 - Додано нумерацію
         li.textContent = `${index + 1}. ${location.name || 'Локація без назви'}`;
         li.dataset.index = index;
         li.addEventListener('click', () => {
@@ -897,7 +970,7 @@ function renderPlotlineList() {
     plotlinesList.innerHTML = ''; 
     currentProjectData.content.plotlines.forEach((plotline, index) => {
         const li = document.createElement('li');
-        // Відображаємо номер (індекс + 1)
+        // ОНОВЛЕНО: v0.4.1 - Додано нумерацію
         li.textContent = `${index + 1}. ${plotline.title || 'Лінія без назви'}`;
         li.dataset.index = index;
         li.addEventListener('click', () => {
@@ -976,6 +1049,7 @@ function initSortableLists() {
     // 1. Сортування Розділів
     new Sortable(chaptersList, {
         animation: 150,
+        ghostClass: 'sortable-ghost', // Додано з v0.4.0 style.css
         onEnd: async (evt) => {
             const { oldIndex, newIndex } = evt;
             // 1. Оновити локальний масив
@@ -993,6 +1067,7 @@ function initSortableLists() {
     // 2. Сортування Персонажів
     new Sortable(charactersList, {
         animation: 150,
+        ghostClass: 'sortable-ghost',
         onEnd: async (evt) => {
             const { oldIndex, newIndex } = evt;
             const [item] = currentProjectData.content.characters.splice(oldIndex, 1);
@@ -1005,6 +1080,7 @@ function initSortableLists() {
     // 3. Сортування Локацій
     new Sortable(locationsList, {
         animation: 150,
+        ghostClass: 'sortable-ghost',
         onEnd: async (evt) => {
             const { oldIndex, newIndex } = evt;
             const [item] = currentProjectData.content.locations.splice(oldIndex, 1);
@@ -1017,6 +1093,7 @@ function initSortableLists() {
     // 4. Сортування Сюжетних ліній
     new Sortable(plotlinesList, {
         animation: 150,
+        ghostClass: 'sortable-ghost',
         onEnd: async (evt) => {
             const { oldIndex, newIndex } = evt;
             const [item] = currentProjectData.content.plotlines.splice(oldIndex, 1);

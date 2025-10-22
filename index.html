@@ -68,6 +68,8 @@
         </div>
 
         <nav id="workspace-nav">
+            <button class="tab-btn" data-tab="dashboard-tab">📈 Dashboard</button>
+            
             <button class="tab-btn active" data-tab="core-tab">💡 Ядро</button>
             <button class="tab-btn" data-tab="characters-tab">👥 Персонажі</button>
             <button class="tab-btn" data-tab="chapters-tab">📝 Розділи</button>
@@ -78,6 +80,37 @@
         </nav>
 
         <div id="workspace-content">
+
+            <div id="dashboard-tab" class="tab-content">
+                <h3>📈 Dashboard: <span id="dashboard-project-title"></span></h3>
+                <p>Загальний огляд Вашого проєкту.</p>
+                
+                <div class="dashboard-grid">
+                    <div class="widget widget-full">
+                        <button id="dashboard-write-btn" class="btn-primary-large">
+                            ✏️ Продовжити писати
+                        </button>
+                    </div>
+
+                    <div class="widget">
+                        <h4>Загальна кількість слів</h4>
+                        <div class="stat-number" id="dashboard-total-words">0</div>
+                    </div>
+                    
+                    <div class="widget">
+                        <h4>Прогрес до мети (50k)</h4>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="dashboard-progress-fill"></div>
+                        </div>
+                        <div class="stat-label" id="dashboard-progress-label">0%</div>
+                    </div>
+
+                    <div class="widget">
+                        <h4>Останнє оновлення</h4>
+                        <div class="stat-label" id="dashboard-last-updated">...</div>
+                    </div>
+                </div>
+            </div>
 
             <div id="core-tab" class="tab-content active">
                 <h3>💡 Ядро Ідеї</h3>

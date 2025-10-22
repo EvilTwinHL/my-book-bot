@@ -1,5 +1,5 @@
 // === ГЛОБАЛЬНІ ЗМІННІ ===
-const APP_VERSION = "0.4.1"; // Встановлюємо нову версію
+const APP_VERSION = "0.5.0"; // Встановлюємо нову версію
 
 let currentUser = null;
 let currentProjectID = null;
@@ -764,7 +764,7 @@ function selectChapter(index) {
     
     chapterEditorTitle.textContent = `Редагування "${chapter.title}"`;
     chapterTitleInput.value = chapter.title || '';
-    chapterStatusInput.value = chapter.status || 'Чернетка';
+    chapterStatusInput.value = chapter.status || 'Заплановано'; // <-- ЗМІНЕНО
     chapterTextInput.value = chapter.text || '';
     
     showChapterEditor(true);
@@ -773,8 +773,11 @@ function selectChapter(index) {
 async function handleAddNewChapter() {
     const newChapter = {
         title: "Новий розділ",
-        status: "Чернетка",
-        text: ""
+        status: "Заплановано", // <-- ЗМІНЕНО
+        text: "",
+        synopsis: "", // <-- ДОДАНО
+        word_count: 0, // <-- ДОДАНО
+        updated_at: new Date().toISOString() // <-- ДОДАНО
     };
     currentProjectData.content.chapters.push(newChapter);
     await saveChaptersArray(true); // Негайно зберегти
@@ -801,6 +804,8 @@ async function handleChapterFieldSave(field, value) {
         chapterEditorTitle.textContent = `Редагування "${value}"`;
     }
     
+    chapter.updated_at = new Date().toISOString(); // <-- ДОДАНО ЦЕЙ РЯДОК
+
     await saveChaptersArray(); // Зберегти з затримкою
     renderChapterList();
 }

@@ -1,5 +1,5 @@
 // === ГЛОБАЛЬНІ ЗМІННІ ===
-const APP_VERSION = "0.4.0"; // Встановлюємо нову версію
+const APP_VERSION = "0.4.1"; // Встановлюємо нову версію
 
 let currentUser = null;
 let currentProjectID = null;
@@ -656,7 +656,8 @@ function renderCharacterList() {
     charactersList.innerHTML = ''; 
     currentProjectData.content.characters.forEach((character, index) => {
         const li = document.createElement('li');
-        li.textContent = character.name || 'Персонаж без імені';
+        // Відображаємо номер (індекс + 1)
+        li.textContent = `${index + 1}. ${character.name || 'Персонаж без імені'}`;
         li.dataset.index = index;
         li.addEventListener('click', () => {
             selectCharacter(index);
@@ -733,7 +734,8 @@ function renderChapterList() {
     chaptersList.innerHTML = ''; 
     currentProjectData.content.chapters.forEach((chapter, index) => {
         const li = document.createElement('li');
-        li.textContent = chapter.title || 'Розділ без назви';
+        // Відображаємо номер (індекс + 1)
+        li.textContent = `${index + 1}. ${chapter.title || 'Розділ без назви'}`;
         li.dataset.index = index;
         li.addEventListener('click', () => {
             selectChapter(index);
@@ -814,7 +816,8 @@ function renderLocationList() {
     locationsList.innerHTML = ''; 
     currentProjectData.content.locations.forEach((location, index) => {
         const li = document.createElement('li');
-        li.textContent = location.name || 'Локація без назви';
+        // Відображаємо номер (індекс + 1)
+        li.textContent = `${index + 1}. ${location.name || 'Локація без назви'}`;
         li.dataset.index = index;
         li.addEventListener('click', () => {
             selectLocation(index);
@@ -889,7 +892,8 @@ function renderPlotlineList() {
     plotlinesList.innerHTML = ''; 
     currentProjectData.content.plotlines.forEach((plotline, index) => {
         const li = document.createElement('li');
-        li.textContent = plotline.title || 'Лінія без назви';
+        // Відображаємо номер (індекс + 1)
+        li.textContent = `${index + 1}. ${plotline.title || 'Лінія без назви'}`;
         li.dataset.index = index;
         li.addEventListener('click', () => {
             selectPlotline(index);

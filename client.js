@@ -1,6 +1,6 @@
 // === КОНФІГУРАЦІЯ ДОДАТКУ [v1.4.0 - P11] ===
 const CONFIG = {
-    APP_VERSION: "1.7.0", // ОНОВЛЕНО v1.7.0
+    APP_VERSION: "2.0.0", // ОНОВЛЕНО v2.0.0
     AUTOSAVE_DELAY: 1500, // ms
     DEFAULT_GOAL_WORDS: 50000,
     SNIPPET_LENGTH: 80, // characters
@@ -20,7 +20,7 @@ let selectedChapterIndex = null;
 let selectedLocationIndex = null;
 let selectedPlotlineIndex = null;
 
-// ОНОВЛЕНО v1.7.0: Таймер автозбереження
+// v1.7.0: Таймер автозбереження
 /** @type {{timer: Timeout | null, func: Function | null}} */
 let pendingSave = { timer: null, func: null };
 
@@ -60,7 +60,7 @@ let workspaceContainer, workspaceTitle, backToProjectsButton, workspaceNav,
 // v1.0.0: КОНТЕКСТНЕ МЕНЮ
 let projectContextMenu, contextEditBtn, contextExportBtn, contextDeleteBtn;
 
-// ОНОВЛЕНО v1.7.0: Кнопка збереження
+// v1.7.0: Кнопка збереження
 let manualSaveButton, saveStatusDot, saveStatusText, saveStatusSpinner;
 
 // ЕЛЕМЕНТИ (ВКЛАДКА ПЕРСОНАЖІВ)
@@ -128,7 +128,7 @@ function bindUIElements() {
     backToProjectsButton = document.getElementById('back-to-projects');
     workspaceNav = document.getElementById('workspace-nav');
     
-    // ОНОВЛЕНО v1.7.0: Індикатор збереження
+    // v1.7.0: Індикатор збереження
     manualSaveButton = document.getElementById('manual-save-button');
     saveStatusDot = document.getElementById('save-status-dot');
     saveStatusText = document.getElementById('save-status-text');
@@ -205,7 +205,7 @@ function bindEventListeners() {
     sendButton.addEventListener('click', sendMessage);
     userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
     
-    // ОНОВЛЕНО v1.7.0: Кнопка збереження
+    // v1.7.0: Кнопка збереження
     manualSaveButton.addEventListener('click', triggerManualSave);
 
     workspaceNav.addEventListener('click', (e) => {
@@ -286,7 +286,7 @@ function bindEventListeners() {
     searchResultsCloseBtn.addEventListener('click', () => searchResultsModal.classList.add('hidden'));
 }
 
-// === ЛОГІКА НАВІГАЦІЇ === (Без змін v1.7.0)
+// === ЛОГІКА НАВІГАЦІЇ === (Без змін v2.0.0)
 
 function checkLoginOnLoad() {
     const savedUser = localStorage.getItem('bookBotUser');
@@ -347,7 +347,10 @@ function showProjectsList() {
     loadProjects(currentUser); 
 }
 
-// v1.5.0: Логіка кешування [P5] (Без змін v1.7.0)
+// v1.5.0: Логіка кешування [P5]
+// ВАЖЛИВО: Ця логіка продовжує працювати, оскільки /get-project-content
+// повертає об'єкт В ТОМУ Ж ФОРМАТІ, що і раніше, незважаючи на 
+// зміни в базі даних.
 async function openProjectWorkspace(projectID) {
     const cachedData = getCachedProject(projectID);
     if (cachedData) {
@@ -377,6 +380,7 @@ async function openProjectWorkspace(projectID) {
         currentProjectData = await response.json();
         currentProjectID = projectID; 
 
+        // Перевірки на випадок, якщо субколекції ще не створені (старі проєкти)
         if (!currentProjectData.content) currentProjectData.content = {};
         if (!currentProjectData.content.characters) currentProjectData.content.characters = [];
         if (!currentProjectData.content.chapters) currentProjectData.content.chapters = [];
@@ -416,7 +420,7 @@ function renderWorkspace() {
     notesResearchInput.value = content.research || '';
 
     chatWindow.innerHTML = ''; 
-    (currentProjectData.chatHistory || []).slice(1).forEach(message => { 
+    (currentProjectData.chatHistory || []).slice(2).forEach(message => { // slice(2) для пропуску стартових
         const sender = message.role === 'model' ? 'bot' : 'user';
         const text = message.parts[0].text.split("--- КОНТЕКСТ ПРОЄКТУ")[0]; 
         addMessageToChat(text, sender);
@@ -441,7 +445,7 @@ function showTab(tabId) {
 }
 
 
-// === ЛОГІКА API (КАРТОТЕКА) === (Без змін v1.7.0)
+// === ЛОГІКА API (КАРТОТЕКА) === (Без змін v2.0.0)
 
 // v1.5.0: Skeleton Loader [P6]
 async function loadProjects(user) {
@@ -596,7 +600,7 @@ async function handleEditTitle(projectID, newTitle) {
     }
 }
 
-// ОНОВЛЕНО v1.7.0: `immediate` параметр додано в `handle...Save`
+// v1.7.0: `immediate` параметр
 async function handleSimpleAutoSave(field, value, immediate = false) {
     if (!currentProjectID || !currentProjectData) return;
     
@@ -609,6 +613,9 @@ async function handleSimpleAutoSave(field, value, immediate = false) {
     currentProjectData.content[fieldName] = value;
     
     try {
+        // Клієнт, як і раніше, надсилає 'content.premise', 
+        // а сервер (v2.0.0) тепер знає, що це треба покласти
+        // в документ 'content' субколекції 'data'.
         await saveArrayToDb(field, value, "даних", immediate, true);
         if (fieldName === 'wordGoal') {
             renderDashboard();
@@ -618,8 +625,8 @@ async function handleSimpleAutoSave(field, value, immediate = false) {
     }
 }
 
-// === ЛОГІКА API (ЧАТ) === (Без змін v1.7.0)
-        
+// === ЛОГІКА API (ЧАТ) === (Без змін v2.0.0)
+// (Клієнт не знає, що /chat тепер пише в інший документ)
 async function sendMessage() {
     const messageText = userInput.value.trim();
     if (messageText === "" || !currentProjectID) return;
@@ -669,7 +676,7 @@ function addMessageToChat(text, sender) {
 }
 
 
-// === ДОПОМІЖНІ ФУНКЦІЇ (UI) === (Без змін v1.7.0)
+// === ДОПОМІЖНІ ФУНКЦІЇ (UI) === (Без змін v2.0.0)
 
 function showSpinner() {
     spinnerOverlay.classList.remove('hidden');
@@ -746,7 +753,7 @@ function hideConfirmModal() {
     confirmModal.classList.add('hidden');
 }
 
-// === v1.0.0: КОНТЕКСТНЕ МЕНЮ === (Без змін v1.7.0)
+// === v1.0.0: КОНТЕКСТНЕ МЕНЮ === (Без змін v2.0.0)
 
 function showProjectContextMenu(event, project) {
     projectContextMenu.classList.remove('hidden');
@@ -768,7 +775,7 @@ function hideProjectContextMenu() {
     projectContextMenu.classList.add('hidden');
 }
 
-// === v1.1.0: ЛОГУВАННЯ ПОМИЛОК === (Без змін v1.7.0)
+// === v1.1.0: ЛОГУВАННЯ ПОМИЛОК === (Без змін v2.0.0)
 async function logErrorToServer(error, contextName) {
     console.error(`[${contextName}]`, error); 
     try {
@@ -798,52 +805,35 @@ window.onunhandledrejection = (event) => {
     logErrorToServer(event.reason || new Error('Unhandled rejection'), 'window.onunhandledrejection');
 };
 
-// === v1.3.0: ГАРЯЧІ КЛАВІШІ [P16] === (ОНОВЛЕНО v1.7.0)
-
+// === v1.3.0: ГАРЯЧІ КЛАВІШІ [P16] === (v1.7.0) (Без змін v2.0.0)
 function handleGlobalHotkeys(e) {
     const key = e.key.toLowerCase();
     const isCtrlOrCmd = e.ctrlKey || e.metaKey;
 
-    // ОНОВЛЕНО v1.7.0: Ctrl+S (Викликаємо примусове збереження)
+    // v1.7.0: Ctrl+S
     if (isCtrlOrCmd && key === 's') {
         e.preventDefault(); 
         triggerManualSave();
         return;
     }
-
     // v1.6.0: Ctrl+Z (Undo) [P17]
     if (isCtrlOrCmd && key === 'z' && !e.shiftKey) {
         e.preventDefault();
         undo();
         return;
     }
-
     // v1.6.0: Ctrl+Y / Ctrl+Shift+Z (Redo) [P17]
     if ((isCtrlOrCmd && key === 'y') || (isCtrlOrCmd && e.shiftKey && key === 'z')) {
         e.preventDefault();
         redo();
         return;
     }
-
     // P16: Клавіша Escape
     if (key === 'escape') {
-        // ... (Логіка Escape без змін) ...
-        if (!searchResultsModal.classList.contains('hidden')) {
-            searchResultsModal.classList.add('hidden');
-            return;
-        }
-        if (!createEditModal.classList.contains('hidden')) {
-            hideCreateEditModal();
-            return;
-        }
-        if (!confirmModal.classList.contains('hidden')) {
-            hideConfirmModal();
-            return;
-        }
-        if (!projectContextMenu.classList.contains('hidden')) {
-            hideProjectContextMenu();
-            return;
-        }
+        if (!searchResultsModal.classList.contains('hidden')) { searchResultsModal.classList.add('hidden'); return; }
+        if (!createEditModal.classList.contains('hidden')) { hideCreateEditModal(); return; }
+        if (!confirmModal.classList.contains('hidden')) { hideConfirmModal(); return; }
+        if (!projectContextMenu.classList.contains('hidden')) { hideProjectContextMenu(); return; }
         const activeTabId = document.querySelector('.tab-content.active')?.id;
         if (!activeTabId) return;
         switch (activeTabId) {
@@ -855,7 +845,7 @@ function handleGlobalHotkeys(e) {
     }
 }
 
-// === v1.2.0: ФУНКЦІЯ ІНДИКАТОРА ЗБЕРЕЖЕННЯ === (ОНОВЛЕНО v1.7.0)
+// === v1.7.0: ФУНКЦІЯ ІНДИКАТОРА ЗБЕРЕЖЕННЯ (Без змін v2.0.0)
 /**
  * Оновлює візуальний стан кнопки збереження
  * @param {'saved' | 'unsaved' | 'saving' | 'error'} status 
@@ -863,7 +853,6 @@ function handleGlobalHotkeys(e) {
 function updateSaveStatus(status) {
     if (!manualSaveButton) return; 
 
-    // Скидаємо всі класи
     manualSaveButton.classList.remove('saving', 'unsaved', 'error');
     saveStatusText.classList.remove('hidden');
     saveStatusDot.classList.remove('hidden');
@@ -883,9 +872,9 @@ function updateSaveStatus(status) {
             break;
         case 'saving':
             manualSaveButton.classList.add('saving');
-            saveStatusText.classList.add('hidden'); // Ховаємо текст
-            saveStatusDot.classList.add('hidden'); // Ховаємо крапку
-            saveStatusSpinner.classList.remove('hidden'); // Показуємо спінер
+            saveStatusText.classList.add('hidden'); 
+            saveStatusDot.classList.add('hidden'); 
+            saveStatusSpinner.classList.remove('hidden'); 
             hasUnsavedChanges = true; 
             window.onbeforeunload = () => "Іде збереження. Ви впевнені, що хочете піти?";
             break;
@@ -899,8 +888,7 @@ function updateSaveStatus(status) {
 }
 
 
-// === v0.5.1 - ЛІЧИЛЬНИК СЛІВ === (Без змін v1.7.0)
-
+// === v0.5.1 - ЛІЧИЛЬНИК СЛІВ === (Без змін v2.0.0)
 function countWords(text) {
     if (!text || text.trim() === "") { return 0; }
     return text.trim().split(/\s+/).length;
@@ -923,8 +911,7 @@ function updateTotalWordCount() {
     chaptersTotalWordCount.textContent = `Загалом: ${totalCount} слів`;
 }
 
-// === v0.8.0: DASHBOARD === (Без змін v1.7.0)
-
+// === v0.8.0: DASHBOARD === (Без змін v2.0.0)
 function renderDashboard() {
     if (!currentProjectData) return;
     const totalCount = currentProjectData.totalWordCount || 0;
@@ -943,10 +930,8 @@ function renderDashboard() {
 }
 
 
-// === ВКЛАДКА "ПЕРСОНАЖІ" === (ОНОВЛЕНО v1.7.0)
-
+// === ВКЛАДКА "ПЕРСОНАЖІ" === (v1.7.0) (Без змін v2.0.0)
 function renderCharacterList() {
-    // ... (без змін) ...
     if (!currentProjectData) return;
     charactersList.innerHTML = ''; 
     currentProjectData.content.characters.forEach((character, index) => {
@@ -959,7 +944,6 @@ function renderCharacterList() {
     });
 }
 function showCharacterEditor(show = true) {
-    // ... (без змін) ...
     if (show) {
         characterEditorPane.classList.remove('hidden');
         characterEditorPlaceholder.classList.add('hidden');
@@ -971,7 +955,6 @@ function showCharacterEditor(show = true) {
     }
 }
 function selectCharacter(index) {
-    // ... (без змін) ...
     selectedCharacterIndex = index;
     const character = currentProjectData.content.characters[index];
     if (!character) return;
@@ -983,7 +966,6 @@ function selectCharacter(index) {
     renderCharacterList();
 }
 function handleAddNewCharacter() {
-    // ... (без змін) ...
     const newCharacter = { name: "Новий персонаж", description: "", arc: "", _tempId: Date.now() };
     currentProjectData.content.characters.push(newCharacter);
     const newIndex = currentProjectData.content.characters.length - 1;
@@ -1002,7 +984,6 @@ function handleAddNewCharacter() {
         });
 }
 function handleDeleteCharacter() {
-    // ... (без змін) ...
     if (selectedCharacterIndex === null) return;
     const characterName = currentProjectData.content.characters[selectedCharacterIndex].name;
     showConfirmModal(`Ви впевнені, що хочете видалити персонажа "${characterName}"?`, async () => {
@@ -1013,7 +994,6 @@ function handleDeleteCharacter() {
         renderCharacterList(); 
     });
 }
-// ОНОВЛЕНО v1.7.0: `immediate` параметр
 async function handleCharacterFieldSave(field, value, immediate = false) {
     if (selectedCharacterIndex === null) return;
     const character = currentProjectData.content.characters[selectedCharacterIndex];
@@ -1026,13 +1006,13 @@ async function handleCharacterFieldSave(field, value, immediate = false) {
     renderCharacterList();
 }
 async function saveCharactersArray(immediate = false) {
+    // Клієнт надсилає 'content.characters', сервер (v2.0.0) 
+    // знає, що це треба покласти в документ 'characters'.
     await saveArrayToDb("content.characters", currentProjectData.content.characters, "персонажів", immediate);
 }
 
-// === ВКЛАДКА "РОЗДІЛИ" === (ОНОВЛЕНО v1.7.0)
-
+// === ВКЛАДКА "РОЗДІЛИ" === (v1.7.0) (Без змін v2.0.0)
 function getStatusIcon(status) {
-    // ... (без змін) ...
     switch (status) {
         case "Заплановано": return "🗓️";
         case "В роботі": return "✏️";
@@ -1043,7 +1023,6 @@ function getStatusIcon(status) {
     }
 }
 function renderChapterList() {
-    // ... (без змін) ...
     if (!currentProjectData) return;
     chaptersList.innerHTML = ''; 
     currentProjectData.content.chapters.forEach((chapter, index) => {
@@ -1073,7 +1052,6 @@ function renderChapterList() {
     updateTotalWordCount();
 }
 function showChapterEditor(show = true) {
-    // ... (без змін) ...
     if (show) {
         chapterEditorPane.classList.remove('hidden');
         chapterEditorPlaceholder.classList.add('hidden');
@@ -1086,7 +1064,6 @@ function showChapterEditor(show = true) {
     }
 }
 function selectChapter(index) {
-    // ... (без змін) ...
     selectedChapterIndex = index;
     const chapter = currentProjectData.content.chapters[index];
     if (!chapter) return;
@@ -1102,7 +1079,6 @@ function selectChapter(index) {
     renderChapterList();
 }
 function handleAddNewChapter() {
-    // ... (без змін) ...
     const newChapter = { title: "Новий розділ", status: "Заплановано", text: "", synopsis: "", word_count: 0, updated_at: new Date().toISOString(), _tempId: Date.now() };
     currentProjectData.content.chapters.push(newChapter);
     const newIndex = currentProjectData.content.chapters.length - 1;
@@ -1121,7 +1097,6 @@ function handleAddNewChapter() {
         });
 }
 function handleDeleteChapter() {
-    // ... (без змін) ...
     if (selectedChapterIndex === null) return;
     const chapterTitle = currentProjectData.content.chapters[selectedChapterIndex].title;
     showConfirmModal(`Ви впевнені, що хочете видалити розділ "${chapterTitle}"?`, async () => {
@@ -1134,7 +1109,6 @@ function handleDeleteChapter() {
         renderDashboard(); 
     });
 }
-// ОНОВЛЕНО v1.7.0: `immediate` параметр
 async function handleChapterFieldSave(field, value, immediate = false) {
     if (selectedChapterIndex === null) return;
     const chapter = currentProjectData.content.chapters[selectedChapterIndex];
@@ -1156,7 +1130,6 @@ async function handleChapterFieldSave(field, value, immediate = false) {
     renderDashboard(); 
 }
 function updateSingleChapterCard(index) {
-    // ... (без змін) ...
     const chapter = currentProjectData.content.chapters[index];
     if (!chapter) return;
     const card = chaptersList.querySelector(`[data-index="${index}"]`);
@@ -1180,13 +1153,13 @@ function updateSingleChapterCard(index) {
     card.innerHTML = `<div class="card-header"><span>${order}. ${title}</span><span class="card-drag-handle" title="Перетягнути">::</span></div><div class="card-body"><div class="card-meta"><span>${icon} ${status}</span><span>${wordCount} слів</span></div><div class="${snippetClass}">${snippet}</div></div>`;
 }
 async function saveChaptersArray(immediate = false) {
+    // Клієнт надсилає 'content.chapters', сервер (v2.0.0) 
+    // знає, що це треба покласти в документ 'chapters'.
     await saveArrayToDb("content.chapters", currentProjectData.content.chapters, "розділів", immediate);
 }
 
-// === ВКЛАДКА "ЛОКАЦІЇ" === (ОНОВЛЕНО v1.7.0)
-
+// === ВКЛАДКА "ЛОКАЦІЇ" === (v1.7.0) (Без змін v2.0.0)
 function renderLocationList() {
-    // ... (без змін) ...
     if (!currentProjectData) return;
     locationsList.innerHTML = ''; 
     currentProjectData.content.locations.forEach((location, index) => {
@@ -1199,7 +1172,6 @@ function renderLocationList() {
     });
 }
 function showLocationEditor(show = true) {
-    // ... (без змін) ...
     if (show) {
         locationEditorPane.classList.remove('hidden');
         locationEditorPlaceholder.classList.add('hidden');
@@ -1211,7 +1183,6 @@ function showLocationEditor(show = true) {
     }
 }
 function selectLocation(index) {
-    // ... (без змін) ...
     selectedLocationIndex = index;
     const location = currentProjectData.content.locations[index];
     if (!location) return;
@@ -1222,7 +1193,6 @@ function selectLocation(index) {
     renderLocationList();
 }
 function handleAddNewLocation() {
-    // ... (без змін) ...
     const newLocation = { name: "Нова локація", description: "", _tempId: Date.now() };
     currentProjectData.content.locations.push(newLocation);
     const newIndex = currentProjectData.content.locations.length - 1;
@@ -1241,7 +1211,6 @@ function handleAddNewLocation() {
         });
 }
 function handleDeleteLocation() {
-    // ... (без змін) ...
     if (selectedLocationIndex === null) return;
     const locationName = currentProjectData.content.locations[selectedLocationIndex].name;
     showConfirmModal(`Ви впевнені, що хочете видалити локацію "${locationName}"?`, async () => {
@@ -1252,7 +1221,6 @@ function handleDeleteLocation() {
         renderLocationList(); 
     });
 }
-// ОНОВЛЕНО v1.7.0: `immediate` параметр
 async function handleLocationFieldSave(field, value, immediate = false) {
     if (selectedLocationIndex === null) return;
     const location = currentProjectData.content.locations[selectedLocationIndex];
@@ -1268,10 +1236,8 @@ async function saveLocationsArray(immediate = false) {
     await saveArrayToDb("content.locations", currentProjectData.content.locations, "локацій", immediate);
 }
 
-// === ВКЛАДКА "СЮЖЕТНІ ЛІНІЇ" === (ОНОВЛЕНО v1.7.0)
-
+// === ВКЛАДКА "СЮЖЕТНІ ЛІНІЇ" === (v1.7.0) (Без змін v2.0.0)
 function renderPlotlineList() {
-    // ... (без змін) ...
     if (!currentProjectData) return;
     plotlinesList.innerHTML = ''; 
     currentProjectData.content.plotlines.forEach((plotline, index) => {
@@ -1284,7 +1250,6 @@ function renderPlotlineList() {
     });
 }
 function showPlotlineEditor(show = true) {
-    // ... (без змін) ...
     if (show) {
         plotlineEditorPane.classList.remove('hidden');
         plotlineEditorPlaceholder.classList.add('hidden');
@@ -1296,7 +1261,6 @@ function showPlotlineEditor(show = true) {
     }
 }
 function selectPlotline(index) {
-    // ... (без змін) ...
     selectedPlotlineIndex = index;
     const plotline = currentProjectData.content.plotlines[index];
     if (!plotline) return;
@@ -1307,7 +1271,6 @@ function selectPlotline(index) {
     renderPlotlineList();
 }
 function handleAddNewPlotline() {
-    // ... (без змін) ...
     const newPlotline = { title: "Нова сюжетна лінія", description: "", _tempId: Date.now() };
     currentProjectData.content.plotlines.push(newPlotline);
     const newIndex = currentProjectData.content.plotlines.length - 1;
@@ -1326,7 +1289,6 @@ function handleAddNewPlotline() {
         });
 }
 function handleDeletePlotline() {
-    // ... (без змін) ...
     if (selectedPlotlineIndex === null) return;
     const plotlineTitle = currentProjectData.content.plotlines[selectedPlotlineIndex].title;
     showConfirmModal(`Ви впевнені, що хочете видалити сюжетну лінію "${plotlineTitle}"?`, async () => {
@@ -1337,7 +1299,6 @@ function handleDeletePlotline() {
         renderPlotlineList(); 
     });
 }
-// ОНОВЛЕНО v1.7.0: `immediate` параметр
 async function handlePlotlineFieldSave(field, value, immediate = false) {
     if (selectedPlotlineIndex === null) return;
     const plotline = currentProjectData.content.plotlines[selectedPlotlineIndex];
@@ -1354,8 +1315,7 @@ async function savePlotlinesArray(immediate = false) {
 }
 
 
-// === СОРТУВАННЯ === (Без змін v1.7.0)
-
+// === СОРТУВАННЯ === (Без змін v2.0.0)
 function initSortableLists() {
     if (!currentProjectData) return;
     const onSortEnd = async (evt, array, saveFunction, renderFunction) => {
@@ -1373,30 +1333,19 @@ function initSortableLists() {
 }
 
 
-// === УНІВЕРСАЛЬНА ФУНКЦІЯ ЗБЕРЕЖЕННЯ === (ОНОВЛЕНО v1.7.0)
-
-/**
- * Універсальна функція для збереження
- * @param {string} field - Поле для оновлення (напр., 'content.chapters')
- * @param {*} value - Нове значення (масив або примітив)
- * @param {string} nameForToast - Назва для тосту (напр., 'розділів')
- * @param {boolean} [immediate=false] - Зберегти негайно (true) чи з затримкою (false)
- * @param {boolean} [isSimpleField=false] - (v1.2.0) Чи це просте поле (не масив)
- */
+// === УНІВЕРСАЛЬНА ФУНКЦІЯ ЗБЕРЕЖЕННЯ === (v1.7.0) (Без змін v2.0.0)
+// (Ця функція прозоро працює з новим бекендом v2.0.0)
 async function saveArrayToDb(field, value, nameForToast, immediate = false, isSimpleField = false) {
     if (!currentProjectID) return;
     
-    // 1. Очищуємо будь-який *попередній* запланований виклик
     clearTimeout(pendingSave.timer);
     pendingSave.func = null;
     pendingSave.timer = null;
 
-    // 2. Створюємо функцію, яка виконає збереження
     const doSave = async () => {
         updateSaveStatus('saving'); 
         try {
             let valueToSend = value;
-
             if (Array.isArray(valueToSend)) {
                 valueToSend = valueToSend.map(item => {
                     if (item && typeof item === 'object' && item._tempId) {
@@ -1412,25 +1361,35 @@ async function saveArrayToDb(field, value, nameForToast, immediate = false, isSi
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     projectID: currentProjectID, 
-                    field: field, 
+                    field: field, // Напр., "content.chapters" або "content.premise"
                     value: valueToSend 
                 })
             });
 
-            const updatedProjectResponse = await fetch(`/get-project-content?projectID=${currentProjectID}`);
-            if (!updatedProjectResponse.ok) throw new Error('Не вдалося оновити локальні дані');
+            // v2.0.0: Ми НЕ МОЖЕМО більше довіряти `currentProjectData`
+            // після збереження, оскільки бекенд міг оновити
+            // totalWordCount. Ми маємо отримати свіжі дані.
+            // *Але* /get-project-content важкий.
+            // Давайте оновимо лише те, що змінилося.
             
-            const freshProjectData = await updatedProjectResponse.json();
-            currentProjectData = freshProjectData;
-            
-            setCachedProject(currentProjectID, freshProjectData); // v1.5.0 [P5]
-            renderDashboard(); 
+            if (field === 'content.chapters') {
+                // Отримуємо оновлений totalWordCount
+                const projectResponse = await fetch(`/get-project-content?projectID=${currentProjectID}`);
+                if (!projectResponse.ok) throw new Error('Не вдалося оновити локальні дані');
+                const freshProjectData = await projectResponse.json();
+                currentProjectData.totalWordCount = freshProjectData.totalWordCount;
+                currentProjectData.updatedAt = freshProjectData.updatedAt;
+                
+                // Оновлюємо кеш, оскільки totalWordCount змінився
+                setCachedProject(currentProjectID, currentProjectData); 
+            }
             
             if (!response.ok) {
                 const err = await response.json();
                 throw new Error(err.message || `Помилка збереження ${nameForToast}`);
             }
 
+            renderDashboard(); // Оновлюємо дашборд (на випадок зміни totalWordCount)
             updateSaveStatus('saved'); 
             showToast(`${nameForToast.charAt(0).toUpperCase() + nameForToast.slice(1)} збережено!`, 'success');
 
@@ -1440,13 +1399,11 @@ async function saveArrayToDb(field, value, nameForToast, immediate = false, isSi
             logErrorToServer(error, "saveArrayToDb"); 
             updateSaveStatus('error'); 
         } finally {
-            // Очищуємо, оскільки ми завершили
             pendingSave.func = null;
             pendingSave.timer = null;
         }
     };
 
-    // 3. Виконуємо негайно або плануємо
     if (immediate) {
         await doSave();
     } else {
@@ -1456,8 +1413,7 @@ async function saveArrayToDb(field, value, nameForToast, immediate = false, isSi
 }
 
 
-// === v1.5.0: ФУНКЦІЇ КЕШУВАННЯ [P5] === (Без змін v1.7.0)
-
+// === v1.5.0: ФУНКЦІЇ КЕШУВАННЯ [P5] === (Без змін v2.0.0)
 function setCachedProject(projectID, data) {
     try {
         const cacheEntry = { timestamp: Date.now(), projectID: projectID, data: data };
@@ -1494,8 +1450,7 @@ function clearCachedProject() {
 }
 
 
-// === v1.6.0: ФУНКЦІЇ ПОШУКУ [P22] === (Без змін v1.7.0)
-
+// === v1.6.0: ФУНКЦІЇ ПОШУКУ [P22] === (Без змін v2.0.0)
 function handleGlobalSearch(e) {
     if (e.key !== 'Enter') return;
     const query = globalSearchInput.value.trim();
@@ -1513,7 +1468,6 @@ function searchInProject(query) {
     const q = query.toLowerCase();
     const content = currentProjectData.content;
     
-    // ... (Логіка пошуку без змін) ...
     content.chapters.forEach((item, index) => {
         let match = false; let snippet = '';
         if (item.title?.toLowerCase().includes(q)) { match = true; snippet = item.synopsis || item.text || ''; } 
@@ -1573,8 +1527,7 @@ function handleSearchResultClick(typeKey, index) {
 }
 
 
-// === v1.6.0: ФУНКЦІЇ ІСТОРІЇ (UNDO/REDO) [P17] === (Без змін v1.7.0)
-
+// === v1.6.0: ФУНКЦІЇ ІСТОРІЇ (UNDO/REDO) [P17] === (Без змін v2.0.0)
 function initHistory(e) {
     const field = e.target;
     historyManager.stack = [field.value];
@@ -1624,38 +1577,25 @@ function redo() {
 }
 
 
-// === ОНОВЛЕНО v1.7.0: ФУНКЦІЯ ПРИМУСОВОГО ЗБЕРЕЖЕННЯ ===
-
-/**
- * Примусово зберігає будь-які поточні зміни
- */
+// === v1.7.0: ФУНКЦІЯ ПРИМУСОВОГО ЗБЕРЕЖЕННЯ === (Без змін v2.0.0)
 function triggerManualSave() {
-    // 1. Перевіряємо, чи є взагалі що зберігати
     if (!hasUnsavedChanges && !pendingSave.timer) {
         showToast("Все збережено", "info");
         return;
     }
-
-    // 2. "Коммітимо" зміни з поля, яке зараз у фокусі (якщо таке є)
-    // Це оновить `currentProjectData` і викличе `saveArrayToDb`
     const activeEl = document.activeElement;
     if (activeEl && activeEl.blur && activeEl !== document.body) {
         activeEl.blur(); 
     }
     
-    // 3. `blur()` вище *міг* створити новий `pendingSave.func`.
-    // Якщо він є, ми його скасовуємо і виконуємо негайно.
     if (pendingSave.func) {
         clearTimeout(pendingSave.timer);
         console.log("Примусове виконання збереження, що очікувало...");
-        pendingSave.func(); // Викликаємо збереження негайно
+        pendingSave.func(); 
         pendingSave.func = null;
         pendingSave.timer = null;
     } else if (hasUnsavedChanges) {
-        // Це випадок, коли `blur` не спрацював (напр, фокус на `body`), 
-        // але `hasUnsavedChanges` = true. Це не має статися, але про всяк випадок.
         console.warn("Manual save triggered, but no pending save function found.");
-        // Ми не знаємо, *що* зберігати, тому просто показуємо статус
         updateSaveStatus('unsaved');
     }
 }

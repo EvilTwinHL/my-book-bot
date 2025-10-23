@@ -64,6 +64,10 @@
         
         <div class="app-header">
             <h2 id="workspace-title">Назва Проєкту</h2>
+            <div id="save-status-indicator" class="autosave-status">
+                <span id="save-status-dot" class="dot"></span>
+                <span id="save-status-text" class="text">Збережено</span>
+            </div>
             <button id="back-to-projects" style="background-color: #6c757d;">← До проєктів</button>
         </div>
 
@@ -83,67 +87,35 @@
             <div id="dashboard-tab" class="tab-content">
                 <h3>📈 Dashboard: <span id="dashboard-project-title"></span></h3>
                 <p>Загальний огляд Вашого проєкту.</p>
-                
                 <div class="dashboard-grid">
-                    <div class="widget widget-full">
-                        <button id="dashboard-write-btn" class="btn-primary-large">
-                            ✏️ Продовжити писати
-                        </button>
-                    </div>
-
-                    <div class="widget">
-                        <h4>Загальна кількість слів</h4>
-                        <div class="stat-number" id="dashboard-total-words">0</div>
-                    </div>
-                    
-                    <div class="widget">
-                        <h4>Прогрес до мети (50k)</h4>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="dashboard-progress-fill"></div>
-                        </div>
-                        <div class="stat-label" id="dashboard-progress-label">0%</div>
-                    </div>
-
-                    <div class="widget">
-                        <h4>Останнє оновлення</h4>
-                        <div class="stat-label" id="dashboard-last-updated">...</div>
-                    </div>
+                    <div class="widget widget-full"> <button id="dashboard-write-btn" class="btn-primary-large"> ✏️ Продовжити писати </button> </div>
+                    <div class="widget"> <h4>Загальна кількість слів</h4> <div class="stat-number" id="dashboard-total-words">0</div> </div>
+                    <div class="widget"> <h4>Прогрес до мети (50k)</h4> <div class="progress-bar"> <div class="progress-fill" id="dashboard-progress-fill"></div> </div> <div class="stat-label" id="dashboard-progress-label">0%</div> </div>
+                    <div class="widget"> <h4>Останнє оновлення</h4> <div class="stat-label" id="dashboard-last-updated">...</div> </div>
                 </div>
             </div>
-
             <div id="core-tab" class="tab-content active">
                 <h3>💡 Ядро Ідеї</h3>
                 <p>Ключові концепції вашої історії. Автозбереження при виході з поля.</p>
                 <label for="core-premise-input">Про що ця книга (Logline):</label>
                 <input type="text" id="core-premise-input" data-field="content.premise" placeholder="Одним реченням: хто, що робить, і що стоїть на кону?">
-                
                 <label for="core-theme-input">Проблематика / Головна думка (Theme):</label>
                 <input type="text" id="core-theme-input" data-field="content.theme" placeholder="Про що *насправді* ця книга (напр., 'чи виправдовує мета засоби?')">
-
                 <label for="core-arc-input">Головна сюжетна арка:</label>
                 <input type="text" id="core-arc-input" data-field="content.mainArc" placeholder="Напр., 'Подорож героя', 'З грязі в князі', 'Трагедія'">
             </div>
-
             <div id="characters-tab" class="tab-content">
                 <h3>👥 Персонажі</h3>
                 <div class="list-editor-layout">
-                    <div class="list-pane">
-                        <button id="add-character-btn" class="btn-icon export-btn" style="width: 100%; background-color: #28a745;">[ + ] Новий персонаж</button>
-                        <ul id="characters-list" class="item-list"></ul>
-                    </div>
+                    <div class="list-pane"> <button id="add-character-btn" class="btn-icon export-btn" style="width: 100%; background-color: #28a745;">[ + ] Новий персонаж</button> <ul id="characters-list" class="item-list"></ul> </div>
                     <div id="character-editor-pane" class="editor-pane hidden">
                         <h4 id="character-editor-title">Редагування</h4>
-                        <label for="character-name-input">Ім'я:</label>
-                        <input type="text" id="character-name-input" placeholder="Ім'я, прізвисько...">
-                        <label for="character-desc-input">Опис:</label>
-                        <textarea id="character-desc-input" rows="6" placeholder="Зовнішність, мотивація, звички..."></textarea>
-                        <label for="character-arc-input">Сюжетна арка:</label>
-                        <textarea id="character-arc-input" rows="4" placeholder="Як цей персонаж зміниться протягом історії?"></textarea>
+                        <label for="character-name-input">Ім'я:</label> <input type="text" id="character-name-input" placeholder="Ім'я, прізвисько...">
+                        <label for="character-desc-input">Опис:</label> <textarea id="character-desc-input" rows="6" placeholder="Зовнішність, мотивація, звички..."></textarea>
+                        <label for="character-arc-input">Сюжетна арка:</label> <textarea id="character-arc-input" rows="4" placeholder="Як цей персонаж зміниться протягом історії?"></textarea>
                         <button id="delete-character-btn" class="btn-icon delete-btn" style="width: auto; margin-top: 10px;">Видалити персонажа</button>
                     </div>
-                    <div id="character-editor-placeholder" class="editor-pane-placeholder">
-                        <p>← Оберіть персонажа зі списку або створіть нового.</p>
-                    </div>
+                    <div id="character-editor-placeholder" class="editor-pane-placeholder"> <p>← Оберіть персонажа зі списку або створіть нового.</p> </div>
                 </div>
             </div>
             
@@ -173,6 +145,12 @@
                                 </select>
                             </div>
                         </div>
+                        
+                        <label>Синопсис (з картки):</label>
+                        <div id="chapter-editor-synopsis" class="editor-synopsis-preview">
+                            Немає синопсису...
+                        </div>
+
                         <label for="chapter-text-input">Текст розділу:</label>
                         <textarea id="chapter-text-input" rows="15" placeholder="Почніть писати тут..."></textarea>
                         <div class="editor-word-count" id="chapter-current-word-count">0 слів</div>
@@ -187,63 +165,41 @@
             <div id="locations-tab" class="tab-content">
                 <h3>🗺️ Локації</h3>
                  <div class="list-editor-layout">
-                    <div class="list-pane">
-                        <button id="add-location-btn" class="btn-icon export-btn" style="width: 100%; background-color: #28a745;">[ + ] Нова локація</button>
-                        <ul id="locations-list" class="item-list"></ul>
-                    </div>
+                    <div class="list-pane"> <button id="add-location-btn" class="btn-icon export-btn" style="width: 100%; background-color: #28a745;">[ + ] Нова локація</button> <ul id="locations-list" class="item-list"></ul> </div>
                     <div id="location-editor-pane" class="editor-pane hidden">
                         <h4 id="location-editor-title">Редагування</h4>
-                        <label for="location-name-input">Назва локації:</label>
-                        <input type="text" id="location-name-input" placeholder="Назва...">
-                        <label for="location-desc-input">Опис:</label>
-                        <textarea id="location-desc-input" rows="10" placeholder="Атмосфера, ключові риси, запахи, звуки..."></textarea>
+                        <label for="location-name-input">Назва локації:</label> <input type="text" id="location-name-input" placeholder="Назва...">
+                        <label for="location-desc-input">Опис:</label> <textarea id="location-desc-input" rows="10" placeholder="Атмосфера, ключові риси, запахи, звуки..."></textarea>
                         <button id="delete-location-btn" class="btn-icon delete-btn" style="width: auto; margin-top: 10px;">Видалити локацію</button>
                     </div>
-                    <div id="location-editor-placeholder" class="editor-pane-placeholder">
-                        <p>← Оберіть локацію зі списку або створіть нову.</p>
-                    </div>
+                    <div id="location-editor-placeholder" class="editor-pane-placeholder"> <p>← Оберіть локацію зі списку або створіть нову.</p> </div>
                 </div>
             </div>
-
             <div id="plotlines-tab" class="tab-content">
                 <h3>🧵 Сюжетні лінії</h3>
                  <div class="list-editor-layout">
-                    <div class="list-pane">
-                        <button id="add-plotline-btn" class="btn-icon export-btn" style="width: 100%; background-color: #28a745;">[ + ] Нова лінія</button>
-                        <ul id="plotlines-list" class="item-list"></ul>
-                    </div>
+                    <div class="list-pane"> <button id="add-plotline-btn" class="btn-icon export-btn" style="width: 100%; background-color: #28a745;">[ + ] Нова лінія</button> <ul id="plotlines-list" class="item-list"></ul> </div>
                     <div id="plotline-editor-pane" class="editor-pane hidden">
                         <h4 id="plotline-editor-title">Редагування</h4>
-                        <label for="plotline-title-input">Назва (A-Plot, B-Plot, арка персонажа):</label>
-                        <input type="text" id="plotline-title-input" placeholder="Назва...">
-                        <label for="plotline-desc-input">Опис / Ключові події:</label>
-                        <textarea id="plotline-desc-input" rows="10" placeholder="Опишіть ключові точки цієї сюжетної лінії..."></textarea>
+                        <label for="plotline-title-input">Назва (A-Plot, B-Plot, арка персонажа):</label> <input type="text" id="plotline-title-input" placeholder="Назва...">
+                        <label for="plotline-desc-input">Опис / Ключові події:</label> <textarea id="plotline-desc-input" rows="10" placeholder="Опишіть ключові точки цієї сюжетної лінії..."></textarea>
                         <button id="delete-plotline-btn" class="btn-icon delete-btn" style="width: auto; margin-top: 10px;">Видалити лінію</button>
                     </div>
-                    <div id="plotline-editor-placeholder" class="editor-pane-placeholder">
-                        <p>← Оберіть сюжетну лінію або створіть нову.</p>
-                    </div>
+                    <div id="plotline-editor-placeholder" class="editor-pane-placeholder"> <p>← Оберіть сюжетну лінію або створіть нову.</p> </div>
                 </div>
             </div>
-
-
             <div id="notes-tab" class="tab-content">
                 <h3>📓 Нотатки та Дослідження</h3>
                 <p>Ваш особистий блокнот. Автозбереження при виході з поля.</p>
-                
                 <label for="notes-general-input">Загальні нотатки:</label>
                 <textarea id="notes-general-input" data-field="content.notes" rows="10" placeholder="Записуйте будь-які ідеї, думки, діалоги..."></textarea>
-                
                 <label for="notes-research-input">Дослідження та Посилання:</label>
                 <textarea id="notes-research-input" data-field="content.research" rows="5" placeholder="Вставте сюди посилання, факти, історичні довідки..."></textarea>
             </div>
-
             <div id="chat-tab" class="tab-content">
                 <h3>💬 Чат з Опусом</h3>
                 <p>Опус має доступ до всього, що ви пишете в інших вкладках.</p>
-                
-                <div id="chat-window">
-                    </div>
+                <div id="chat-window"> </div>
                 <div class="chat-input-area">
                     <input type="text" id="userInput" placeholder="Напишіть щось...">
                     <button id="sendButton">Надіслати</button>

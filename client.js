@@ -1,5 +1,5 @@
 // === ГЛОБАЛЬНІ ЗМІННІ ===
-const APP_VERSION = "1.1.0"; // ОНОВЛЕНО: v1.1.0
+const APP_VERSION = "1.2.0"; // ОНОВЛЕНО: v1.2.0
 
 let currentUser = null;
 let currentProjectID = null;
@@ -11,6 +11,8 @@ let selectedLocationIndex = null;
 let selectedPlotlineIndex = null;
 /** @type {Timeout | null} Таймер для затримки автозбереження */
 let saveTimer = null;
+/** @type {boolean} v1.2.0: Прапор для P15/P21 */
+let hasUnsavedChanges = false;
 
 
 // === ЕЛЕМЕНТИ DOM ===
@@ -33,6 +35,9 @@ let workspaceContainer, workspaceTitle, backToProjectsButton, workspaceNav,
 // v1.0.0: КОНТЕКСТНЕ МЕНЮ
 let projectContextMenu, contextEditBtn, contextExportBtn, contextDeleteBtn;
 
+// v1.2.0: ІНДИКАТОР ЗБЕРЕЖЕННЯ
+let saveStatusIndicator, saveStatusDot, saveStatusText;
+
 // ЕЛЕМЕНТИ (ВКЛАДКА ПЕРСОНАЖІВ)
 let charactersList, addCharacterBtn, characterEditorPane,
     characterEditorPlaceholder, characterEditorTitle, characterNameInput,
@@ -42,7 +47,8 @@ let charactersList, addCharacterBtn, characterEditorPane,
 let chaptersList, addChapterBtn, chapterEditorPane,
     chapterEditorPlaceholder, chapterEditorTitle, chapterTitleInput,
     chapterStatusInput, chapterTextInput, deleteChapterBtn,
-    chaptersTotalWordCount, chapterCurrentWordCount; 
+    chaptersTotalWordCount, chapterCurrentWordCount,
+    chapterEditorSynopsis; // v1.2.0
 
 // ЕЛЕМЕНТИ (ВКЛАДКА ЛОКАЦІЙ)
 let locationsList, addLocationBtn, locationEditorPane,
@@ -95,6 +101,12 @@ function bindUIElements() {
     workspaceTitle = document.getElementById('workspace-title');
     backToProjectsButton = document.getElementById('back-to-projects');
     workspaceNav = document.getElementById('workspace-nav');
+    
+    // v1.2.0: Індикатор збереження
+    saveStatusIndicator = document.getElementById('save-status-indicator');
+    saveStatusDot = document.getElementById('save-status-dot');
+    saveStatusText = document.getElementById('save-status-text');
+
     chatWindow = document.getElementById('chat-window');
     userInput = document.getElementById('userInput');
     sendButton = document.getElementById('sendButton');
@@ -126,6 +138,7 @@ function bindUIElements() {
     chapterTitleInput = document.getElementById('chapter-title-input');
     chapterStatusInput = document.getElementById('chapter-status-input');
     chapterTextInput = document.getElementById('chapter-text-input');
+    chapterEditorSynopsis = document.getElementById('chapter-editor-synopsis'); // v1.2.0
     deleteChapterBtn = document.getElementById('delete-chapter-btn');
     chaptersTotalWordCount = document.getElementById('chapters-total-word-count');
     chapterCurrentWordCount = document.getElementById('chapter-current-word-count');
@@ -162,13 +175,6 @@ function bindEventListeners() {
             showTab(e.target.dataset.tab);
         }
     });
-
-    corePremiseInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
-    coreThemeInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
-    coreArcInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
-    notesGeneralInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
-    notesResearchInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
-    dashboardWriteBtn.addEventListener('click', () => { showTab('chapters-tab'); });
     
     // v1.0.0: Закриття контекстного меню
     document.addEventListener('click', (e) => {
@@ -176,6 +182,30 @@ function bindEventListeners() {
             hideProjectContextMenu();
         }
     });
+
+    // --- ОНОВЛЕНО v1.2.0: Слухачі для індикатора збереження ---
+    // Слухаємо *всі* поля вводу
+    const inputs = document.querySelectorAll(
+        '#core-premise-input, #core-theme-input, #core-arc-input, ' +
+        '#notes-general-input, #notes-research-input, ' +
+        '#character-name-input, #character-desc-input, #character-arc-input, ' +
+        '#chapter-title-input, #chapter-status-input, #chapter-text-input, ' +
+        '#location-name-input, #location-desc-input, ' +
+        '#plotline-title-input, #plotline-desc-input'
+    );
+    // 'input' спрацьовує миттєво (для textarea), 'change' (для select)
+    inputs.forEach(input => {
+        input.addEventListener('input', () => updateSaveStatus('unsaved'));
+        input.addEventListener('change', () => updateSaveStatus('unsaved'));
+    });
+    
+    // Слухачі для автозбереження (залишаються на 'blur' або 'change')
+    corePremiseInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
+    coreThemeInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
+    coreArcInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
+    notesGeneralInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
+    notesResearchInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
+    dashboardWriteBtn.addEventListener('click', () => { showTab('chapters-tab'); });
     
     addCharacterBtn.addEventListener('click', handleAddNewCharacter);
     deleteCharacterBtn.addEventListener('click', handleDeleteCharacter);
@@ -223,9 +253,15 @@ function handleLogin() {
     showAppScreen();
 }
 function handleLogout() {
+    // v1.2.0: Перевірка на незбережені зміни
+    if (hasUnsavedChanges && !confirm("У вас є незбережені зміни. Ви впевнені, що хочете вийти?")) {
+        return;
+    }
     currentUser = null; 
     currentProjectID = null;
     currentProjectData = null;
+    hasUnsavedChanges = false; // Скидаємо прапор
+    window.onbeforeunload = null; // Знімаємо попередження
     localStorage.removeItem('bookBotUser');
     chatWindow.innerHTML = ''; 
     showLoginScreen();
@@ -243,10 +279,16 @@ function showAppScreen() {
     loadProjects(currentUser); 
 }
 function showProjectsList() {
+    // v1.2.0: Перевірка на незбережені зміни
+    if (hasUnsavedChanges && !confirm("У вас є незбережені зміни. Ви впевнені, що хочете вийти?")) {
+        return;
+    }
     workspaceContainer.classList.add('hidden');
     appContainer.classList.remove('hidden');
     currentProjectID = null; 
     currentProjectData = null;
+    hasUnsavedChanges = false; // Скидаємо прапор
+    window.onbeforeunload = null; // Знімаємо попередження
     loadProjects(currentUser); 
 }
 
@@ -275,11 +317,12 @@ async function openProjectWorkspace(projectID) {
         renderWorkspace();
         showTab('dashboard-tab');
         initSortableLists(); 
+        updateSaveStatus('saved'); // v1.2.0: Скидаємо статус при завантаженні
 
     } catch (error) {
         console.error("Помилка при відкритті проєкту:", error);
         showToast(error.message, 'error');
-        logErrorToServer(error, "openProjectWorkspace"); // v1.1.0
+        logErrorToServer(error, "openProjectWorkspace"); 
     } finally {
         hideSpinner();
     }
@@ -287,7 +330,6 @@ async function openProjectWorkspace(projectID) {
 
 function renderWorkspace() {
     if (!currentProjectData) return;
-
     workspaceTitle.textContent = currentProjectData.title;
     const content = currentProjectData.content;
     corePremiseInput.value = content.premise || '';
@@ -295,14 +337,12 @@ function renderWorkspace() {
     coreArcInput.value = content.mainArc || '';
     notesGeneralInput.value = content.notes || '';
     notesResearchInput.value = content.research || '';
-
     chatWindow.innerHTML = ''; 
     (currentProjectData.chatHistory || []).slice(1).forEach(message => { 
         const sender = message.role === 'model' ? 'bot' : 'user';
         const text = message.parts[0].text.split("--- КОНТЕКСТ ПРОЄКТУ")[0]; 
         addMessageToChat(text, sender);
     });
-    
     renderCharacterList();
     showCharacterEditor(false); 
     renderChapterList();
@@ -341,14 +381,12 @@ async function loadProjects(user) {
             projects.forEach(project => {
                 const li = document.createElement('li');
                 li.className = 'project-card';
-                
                 const wordCount = (project.totalWordCount || 0).toLocaleString('uk-UA');
                 let lastUpdated = 'нещодавно';
                 if (project.updatedAt) {
                     const date = new Date(project.updatedAt._seconds * 1000);
                     lastUpdated = date.toLocaleDateString('uk-UA'); 
                 }
-
                 li.innerHTML = `
                     <div class="project-card-header">
                         <h3 class="project-card-title">${project.title}</h3>
@@ -359,16 +397,13 @@ async function loadProjects(user) {
                         <span>Оновлено: ${lastUpdated}</span>
                     </div>
                 `;
-
                 li.querySelector('.project-card-title').addEventListener('click', () => {
                     openProjectWorkspace(project.id);
                 });
-
                 li.querySelector('.project-card-menu-btn').addEventListener('click', (e) => {
                     e.stopPropagation(); 
                     showProjectContextMenu(e, project);
                 });
-
                 projectsList.appendChild(li);
             });
         }
@@ -376,7 +411,7 @@ async function loadProjects(user) {
         console.error('Не вдалося завантажити проєкти:', error);
         projectsList.innerHTML = '<li>Не вдалося завантажити проєкти.</li>';
         showToast(error.message, 'error');
-        logErrorToServer(error, "loadProjects"); // v1.1.0
+        logErrorToServer(error, "loadProjects"); 
     }
 }
 
@@ -392,22 +427,20 @@ async function handleCreateProject(title) {
             const err = await response.json();
             throw new Error(err.message || 'Сервер не зміг створити проєкт.');
         }
-        
         const newProject = await response.json(); 
         currentProjectData = newProject.data;
         currentProjectID = newProject.id;
-        
         appContainer.classList.add('hidden');
         workspaceContainer.classList.remove('hidden');
         renderWorkspace();
         showTab('dashboard-tab'); 
         initSortableLists();
+        updateSaveStatus('saved'); // v1.2.0
         showToast('Проєкт створено!', 'success'); 
-
     } catch (error) { 
         console.error('Помилка при створенні проєкту:', error);
         showToast(error.message, 'error');
-        logErrorToServer(error, "handleCreateProject"); // v1.1.0
+        logErrorToServer(error, "handleCreateProject"); 
     } finally {
         hideSpinner(); 
     }
@@ -423,11 +456,10 @@ async function handleDeleteProject(projectID) {
         }
         loadProjects(currentUser);
         showToast('Проєкт видалено.', 'success'); 
-
     } catch (error) { 
         console.error('Помилка при видаленні:', error); 
         showToast(error.message, 'error');
-        logErrorToServer(error, "handleDeleteProject"); // v1.1.0
+        logErrorToServer(error, "handleDeleteProject"); 
     } finally {
         hideSpinner(); 
     }
@@ -438,6 +470,7 @@ async function handleEditTitle(projectID, newTitle) {
         showToast("Назва не може бути порожньою!", 'error');
         return;
     }
+    updateSaveStatus('saving'); // v1.2.0
     showSpinner(); 
     try {
         const response = await fetch('/update-title', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectID: projectID, newTitle: newTitle.trim() }) });
@@ -445,19 +478,18 @@ async function handleEditTitle(projectID, newTitle) {
             const err = await response.json();
             throw new Error(err.message || 'Сервер не зміг оновити назву.');
         }
-        
         if (currentProjectID === projectID) {
             currentProjectData.title = newTitle;
             workspaceTitle.textContent = newTitle;
         }
-        
         loadProjects(currentUser); 
+        updateSaveStatus('saved'); // v1.2.0
         showToast('Назву оновлено.', 'success'); 
-
     } catch (error) {
         console.error('Помилка при оновленні назви:', error);
         showToast(error.message, 'error');
-        logErrorToServer(error, "handleEditTitle"); // v1.1.0
+        updateSaveStatus('error'); // v1.2.0
+        logErrorToServer(error, "handleEditTitle"); 
     } finally {
         hideSpinner(); 
     }
@@ -465,38 +497,24 @@ async function handleEditTitle(projectID, newTitle) {
 
 async function handleSimpleAutoSave(field, value) {
     if (!currentProjectID || !currentProjectData) return;
-    
     const fieldName = field.split('.')[1]; 
     if (currentProjectData.content[fieldName] === value) {
         return; 
     }
-    
     currentProjectData.content[fieldName] = value;
-    console.log(`Збереження... ${field}`);
+    
+    // v1.2.0: updateSaveStatus('unsaved') вже викликано слухачем 'input'
     
     clearTimeout(saveTimer);
     saveTimer = setTimeout(async () => {
-        showToast(`Збереження...`, 'info'); 
+        // v1.2.0: Перенесено в saveArrayToDb
+        // updateSaveStatus('saving'); 
+        
         try {
-            const response = await fetch('/save-project-content', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    projectID: currentProjectID, 
-                    field: field, 
-                    value: value 
-                })
-            });
-            if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.message || 'Помилка збереження');
-            }
-            showToast('Збережено!', 'success');
-
+            // v1.2.0: Використовуємо універсальну функцію
+            await saveArrayToDb(field, value, "даних", true, true);
         } catch (error) {
-            console.error('Помилка автозбереження:', error);
-            showToast(error.message, 'error');
-            logErrorToServer(error, "handleSimpleAutoSave"); // v1.1.0
+            // Обробка помилок тепер в saveArrayToDb
         }
     }, 1000); 
 }
@@ -524,10 +542,8 @@ async function sendMessage() {
             const err = await response.json();
             throw new Error(err.message || 'Сервер повернув помилку');
         }
-        
         const data = await response.json();
         const botMessage = data.message;
-        
         addMessageToChat(botMessage, 'bot');
         currentProjectData.chatHistory.push({ role: "user", parts: [{ text: messageText }] });
         currentProjectData.chatHistory.push({ role: "model", parts: [{ text: botMessage }] });
@@ -535,7 +551,7 @@ async function sendMessage() {
     } catch (error) { 
         console.error("Помилка відправки повідомлення:", error);
         showToast(error.message, 'error');
-        logErrorToServer(error, "sendMessage"); // v1.1.0
+        logErrorToServer(error, "sendMessage"); 
     } finally { 
         sendButton.disabled = false; 
     }
@@ -567,9 +583,11 @@ function showToast(message, type = 'info') {
         toast.remove();
     }, 3000);
 
-    // ОНОВЛЕНО v1.1.0: Логуємо помилки на сервер
     if (type === 'error') {
-        logErrorToServer(new Error(message), "showToast");
+        // v1.1.0: Не логуємо помилки, які вже є Error, щоб уникнути дублів
+        if (!(message instanceof Error)) {
+            logErrorToServer(new Error(message), "showToast");
+        }
     }
 }
 function showCreateEditModal(mode, projectID = null, oldTitle = '') {
@@ -582,11 +600,9 @@ function showCreateEditModal(mode, projectID = null, oldTitle = '') {
         createEditInput.value = oldTitle;
     }
     createEditInput.focus(); 
-
     createEditConfirmBtn.onclick = null;
     createEditCancelBtn.onclick = null;
     createEditInput.onkeypress = null;
-
     createEditConfirmBtn.onclick = () => {
         const newValue = createEditInput.value.trim();
         hideCreateEditModal();
@@ -611,10 +627,8 @@ function hideCreateEditModal() {
 function showConfirmModal(message, onConfirm) {
     confirmModal.classList.remove('hidden'); 
     confirmModalMessage.textContent = message;
-
     confirmOkBtn.onclick = null;
     confirmCancelBtn.onclick = null;
-
     confirmOkBtn.onclick = () => {
         hideConfirmModal();
         onConfirm(); 
@@ -631,7 +645,6 @@ function showProjectContextMenu(event, project) {
     projectContextMenu.classList.remove('hidden');
     projectContextMenu.style.top = `${event.pageY}px`;
     projectContextMenu.style.left = `${event.pageX}px`;
-
     contextEditBtn.onclick = () => {
         showCreateEditModal('edit', project.id, project.title);
     };
@@ -648,13 +661,8 @@ function hideProjectContextMenu() {
 }
 
 // === v1.1.0: ЛОГУВАННЯ ПОМИЛОК ===
-/**
- * Відправляє помилки на сервер для логування
- * @param {Error} error - Об'єкт помилки
- * @param {string} contextName - Назва функції, де сталася помилка
- */
 async function logErrorToServer(error, contextName) {
-    console.error(`[${contextName}]`, error); // Залишаємо лог в консолі
+    console.error(`[${contextName}]`, error); 
     try {
         await fetch('/log-error', {
             method: 'POST',
@@ -663,11 +671,8 @@ async function logErrorToServer(error, contextName) {
                 message: error.message,
                 stack: error.stack,
                 context: {
-                    name: contextName,
-                    user: currentUser,
-                    projectID: currentProjectID,
-                    href: window.location.href,
-                    userAgent: navigator.userAgent
+                    name: contextName, user: currentUser, projectID: currentProjectID,
+                    href: window.location.href, userAgent: navigator.userAgent
                 }
             })
         });
@@ -675,8 +680,6 @@ async function logErrorToServer(error, contextName) {
         console.error("Не вдалося відправити лог на сервер:", logError);
     }
 }
-
-// Глобальні обробники помилок
 window.onerror = (message, source, lineno, colno, error) => {
     logErrorToServer(error || new Error(message), 'window.onerror');
 };
@@ -684,12 +687,49 @@ window.onunhandledrejection = (event) => {
     logErrorToServer(event.reason || new Error('Unhandled rejection'), 'window.onunhandledrejection');
 };
 
-// === v0.5.1 - ЛІЧИЛЬНИК СЛІВ ===
+// === v1.2.0: НОВА ФУНКЦІЯ ІНДИКАТОРА ЗБЕРЕЖЕННЯ (P15, P21) ===
+/**
+ * Оновлює візуальний стан індикатора збереження
+ * @param {'saved' | 'unsaved' | 'saving' | 'error'} status 
+ */
+function updateSaveStatus(status) {
+    if (!saveStatusIndicator) return; // Якщо ми не у воркспейсі
 
-function countWords(text) {
-    if (!text || text.trim() === "") {
-        return 0;
+    switch (status) {
+        case 'saved':
+            saveStatusIndicator.classList.remove('saving', 'unsaved', 'error');
+            saveStatusText.textContent = "Збережено";
+            hasUnsavedChanges = false;
+            window.onbeforeunload = null;
+            break;
+        case 'unsaved':
+            saveStatusIndicator.classList.remove('saving', 'error');
+            saveStatusIndicator.classList.add('unsaved');
+            saveStatusText.textContent = "Не збережено";
+            hasUnsavedChanges = true;
+            window.onbeforeunload = () => "У вас є незбережені зміни. Ви впевнені, що хочете піти?";
+            break;
+        case 'saving':
+            saveStatusIndicator.classList.remove('unsaved', 'error');
+            saveStatusIndicator.classList.add('saving');
+            saveStatusText.textContent = "Збереження...";
+            hasUnsavedChanges = true; // Все ще не збережено остаточно
+            window.onbeforeunload = () => "Іде збереження. Ви впевнені, що хочете піти?";
+            break;
+        case 'error':
+            saveStatusIndicator.classList.remove('saving', 'unsaved');
+            saveStatusIndicator.classList.add('error');
+            saveStatusText.textContent = "Помилка збереження";
+            hasUnsavedChanges = true; // Помилка, зміни не збережено
+            window.onbeforeunload = () => "Сталася помилка збереження. Ви впевнені, що хочете піти?";
+            break;
     }
+}
+
+
+// === v0.5.1 - ЛІЧИЛЬНИК СЛІВ ===
+function countWords(text) {
+    if (!text || text.trim() === "") return 0;
     const words = text.trim().split(/\s+/);
     return words.length;
 }
@@ -697,6 +737,7 @@ function handleChapterTextInput(e) {
     if (selectedChapterIndex === null) return;
     const count = countWords(e.target.value);
     chapterCurrentWordCount.textContent = `${count} слів`;
+    updateSaveStatus('unsaved'); // v1.2.0
 }
 function updateTotalWordCount() {
     if (!currentProjectData || !currentProjectData.content.chapters) {
@@ -711,15 +752,12 @@ function updateTotalWordCount() {
 }
 
 // === v0.8.0: DASHBOARD ===
-
 function renderDashboard() {
     if (!currentProjectData) return;
     const GOAL_WORDS = 50000; 
     const totalCount = currentProjectData.totalWordCount || 0;
-    
     dashboardProjectTitle.textContent = currentProjectData.title || "Без назви";
     dashboardTotalWords.textContent = totalCount.toLocaleString('uk-UA'); 
-
     if (currentProjectData.updatedAt) {
         const date = new Date(currentProjectData.updatedAt._seconds * 1000);
         dashboardLastUpdated.textContent = date.toLocaleString('uk-UA');
@@ -733,7 +771,6 @@ function renderDashboard() {
 
 
 // === ВКЛАДКА "ПЕРСОНАЖІ" ===
-
 function renderCharacterList() {
     if (!currentProjectData) return;
     charactersList.innerHTML = ''; 
@@ -768,18 +805,39 @@ function selectCharacter(index) {
     showCharacterEditor(true);
     renderCharacterList();
 }
-async function handleAddNewCharacter() {
-    const newCharacter = { name: "Новий персонаж", description: "", arc: "" };
+// ОНОВЛЕНО v1.2.0: Оптимістичне оновлення (P7)
+function handleAddNewCharacter() {
+    const newCharacter = { 
+        name: "Новий персонаж", description: "", arc: "",
+        _tempId: Date.now() // v1.2.0: ID для відкату
+    };
+    
+    // 1. Оновити UI миттєво
     currentProjectData.content.characters.push(newCharacter);
-    await saveCharactersArray(true); 
     const newIndex = currentProjectData.content.characters.length - 1;
+    renderCharacterList();
     selectCharacter(newIndex);
+    updateSaveStatus('unsaved'); // v1.2.0
+
+    // 2. Зберегти у фоні
+    saveCharactersArray(true)
+        .catch(err => {
+            // 3. Відкат у разі помилки
+            logErrorToServer(err, "handleAddNewCharacter (Optimistic Save)");
+            showToast("Помилка! Не вдалося створити персонажа.", 'error');
+            currentProjectData.content.characters = currentProjectData.content.characters.filter(
+                c => c._tempId !== newCharacter._tempId
+            );
+            showCharacterEditor(false);
+            renderCharacterList();
+        });
 }
 function handleDeleteCharacter() {
     if (selectedCharacterIndex === null) return;
     const characterName = currentProjectData.content.characters[selectedCharacterIndex].name;
     showConfirmModal(`Ви впевнені, що хочете видалити персонажа "${characterName}"?`, async () => {
         currentProjectData.content.characters.splice(selectedCharacterIndex, 1);
+        updateSaveStatus('unsaved'); // v1.2.0
         await saveCharactersArray(true); 
         showCharacterEditor(false); 
         renderCharacterList(); 
@@ -793,6 +851,7 @@ async function handleCharacterFieldSave(field, value) {
     if (field === 'name') {
         characterEditorTitle.textContent = `Редагування "${value}"`;
     }
+    // updateSaveStatus('unsaved') вже викликано
     await saveCharactersArray(); 
     renderCharacterList();
 }
@@ -801,7 +860,6 @@ async function saveCharactersArray(immediate = false) {
 }
 
 // === ВКЛАДКА "РОЗДІЛИ" ===
-
 function getStatusIcon(status) {
     switch (status) {
         case "Заплановано": return "🗓️";
@@ -824,13 +882,11 @@ function renderChapterList() {
             selectChapter(index);
         });
         if (index === selectedChapterIndex) card.classList.add('active');
-        
         const order = index + 1;
         const title = chapter.title || 'Розділ без назви';
         const status = chapter.status || 'Заплановано';
         const icon = getStatusIcon(status);
         const wordCount = chapter.word_count || 0;
-        
         let snippet = '';
         let snippetClass = 'card-snippet';
         if (status === 'Заплановано') {
@@ -841,7 +897,6 @@ function renderChapterList() {
         } else {
             snippet = 'Немає тексту...';
         }
-        
         card.innerHTML = `
             <div class="card-header">
                 <span>${order}. ${title}</span>
@@ -881,27 +936,49 @@ function selectChapter(index) {
     chapterTitleInput.value = chapter.title || '';
     chapterStatusInput.value = chapter.status || 'Заплановано';
     chapterTextInput.value = chapter.text || '';
+    // ОНОВЛЕНО v1.2.0: Заповнюємо поле синопсису
+    chapterEditorSynopsis.textContent = chapter.synopsis || 'Немає синопсису...';
+
     const count = chapter.word_count || countWords(chapter.text || '');
     chapter.word_count = count; 
     chapterCurrentWordCount.textContent = `${count} слів`;
     showChapterEditor(true);
     renderChapterList();
 }
-async function handleAddNewChapter() {
+// ОНОВЛЕНО v1.2.0: Оптимістичне оновлення (P7)
+function handleAddNewChapter() {
     const newChapter = {
         title: "Новий розділ", status: "Заплановано", text: "",
-        synopsis: "", word_count: 0, updated_at: new Date().toISOString()
+        synopsis: "", word_count: 0, updated_at: new Date().toISOString(),
+        _tempId: Date.now() // v1.2.0: ID для відкату
     };
+
+    // 1. Оновити UI миттєво
     currentProjectData.content.chapters.push(newChapter);
-    await saveChaptersArray(true); 
     const newIndex = currentProjectData.content.chapters.length - 1;
+    renderChapterList();
     selectChapter(newIndex);
+    updateSaveStatus('unsaved'); // v1.2.0
+
+    // 2. Зберегти у фоні
+    saveChaptersArray(true)
+        .catch(err => {
+            // 3. Відкат у разі помилки
+            logErrorToServer(err, "handleAddNewChapter (Optimistic Save)");
+            showToast("Помилка! Не вдалося створити розділ.", 'error');
+            currentProjectData.content.chapters = currentProjectData.content.chapters.filter(
+                c => c._tempId !== newChapter._tempId
+            );
+            showChapterEditor(false);
+            renderChapterList();
+        });
 }
 function handleDeleteChapter() {
     if (selectedChapterIndex === null) return;
     const chapterTitle = currentProjectData.content.chapters[selectedChapterIndex].title;
     showConfirmModal(`Ви впевнені, що хочете видалити розділ "${chapterTitle}"?`, async () => {
         currentProjectData.content.chapters.splice(selectedChapterIndex, 1);
+        updateSaveStatus('unsaved'); // v1.2.0
         await saveChaptersArray(true); 
         showChapterEditor(false); 
         renderChapterList();
@@ -923,6 +1000,7 @@ async function handleChapterFieldSave(field, value) {
         chapterCurrentWordCount.textContent = `${count} слів`;
     }
     chapter.updated_at = new Date().toISOString();
+    // updateSaveStatus('unsaved') вже викликано
     await saveChaptersArray(); 
     updateSingleChapterCard(selectedChapterIndex);
     updateTotalWordCount();
@@ -941,6 +1019,10 @@ function updateSingleChapterCard(index) {
     let snippet = '';
     let snippetClass = 'card-snippet';
     if (status === 'Заплановано') {
+        // v1.2.0: Оновлюємо синопсис у редакторі, якщо він відкритий
+        if(index === selectedChapterIndex) {
+             chapterEditorSynopsis.textContent = chapter.synopsis || 'Немає синопсису...';
+        }
         snippet = chapter.synopsis || 'Немає синопсису...';
         snippetClass = 'card-snippet synopsis';
     } else if (chapter.text) {
@@ -969,7 +1051,6 @@ async function saveChaptersArray(immediate = false) {
 }
 
 // === ВКЛАДКА "ЛОКАЦІЇ" ===
-
 function renderLocationList() {
     if (!currentProjectData) return;
     locationsList.innerHTML = ''; 
@@ -1003,18 +1084,39 @@ function selectLocation(index) {
     showLocationEditor(true);
     renderLocationList();
 }
-async function handleAddNewLocation() {
-    const newLocation = { name: "Нова локація", description: "" };
+// ОНОВЛЕНО v1.2.0: Оптимістичне оновлення (P7)
+function handleAddNewLocation() {
+    const newLocation = { 
+        name: "Нова локація", description: "",
+        _tempId: Date.now() // v1.2.0: ID для відкату
+    };
+    
+    // 1. Оновити UI миттєво
     currentProjectData.content.locations.push(newLocation);
-    await saveLocationsArray(true); 
     const newIndex = currentProjectData.content.locations.length - 1;
+    renderLocationList();
     selectLocation(newIndex);
+    updateSaveStatus('unsaved'); // v1.2.0
+
+    // 2. Зберегти у фоні
+    saveLocationsArray(true)
+        .catch(err => {
+            // 3. Відкат у разі помилки
+            logErrorToServer(err, "handleAddNewLocation (Optimistic Save)");
+            showToast("Помилка! Не вдалося створити локацію.", 'error');
+            currentProjectData.content.locations = currentProjectData.content.locations.filter(
+                c => c._tempId !== newLocation._tempId
+            );
+            showLocationEditor(false);
+            renderLocationList();
+        });
 }
 function handleDeleteLocation() {
     if (selectedLocationIndex === null) return;
     const locationName = currentProjectData.content.locations[selectedLocationIndex].name;
     showConfirmModal(`Ви впевнені, що хочете видалити локацію "${locationName}"?`, async () => {
         currentProjectData.content.locations.splice(selectedLocationIndex, 1);
+        updateSaveStatus('unsaved'); // v1.2.0
         await saveLocationsArray(true); 
         showLocationEditor(false); 
         renderLocationList(); 
@@ -1028,6 +1130,7 @@ async function handleLocationFieldSave(field, value) {
     if (field === 'name') {
         locationEditorTitle.textContent = `Редагування "${value}"`;
     }
+    // updateSaveStatus('unsaved') вже викликано
     await saveLocationsArray(); 
     renderLocationList();
 }
@@ -1036,7 +1139,6 @@ async function saveLocationsArray(immediate = false) {
 }
 
 // === ВКЛАДКА "СЮЖЕТНІ ЛІНІЇ" ===
-
 function renderPlotlineList() {
     if (!currentProjectData) return;
     plotlinesList.innerHTML = ''; 
@@ -1045,7 +1147,7 @@ function renderPlotlineList() {
         li.textContent = `${index + 1}. ${plotline.title || 'Лінія без назви'}`;
         li.dataset.index = index;
         li.addEventListener('click', () => { selectPlotline(index); });
-        if (index === selectedPlotlineIndex) li.classList.add('active'); // ВИПРАВЛЕНО
+        if (index === selectedPlotlineIndex) li.classList.add('active'); 
         plotlinesList.appendChild(li);
     });
 }
@@ -1070,18 +1172,39 @@ function selectPlotline(index) {
     showPlotlineEditor(true);
     renderPlotlineList();
 }
-async function handleAddNewPlotline() {
-    const newPlotline = { title: "Нова сюжетна лінія", description: "" };
+// ОНОВЛЕНО v1.2.0: Оптимістичне оновлення (P7)
+function handleAddNewPlotline() {
+    const newPlotline = { 
+        title: "Нова сюжетна лінія", description: "",
+        _tempId: Date.now() // v1.2.0: ID для відкату
+    };
+
+    // 1. Оновити UI миттєво
     currentProjectData.content.plotlines.push(newPlotline);
-    await savePlotlinesArray(true); 
     const newIndex = currentProjectData.content.plotlines.length - 1;
+    renderPlotlineList();
     selectPlotline(newIndex);
+    updateSaveStatus('unsaved'); // v1.2.0
+
+    // 2. Зберегти у фоні
+    savePlotlinesArray(true)
+        .catch(err => {
+            // 3. Відкат у разі помилки
+            logErrorToServer(err, "handleAddNewPlotline (Optimistic Save)");
+            showToast("Помилка! Не вдалося створити сюжетну лінію.", 'error');
+            currentProjectData.content.plotlines = currentProjectData.content.plotlines.filter(
+                c => c._tempId !== newPlotline._tempId
+            );
+            showPlotlineEditor(false);
+            renderPlotlineList();
+        });
 }
 function handleDeletePlotline() {
     if (selectedPlotlineIndex === null) return;
     const plotlineTitle = currentProjectData.content.plotlines[selectedPlotlineIndex].title;
     showConfirmModal(`Ви впевнені, що хочете видалити сюжетну лінію "${plotlineTitle}"?`, async () => {
         currentProjectData.content.plotlines.splice(selectedPlotlineIndex, 1);
+        updateSaveStatus('unsaved'); // v1.2.0
         await savePlotlinesArray(true); 
         showPlotlineEditor(false); 
         renderPlotlineList(); 
@@ -1092,9 +1215,10 @@ async function handlePlotlineFieldSave(field, value) {
     const plotline = currentProjectData.content.plotlines[selectedPlotlineIndex];
     if (plotline[field] === value) return; 
     plotline[field] = value;
-    if (field === 'title') { // ВИПРАВЛЕНО (було 'name')
+    if (field === 'title') { 
         plotlineEditorTitle.textContent = `Редагування "${value}"`;
     }
+    // updateSaveStatus('unsaved') вже викликано
     await savePlotlinesArray(); 
     renderPlotlineList();
 }
@@ -1104,87 +1228,111 @@ async function savePlotlinesArray(immediate = false) {
 
 
 // === СОРТУВАННЯ ===
-
 function initSortableLists() {
     if (!currentProjectData) return;
+    
+    // Функція-обробник для всіх сортувань
+    const onSortEnd = async (evt, array, saveFunction, renderFunction) => {
+        const { oldIndex, newIndex } = evt;
+        const [item] = array.splice(oldIndex, 1);
+        array.splice(newIndex, 0, item);
+        updateSaveStatus('unsaved'); // v1.2.0
+        await saveFunction(true);
+        renderFunction();
+    };
+
     new Sortable(chaptersList, {
         animation: 150, ghostClass: 'sortable-ghost', handle: '.card-drag-handle', 
-        onEnd: async (evt) => {
-            const { oldIndex, newIndex } = evt;
-            const [item] = currentProjectData.content.chapters.splice(oldIndex, 1);
-            currentProjectData.content.chapters.splice(newIndex, 0, item);
-            await saveChaptersArray(true);
-            renderChapterList();
-        }
+        onEnd: (evt) => onSortEnd(evt, currentProjectData.content.chapters, saveChaptersArray, renderChapterList)
     });
     new Sortable(charactersList, {
         animation: 150, ghostClass: 'sortable-ghost',
-        onEnd: async (evt) => {
-            const { oldIndex, newIndex } = evt;
-            const [item] = currentProjectData.content.characters.splice(oldIndex, 1);
-            currentProjectData.content.characters.splice(newIndex, 0, item);
-            await saveCharactersArray(true);
-            renderCharacterList();
-        }
+        onEnd: (evt) => onSortEnd(evt, currentProjectData.content.characters, saveCharactersArray, renderCharacterList)
     });
     new Sortable(locationsList, {
         animation: 150, ghostClass: 'sortable-ghost',
-        onEnd: async (evt) => {
-            const { oldIndex, newIndex } = evt;
-            const [item] = currentProjectData.content.locations.splice(oldIndex, 1);
-            currentProjectData.content.locations.splice(newIndex, 0, item);
-            await saveLocationsArray(true);
-            renderLocationList();
-        }
+        onEnd: (evt) => onSortEnd(evt, currentProjectData.content.locations, saveLocationsArray, renderLocationList)
     });
     new Sortable(plotlinesList, {
         animation: 150, ghostClass: 'sortable-ghost',
-        onEnd: async (evt) => {
-            const { oldIndex, newIndex } = evt;
-            const [item] = currentProjectData.content.plotlines.splice(oldIndex, 1);
-            currentProjectData.content.plotlines.splice(newIndex, 0, item);
-            await savePlotlinesArray(true);
-            renderPlotlineList();
-        }
+        onEnd: (evt) => onSortEnd(evt, currentProjectData.content.plotlines, savePlotlinesArray, renderPlotlineList)
     });
 }
 
 
 // === УНІВЕРСАЛЬНА ФУНКЦІЯ ЗБЕРЕЖЕННЯ ===
-
-async function saveArrayToDb(field, array, nameForToast, immediate = false) {
+/**
+ * Універсальна функція для збереження масивів
+ * @param {boolean} [isSimpleField=false] - (v1.2.0) Чи це просте поле (не масив)
+ */
+async function saveArrayToDb(field, array, nameForToast, immediate = false, isSimpleField = false) {
     if (!currentProjectID) return;
-    console.log(`Запит на збереження ${nameForToast}. Негайно: ${immediate}`);
-    clearTimeout(saveTimer); 
-
+    
+    // v1.2.0: 'array' тепер може бути 'value' для простих полів
+    const valueToSave = array; 
+    
+    // v1.2.0: handleSimpleAutoSave вже встановив 'unsaved', тут ми ставимо 'saving'
+    if (!immediate) {
+        console.log(`Запит на збереження ${nameForToast}. Негайно: ${immediate}`);
+        clearTimeout(saveTimer);
+    }
+    
     const doSave = async () => {
-        showToast(`Збереження...`, 'info'); 
+        updateSaveStatus('saving'); // v1.2.0
         try {
+            let valueToSend = valueToSave;
+
+            // v1.2.0: Очищуємо _tempId з масивів перед відправкою
+            if (Array.isArray(valueToSave)) {
+                valueToSend = valueToSave.map(item => {
+                    if (item && typeof item === 'object' && item._tempId) {
+                        const { _tempId, ...rest } = item;
+                        return rest;
+                    }
+                    return item;
+                });
+            }
+
             const response = await fetch('/save-project-content', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     projectID: currentProjectID, 
                     field: field, 
-                    value: array
+                    value: valueToSend // Надсилаємо очищені дані
                 })
             });
 
+            // ОНОВЛЕНО v0.8.0: Отримуємо оновлені дані (для updatedAt, totalWordCount)
             const updatedProjectResponse = await fetch(`/get-project-content?projectID=${currentProjectID}`);
             if (!updatedProjectResponse.ok) throw new Error('Не вдалося оновити локальні дані');
+            
+            // Оновлюємо локальні дані (v1.2.0: тепер з очищеними даними)
             currentProjectData = await updatedProjectResponse.json();
+            
+            // v1.2.0: Синхронізуємо локальний стан з тим, що повернув сервер
+            // Це важливо, якщо ми щойно додали новий елемент
+            if (field.startsWith('content.')) {
+                 const key = field.split('.')[1];
+                 // Перезаписуємо локальний масив (з _tempId) на чистий масив з сервера
+                 currentProjectData.content[key] = updatedProjectResponse.json().content[key];
+            }
+
             renderDashboard(); 
             
             if (!response.ok) {
                 const err = await response.json();
                 throw new Error(err.message || `Помилка збереження ${nameForToast}`);
             }
+
+            updateSaveStatus('saved'); // v1.2.0
             showToast(`${nameForToast.charAt(0).toUpperCase() + nameForToast.slice(1)} збережено!`, 'success');
 
         } catch (error) {
             console.error(`Помилка автозбереження ${nameForToast}:`, error);
             showToast(error.message, 'error');
-            logErrorToServer(error, "saveArrayToDb"); // v1.1.0
+            logErrorToServer(error, "saveArrayToDb"); 
+            updateSaveStatus('error'); // v1.2.0
         }
     };
 

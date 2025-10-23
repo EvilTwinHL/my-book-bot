@@ -5,17 +5,17 @@
 body { 
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
     padding: 10px; 
-    background-color: #2b2b2b; /* Новий фон */
-    color: #eee; /* Новий текст */
+    background-color: #2b2b2b;
+    color: #eee;
 }
 .container { 
-    background-color: #333; /* Новий фон контейнера */
+    background-color: #333;
     padding: 25px; 
     border-radius: 12px; 
-    margin: 20px auto; /* Залишаємо auto-margin */
-    width: 95%; /* Нова ширина */
-    max-width: 1600px; /* Новий максимум */
-    box-sizing: border-box; /* Важливо для width: 95% */
+    margin: 20px auto;
+    width: 95%;
+    max-width: 1600px;
+    box-sizing: border-box;
 }
 .hidden { display: none !important; }
 
@@ -27,12 +27,12 @@ input[type="text"], textarea, select {
     width: calc(100% - 22px); 
     padding: 10px; 
     margin-bottom: 15px; 
-    border: 1px solid #555; /* Темний бордер */
+    border: 1px solid #555;
     border-radius: 6px; 
     font-size: 14px; 
     box-sizing: border-box;
-    background-color: #444; /* Темний фон */
-    color: #eee; /* Світлий текст */
+    background-color: #444;
+    color: #eee;
 }
 input[type="text"]::placeholder, textarea::placeholder {
     color: #999;
@@ -41,18 +41,18 @@ label {
     display: block;
     margin-bottom: 5px;
     font-weight: 500;
-    color: #ccc; /* Світліший лейбл */
+    color: #ccc;
 }
 button { 
     width: 100%; 
     padding: 10px; 
-    background-color: #ffc107; /* Жовтий акцент (з ui-ux-opus.png) */
-    color: #212529; /* Темний текст на жовтому */
+    background-color: #ffc107;
+    color: #212529;
     border: none; 
     border-radius: 6px; 
     cursor: pointer; 
     font-size: 16px; 
-    font-weight: 600; /* Жирніший */
+    font-weight: 600;
 }
 button:hover { 
     background-color: #e0a800; 
@@ -65,9 +65,8 @@ button:disabled {
 /* --- v1.0.0: СПИСОК ПРОЄКТІВ (КАРТКИ) --- */
 .app-header { display: flex; justify-content: space-between; align-items: center; }
 .app-header p { margin: 0; }
-.app-header button { width: auto; } /* Кнопка "Вийти" */
+.app-header button { width: auto; }
 
-/* v1.0.0: Нова сітка для карток */
 .project-card-list {
     list-style: none;
     padding: 0;
@@ -76,7 +75,6 @@ button:disabled {
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 20px;
 }
-/* v1.0.0: Стиль картки проєкту */
 .project-card {
     background-color: #444;
     border: 1px solid #555;
@@ -90,7 +88,6 @@ button:disabled {
 .project-card:hover {
     border-color: #ffc107;
 }
-/* v1.0.0: Верхня частина картки (назва + кнопка) */
 .project-card-header {
     display: flex;
     justify-content: space-between;
@@ -107,7 +104,6 @@ button:disabled {
 .project-card-title:hover {
     color: #ffc107;
 }
-/* v1.0.0: Кнопка "..." */
 .project-card-menu-btn {
     width: auto;
     background: transparent;
@@ -123,7 +119,6 @@ button:disabled {
     background-color: #555;
     color: #fff;
 }
-/* v1.0.0: Нижня частина (статистика) */
 .project-card-footer {
     font-size: 0.9em;
     color: #aaa;
@@ -153,6 +148,42 @@ button:disabled {
 #workspace-title { margin: 0; color: #fff; }
 #back-to-projects { background-color: #6c757d; color: white; }
 #back-to-projects:hover { background-color: #5a6268; }
+
+/* v1.2.0: Індикатор збереження */
+.autosave-status {
+    font-size: 0.9em;
+    color: #aaa;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 auto; /* Центруємо між заголовком і кнопкою */
+}
+.autosave-status .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #28a745; /* Зелений (Збережено) */
+    transition: background-color 0.3s ease;
+}
+/* Статус "Збереження..." (Жовтий) */
+.autosave-status.saving .dot {
+    background-color: #ffc107;
+    animation: pulse 1.5s infinite;
+}
+/* Статус "Не збережено" (Сірий) */
+.autosave-status.unsaved .dot {
+    background-color: #6c757d;
+}
+/* Статус "Помилка" (Червоний) */
+.autosave-status.error .dot {
+    background-color: #dc3545;
+}
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
+}
+
 
 #workspace-nav {
     display: flex;
@@ -335,6 +366,21 @@ button:disabled {
 #location-desc-input, #plotline-desc-input {
     flex-grow: 1;
     min-height: 150px;
+}
+
+/* v1.2.0: Стиль для поля синопсису */
+.editor-synopsis-preview {
+    background-color: #444;
+    border: 1px dashed #666; /* Штрихована рамка, щоб відрізняти */
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 15px;
+    font-size: 0.95em;
+    color: #ccc;
+    font-style: italic;
+    min-height: 40px; /* Мінімальна висота */
+    box-sizing: border-box;
+    width: calc(100% - 22px);
 }
 
 
@@ -581,7 +627,6 @@ button:disabled {
 .context-menu button:hover {
     background-color: #555;
 }
-/* Спеціальний колір для видалення */
 #context-delete-btn {
     color: #ff8b8b;
 }

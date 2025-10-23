@@ -1,6 +1,14 @@
-// === ГЛОБАЛЬНІ ЗМІННІ ===
-const APP_VERSION = "1.3.0"; // ОНОВЛЕНО: v1.3.0
+// === КОНФІГУРАЦІЯ ДОДАТКУ [v1.4.0 - P11] ===
+const CONFIG = {
+    APP_VERSION: "1.4.0",
+    AUTOSAVE_DELAY: 1500, // ms
+    DEFAULT_GOAL_WORDS: 50000,
+    SNIPPET_LENGTH: 80, // characters
+    TOAST_DURATION: 3000 // ms
+};
 
+// === ГЛОБАЛЬНІ ЗМІННІ ===
+// (Видалено APP_VERSION, тепер вона в CONFIG)
 let currentUser = null;
 let currentProjectID = null;
 /** @type {object | null} Зберігає ВСІ дані поточного проєкту */
@@ -25,7 +33,7 @@ let loginContainer, appContainer, loginInput, loginButton, logoutButton, usernam
 // ЕЛЕМЕНТИ РОБОЧОГО ПРОСТОРУ
 let workspaceContainer, workspaceTitle, backToProjectsButton, workspaceNav,
     chatWindow, userInput, sendButton,
-    corePremiseInput, coreThemeInput, coreArcInput,
+    corePremiseInput, coreThemeInput, coreArcInput, coreGoalInput, // ОНОВЛЕНО v1.4.0
     notesGeneralInput, notesResearchInput,
     versionNumberSpan,
     // v0.8.0
@@ -67,7 +75,8 @@ document.addEventListener('DOMContentLoaded', () => {
     bindEventListeners();
     checkLoginOnLoad();
     
-    versionNumberSpan.textContent = APP_VERSION;
+    // ОНОВЛЕНО v1.4.0: Використовуємо CONFIG
+    versionNumberSpan.textContent = CONFIG.APP_VERSION;
 });
 
 /** Знаходить всі елементи DOM і зберігає їх у глобальні змінні */
@@ -102,7 +111,6 @@ function bindUIElements() {
     backToProjectsButton = document.getElementById('back-to-projects');
     workspaceNav = document.getElementById('workspace-nav');
     
-    // v1.2.0: Індикатор збереження
     saveStatusIndicator = document.getElementById('save-status-indicator');
     saveStatusDot = document.getElementById('save-status-dot');
     saveStatusText = document.getElementById('save-status-text');
@@ -113,6 +121,7 @@ function bindUIElements() {
     corePremiseInput = document.getElementById('core-premise-input');
     coreThemeInput = document.getElementById('core-theme-input');
     coreArcInput = document.getElementById('core-arc-input');
+    coreGoalInput = document.getElementById('core-goal-input'); // ОНОВЛЕНО v1.4.0
     notesGeneralInput = document.getElementById('notes-general-input');
     notesResearchInput = document.getElementById('notes-research-input');
     dashboardProjectTitle = document.getElementById('dashboard-project-title');
@@ -176,19 +185,19 @@ function bindEventListeners() {
         }
     });
     
-    // v1.0.0: Закриття контекстного меню
     document.addEventListener('click', (e) => {
         if (!projectContextMenu.classList.contains('hidden')) {
             hideProjectContextMenu();
         }
     });
 
-    // ОНОВЛЕНО v1.3.0: Глобальний слухач гарячих клавіш [P16]
+    // v1.3.0: Глобальний слухач гарячих клавіш [P16]
     document.addEventListener('keydown', handleGlobalHotkeys);
 
-    // --- v1.2.1: Слухачі для індикатора збереження ---
+    // --- ОНОВЛЕНО v1.4.0: Слухачі для індикатора збереження ---
+    // Слухаємо *всі* поля вводу
     const inputs = document.querySelectorAll(
-        '#core-premise-input, #core-theme-input, #core-arc-input, ' +
+        '#core-premise-input, #core-theme-input, #core-arc-input, #core-goal-input, ' + // Додано core-goal-input
         '#notes-general-input, #notes-research-input, ' +
         '#character-name-input, #character-desc-input, #character-arc-input, ' +
         '#chapter-title-input, #chapter-status-input, #chapter-text-input, ' +
@@ -205,6 +214,9 @@ function bindEventListeners() {
     corePremiseInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
     coreThemeInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
     coreArcInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
+    // ОНОВЛЕНО v1.4.0: Збереження мети (конвертуємо в число)
+    coreGoalInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, parseInt(e.target.value, 10) || 0));
+
     notesGeneralInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
     notesResearchInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
     dashboardWriteBtn.addEventListener('click', () => { showTab('chapters-tab'); });
@@ -234,7 +246,7 @@ function bindEventListeners() {
     plotlineDescInput.addEventListener('blur', (e) => handlePlotlineFieldSave('description', e.target.value));
 }
 
-// === ЛОГІКА НАВІГАЦІЇ ===
+// === ЛОГІКА НАВІГАЦІЇ === (Без змін v1.4.0)
 
 function checkLoginOnLoad() {
     const savedUser = localStorage.getItem('bookBotUser');
@@ -256,15 +268,14 @@ function handleLogin() {
     showAppScreen();
 }
 function handleLogout() {
-    // v1.2.0: Перевірка на незбережені зміни
     if (hasUnsavedChanges && !confirm("У вас є незбережені зміни. Ви впевнені, що хочете вийти?")) {
         return;
     }
     currentUser = null; 
     currentProjectID = null;
     currentProjectData = null;
-    hasUnsavedChanges = false; // Скидаємо прапор
-    window.onbeforeunload = null; // Знімаємо попередження
+    hasUnsavedChanges = false; 
+    window.onbeforeunload = null; 
     localStorage.removeItem('bookBotUser');
     chatWindow.innerHTML = ''; 
     showLoginScreen();
@@ -282,7 +293,6 @@ function showAppScreen() {
     loadProjects(currentUser); 
 }
 function showProjectsList() {
-    // v1.2.0: Перевірка на незбережені зміни
     if (hasUnsavedChanges && !confirm("У вас є незбережені зміни. Ви впевнені, що хочете вийти?")) {
         return;
     }
@@ -290,8 +300,8 @@ function showProjectsList() {
     appContainer.classList.remove('hidden');
     currentProjectID = null; 
     currentProjectData = null;
-    hasUnsavedChanges = false; // Скидаємо прапор
-    window.onbeforeunload = null; // Знімаємо попередження
+    hasUnsavedChanges = false; 
+    window.onbeforeunload = null; 
     loadProjects(currentUser); 
 }
 
@@ -320,7 +330,7 @@ async function openProjectWorkspace(projectID) {
         renderWorkspace();
         showTab('dashboard-tab');
         initSortableLists(); 
-        updateSaveStatus('saved'); // v1.2.0: Скидаємо статус при завантаженні
+        updateSaveStatus('saved'); 
 
     } catch (error) {
         console.error("Помилка при відкритті проєкту:", error);
@@ -339,6 +349,7 @@ function renderWorkspace() {
     corePremiseInput.value = content.premise || '';
     coreThemeInput.value = content.theme || '';
     coreArcInput.value = content.mainArc || '';
+    coreGoalInput.value = content.wordGoal || ''; // ОНОВЛЕНО v1.4.0
     notesGeneralInput.value = content.notes || '';
     notesResearchInput.value = content.research || '';
 
@@ -368,7 +379,7 @@ function showTab(tabId) {
 }
 
 
-// === ЛОГІКА API (КАРТОТЕКА) ===
+// === ЛОГІКА API (КАРТОТЕКА) === (Без змін v1.4.0)
 
 async function loadProjects(user) {
     projectsList.innerHTML = '<li>Завантаження...</li>'; 
@@ -448,7 +459,7 @@ async function handleCreateProject(title) {
         renderWorkspace();
         showTab('dashboard-tab'); 
         initSortableLists();
-        updateSaveStatus('saved'); // v1.2.0
+        updateSaveStatus('saved'); 
         showToast('Проєкт створено!', 'success'); 
 
     } catch (error) { 
@@ -485,7 +496,7 @@ async function handleEditTitle(projectID, newTitle) {
         showToast("Назва не може бути порожньою!", 'error');
         return;
     }
-    updateSaveStatus('saving'); // v1.2.0
+    updateSaveStatus('saving'); 
     showSpinner(); 
     try {
         const response = await fetch('/update-title', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectID: projectID, newTitle: newTitle.trim() }) });
@@ -500,13 +511,13 @@ async function handleEditTitle(projectID, newTitle) {
         }
         
         loadProjects(currentUser); 
-        updateSaveStatus('saved'); // v1.2.0
+        updateSaveStatus('saved'); 
         showToast('Назву оновлено.', 'success'); 
 
     } catch (error) {
         console.error('Помилка при оновленні назви:', error);
         showToast(error.message, 'error');
-        updateSaveStatus('error'); // v1.2.0
+        updateSaveStatus('error'); 
         logErrorToServer(error, "handleEditTitle"); 
     } finally {
         hideSpinner(); 
@@ -517,29 +528,32 @@ async function handleSimpleAutoSave(field, value) {
     if (!currentProjectID || !currentProjectData) return;
     
     const fieldName = field.split('.')[1]; 
-    if (currentProjectData.content[fieldName] === value) {
+    
+    // ОНОВЛЕНО v1.4.0: Також перевіряємо, чи є 'wordGoal' 0
+    if (currentProjectData.content[fieldName] === value && fieldName !== 'wordGoal') {
         return; 
     }
     
     currentProjectData.content[fieldName] = value;
     
-    // v1.2.0: updateSaveStatus('unsaved') вже викликано слухачем 'input'
+    // updateSaveStatus('unsaved') вже викликано
     
     clearTimeout(saveTimer);
+    // ОНОВЛЕНО v1.4.0: Використовуємо CONFIG
     saveTimer = setTimeout(async () => {
-        // v1.2.0: Перенесено в saveArrayToDb
-        // updateSaveStatus('saving'); 
-        
         try {
-            // v1.2.0: Використовуємо універсальну функцію
             await saveArrayToDb(field, value, "даних", true, true);
+            // ОНОВЛЕНО v1.4.0: Якщо ми змінили мету, оновити dashboard
+            if (fieldName === 'wordGoal') {
+                renderDashboard();
+            }
         } catch (error) {
             // Обробка помилок тепер в saveArrayToDb
         }
-    }, 1000); 
+    }, CONFIG.AUTOSAVE_DELAY); 
 }
 
-// === ЛОГІКА API (ЧАТ) ===
+// === ЛОГІКА API (ЧАТ) === (Без змін v1.4.0)
         
 async function sendMessage() {
     const messageText = userInput.value.trim();
@@ -601,13 +615,13 @@ function showToast(message, type = 'info') {
     toast.className = `toast ${type}`;
     toast.textContent = message;
     toastContainer.appendChild(toast);
+    
+    // ОНОВЛЕНО v1.4.0: Використовуємо CONFIG
     setTimeout(() => {
         toast.remove();
-    }, 3000);
+    }, CONFIG.TOAST_DURATION);
 
-    // ОНОВЛЕНО v1.1.0: Логуємо помилки на сервер
     if (type === 'error') {
-        // v1.2.1: Не логуємо помилки, які вже є Error, щоб уникнути дублів
         if (!(message instanceof Error)) {
             logErrorToServer(new Error(message), "showToast");
         }
@@ -666,7 +680,7 @@ function hideConfirmModal() {
     confirmModal.classList.add('hidden');
 }
 
-// === v1.0.0: КОНТЕКСТНЕ МЕНЮ ===
+// === v1.0.0: КОНТЕКСТНЕ МЕНЮ === (Без змін v1.4.0)
 
 function showProjectContextMenu(event, project) {
     projectContextMenu.classList.remove('hidden');
@@ -688,14 +702,9 @@ function hideProjectContextMenu() {
     projectContextMenu.classList.add('hidden');
 }
 
-// === v1.1.0: ЛОГУВАННЯ ПОМИЛОК ===
-/**
- * Відправляє помилки на сервер для логування
- * @param {Error} error - Об'єкт помилки
- * @param {string} contextName - Назва функції, де сталася помилка
- */
+// === v1.1.0: ЛОГУВАННЯ ПОМИЛОК === (Без змін v1.4.0)
 async function logErrorToServer(error, contextName) {
-    console.error(`[${contextName}]`, error); // Залишаємо лог в консолі
+    console.error(`[${contextName}]`, error); 
     try {
         await fetch('/log-error', {
             method: 'POST',
@@ -716,8 +725,6 @@ async function logErrorToServer(error, contextName) {
         console.error("Не вдалося відправити лог на сервер:", logError);
     }
 }
-
-// Глобальні обробники помилок
 window.onerror = (message, source, lineno, colno, error) => {
     logErrorToServer(error || new Error(message), 'window.onerror');
 };
@@ -725,23 +732,18 @@ window.onunhandledrejection = (event) => {
     logErrorToServer(event.reason || new Error('Unhandled rejection'), 'window.onunhandledrejection');
 };
 
-// === ОНОВЛЕНО v1.3.0: ГАРЯЧІ КЛАВІШІ [P16] ===
-/**
- * Обробляє глобальні гарячі клавіші (Ctrl+S, Esc)
- * @param {KeyboardEvent} e
- */
+// === v1.3.0: ГАРЯЧІ КЛАВІШІ [P16] === (Без змін v1.4.0)
+
 function handleGlobalHotkeys(e) {
     // P16: Ctrl+S або Cmd+S для Збереження
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault(); // Забороняємо браузеру зберігати сторінку
+        e.preventDefault(); 
         
         if (hasUnsavedChanges) {
             console.log('Hotkey: Force save (blur) triggered.');
-            // Викликаємо 'blur' на активному елементі, щоб спрацював слухач
             if (document.activeElement && typeof document.activeElement.blur === 'function') {
                 document.activeElement.blur();
             }
-            // Таймер збереження спрацює через 'blur'
         } else {
             showToast('Немає що зберігати.', 'info');
         }
@@ -749,7 +751,6 @@ function handleGlobalHotkeys(e) {
 
     // P16: Клавіша Escape
     if (e.key === 'Escape') {
-        // 1. Закрити модальні вікна (мають вищий пріоритет)
         if (!createEditModal.classList.contains('hidden')) {
             hideCreateEditModal();
             return;
@@ -758,13 +759,11 @@ function handleGlobalHotkeys(e) {
             hideConfirmModal();
             return;
         }
-        // 2. Закрити контекстне меню
         if (!projectContextMenu.classList.contains('hidden')) {
             hideProjectContextMenu();
             return;
         }
         
-        // 3. Закрити активний редактор (повернутися до списку)
         const activeTabId = document.querySelector('.tab-content.active')?.id;
         if (!activeTabId) return;
 
@@ -793,13 +792,9 @@ function handleGlobalHotkeys(e) {
     }
 }
 
-// === v1.2.0: НОВА ФУНКЦІЯ ІНДИКАТОРА ЗБЕРЕЖЕННЯ (P15, P21) ===
-/**
- * Оновлює візуальний стан індикатора збереження
- * @param {'saved' | 'unsaved' | 'saving' | 'error'} status 
- */
+// === v1.2.0: НОВА ФУНКЦІЯ ІНДИКАТОРА ЗБЕРЕЖЕННЯ (P15, P21) === (Без змін v1.4.0)
 function updateSaveStatus(status) {
-    if (!saveStatusIndicator) return; // Якщо ми не у воркспейсі
+    if (!saveStatusIndicator) return; 
 
     switch (status) {
         case 'saved':
@@ -819,21 +814,21 @@ function updateSaveStatus(status) {
             saveStatusIndicator.classList.remove('unsaved', 'error');
             saveStatusIndicator.classList.add('saving');
             saveStatusText.textContent = "Збереження...";
-            hasUnsavedChanges = true; // Все ще не збережено остаточно
+            hasUnsavedChanges = true; 
             window.onbeforeunload = () => "Іде збереження. Ви впевнені, що хочете піти?";
             break;
         case 'error':
             saveStatusIndicator.classList.remove('saving', 'unsaved');
             saveStatusIndicator.classList.add('error');
             saveStatusText.textContent = "Помилка збереження";
-            hasUnsavedChanges = true; // Помилка, зміни не збережено
+            hasUnsavedChanges = true; 
             window.onbeforeunload = () => "Сталася помилка збереження. Ви впевнені, що хочете піти?";
             break;
     }
 }
 
 
-// === v0.5.1 - ЛІЧИЛЬНИК СЛІВ ===
+// === v0.5.1 - ЛІЧИЛЬНИК СЛІВ === (Без змін v1.4.0)
 
 function countWords(text) {
     if (!text || text.trim() === "") {
@@ -846,7 +841,7 @@ function handleChapterTextInput(e) {
     if (selectedChapterIndex === null) return;
     const count = countWords(e.target.value);
     chapterCurrentWordCount.textContent = `${count} слів`;
-    updateSaveStatus('unsaved'); // v1.2.0
+    updateSaveStatus('unsaved'); 
 }
 function updateTotalWordCount() {
     if (!currentProjectData || !currentProjectData.content.chapters) {
@@ -860,12 +855,14 @@ function updateTotalWordCount() {
     chaptersTotalWordCount.textContent = `Загалом: ${totalCount} слів`;
 }
 
-// === v0.8.0: DASHBOARD ===
+// === v0.8.0: DASHBOARD === (ОНОВЛЕНО v1.4.0)
 
 function renderDashboard() {
     if (!currentProjectData) return;
-    const GOAL_WORDS = 50000; 
+    
+    // ОНОВЛЕНО v1.4.0: Використовуємо динамічну мету [P1/P20]
     const totalCount = currentProjectData.totalWordCount || 0;
+    const goalWords = currentProjectData.content.wordGoal || CONFIG.DEFAULT_GOAL_WORDS;
     
     dashboardProjectTitle.textContent = currentProjectData.title || "Без назви";
     dashboardTotalWords.textContent = totalCount.toLocaleString('uk-UA'); 
@@ -876,13 +873,16 @@ function renderDashboard() {
     } else {
         dashboardLastUpdated.textContent = 'Ще не зберігалось';
     }
-    const progressPercent = Math.min((totalCount / GOAL_WORDS) * 100, 100);
+    
+    // Розрахунок прогресу
+    const progressPercent = (goalWords > 0) ? Math.min((totalCount / goalWords) * 100, 100) : 0;
+    
     dashboardProgressFill.style.width = `${progressPercent}%`;
-    dashboardProgressLabel.textContent = `${Math.floor(progressPercent)}% до мети (${GOAL_WORDS.toLocaleString('uk-UA')} слів)`;
+    dashboardProgressLabel.textContent = `${Math.floor(progressPercent)}% до мети (${goalWords.toLocaleString('uk-UA')} слів)`;
 }
 
 
-// === ВКЛАДКА "ПЕРСОНАЖІ" ===
+// === ВКЛАДКА "ПЕРСОНАЖІ" === (Без змін v1.4.0)
 
 function renderCharacterList() {
     if (!currentProjectData) return;
@@ -918,27 +918,22 @@ function selectCharacter(index) {
     showCharacterEditor(true);
     renderCharacterList();
 }
-// ОНОВЛЕНО v1.2.0: Оптимістичне оновлення (P7)
 function handleAddNewCharacter() {
     const newCharacter = { 
         name: "Новий персонаж", description: "", arc: "",
-        _tempId: Date.now() // v1.2.0: ID для відкату
+        _tempId: Date.now() 
     };
     
-    // 1. Оновити UI миттєво
     currentProjectData.content.characters.push(newCharacter);
     const newIndex = currentProjectData.content.characters.length - 1;
     renderCharacterList();
     selectCharacter(newIndex);
-    updateSaveStatus('unsaved'); // v1.2.0
+    updateSaveStatus('unsaved'); 
 
-    // 2. Зберегти у фоні
     saveCharactersArray(true)
         .catch(err => {
-            // 3. Відкат у разі помилки
             logErrorToServer(err, "handleAddNewCharacter (Optimistic Save)");
             showToast("Помилка! Не вдалося створити персонажа.", 'error');
-            // Перевіряємо, чи існує currentProjectData.content перед фільтрацією
             if (currentProjectData && currentProjectData.content) {
                 currentProjectData.content.characters = currentProjectData.content.characters.filter(
                     c => c._tempId !== newCharacter._tempId
@@ -953,7 +948,7 @@ function handleDeleteCharacter() {
     const characterName = currentProjectData.content.characters[selectedCharacterIndex].name;
     showConfirmModal(`Ви впевнені, що хочете видалити персонажа "${characterName}"?`, async () => {
         currentProjectData.content.characters.splice(selectedCharacterIndex, 1);
-        updateSaveStatus('unsaved'); // v1.2.0
+        updateSaveStatus('unsaved'); 
         await saveCharactersArray(true); 
         showCharacterEditor(false); 
         renderCharacterList(); 
@@ -967,7 +962,6 @@ async function handleCharacterFieldSave(field, value) {
     if (field === 'name') {
         characterEditorTitle.textContent = `Редагування "${value}"`;
     }
-    // updateSaveStatus('unsaved') вже викликано
     await saveCharactersArray(); 
     renderCharacterList();
 }
@@ -975,7 +969,7 @@ async function saveCharactersArray(immediate = false) {
     await saveArrayToDb("content.characters", currentProjectData.content.characters, "персонажів", immediate);
 }
 
-// === ВКЛАДКА "РОЗДІЛИ" ===
+// === ВКЛАДКА "РОЗДІЛИ" === (Оновлено v1.4.0)
 
 function getStatusIcon(status) {
     switch (status) {
@@ -1012,7 +1006,8 @@ function renderChapterList() {
             snippet = chapter.synopsis || 'Немає синопсису...';
             snippetClass = 'card-snippet synopsis'; 
         } else if (chapter.text) {
-            snippet = chapter.text.substring(0, 80) + '...'; 
+            // ОНОВЛЕНО v1.4.0: Використовуємо CONFIG
+            snippet = chapter.text.substring(0, CONFIG.SNIPPET_LENGTH) + '...'; 
         } else {
             snippet = 'Немає тексту...';
         }
@@ -1056,8 +1051,7 @@ function selectChapter(index) {
     chapterTitleInput.value = chapter.title || '';
     chapterStatusInput.value = chapter.status || 'Заплановано';
     chapterTextInput.value = chapter.text || '';
-    // ОНОВЛЕНО v1.2.1: Заповнюємо <textarea>
-    chapterSynopsisInput.value = chapter.synopsis || '';
+    chapterSynopsisInput.value = chapter.synopsis || ''; // v1.2.1
 
     const count = chapter.word_count || countWords(chapter.text || '');
     chapter.word_count = count; 
@@ -1065,28 +1059,23 @@ function selectChapter(index) {
     showChapterEditor(true);
     renderChapterList();
 }
-// ОНОВЛЕНО v1.2.0: Оптимістичне оновлення (P7)
 function handleAddNewChapter() {
     const newChapter = {
         title: "Новий розділ", status: "Заплановано", text: "",
         synopsis: "", word_count: 0, updated_at: new Date().toISOString(),
-        _tempId: Date.now() // v1.2.0: ID для відкату
+        _tempId: Date.now() 
     };
 
-    // 1. Оновити UI миттєво
     currentProjectData.content.chapters.push(newChapter);
     const newIndex = currentProjectData.content.chapters.length - 1;
     renderChapterList();
     selectChapter(newIndex);
-    updateSaveStatus('unsaved'); // v1.2.0
+    updateSaveStatus('unsaved'); 
 
-    // 2. Зберегти у фоні
     saveChaptersArray(true)
         .catch(err => {
-            // 3. Відкат у разі помилки
             logErrorToServer(err, "handleAddNewChapter (Optimistic Save)");
             showToast("Помилка! Не вдалося створити розділ.", 'error');
-            // Перевіряємо, чи існує currentProjectData.content перед фільтрацією
             if (currentProjectData && currentProjectData.content) {
                 currentProjectData.content.chapters = currentProjectData.content.chapters.filter(
                     c => c._tempId !== newChapter._tempId
@@ -1101,7 +1090,7 @@ function handleDeleteChapter() {
     const chapterTitle = currentProjectData.content.chapters[selectedChapterIndex].title;
     showConfirmModal(`Ви впевнені, що хочете видалити розділ "${chapterTitle}"?`, async () => {
         currentProjectData.content.chapters.splice(selectedChapterIndex, 1);
-        updateSaveStatus('unsaved'); // v1.2.0
+        updateSaveStatus('unsaved'); 
         await saveChaptersArray(true); 
         showChapterEditor(false); 
         renderChapterList();
@@ -1123,7 +1112,7 @@ async function handleChapterFieldSave(field, value) {
         chapterCurrentWordCount.textContent = `${count} слів`;
     }
     chapter.updated_at = new Date().toISOString();
-    // updateSaveStatus('unsaved') вже викликано
+    
     await saveChaptersArray(); 
     updateSingleChapterCard(selectedChapterIndex);
     updateTotalWordCount();
@@ -1142,14 +1131,14 @@ function updateSingleChapterCard(index) {
     let snippet = '';
     let snippetClass = 'card-snippet';
     if (status === 'Заплановано') {
-        // ОНОВЛЕНО v1.2.1: Оновлюємо синопсис у редакторі, якщо він відкритий
         if(index === selectedChapterIndex) {
              chapterSynopsisInput.value = chapter.synopsis || '';
         }
         snippet = chapter.synopsis || 'Немає синопсису...';
         snippetClass = 'card-snippet synopsis';
     } else if (chapter.text) {
-        snippet = chapter.text.substring(0, 80) + '...';
+        // ОНОВЛЕНО v1.4.0: Використовуємо CONFIG
+        snippet = chapter.text.substring(0, CONFIG.SNIPPET_LENGTH) + '...';
     } else {
         snippet = 'Немає тексту...';
     }
@@ -1173,7 +1162,7 @@ async function saveChaptersArray(immediate = false) {
     await saveArrayToDb("content.chapters", currentProjectData.content.chapters, "розділів", immediate);
 }
 
-// === ВКЛАДКА "ЛОКАЦІЇ" ===
+// === ВКЛАДКА "ЛОКАЦІЇ" === (Без змін v1.4.0)
 
 function renderLocationList() {
     if (!currentProjectData) return;
@@ -1208,27 +1197,22 @@ function selectLocation(index) {
     showLocationEditor(true);
     renderLocationList();
 }
-// ОНОВЛЕНО v1.2.0: Оптимістичне оновлення (P7)
 function handleAddNewLocation() {
     const newLocation = { 
         name: "Нова локація", description: "",
-        _tempId: Date.now() // v1.2.0: ID для відкату
+        _tempId: Date.now() 
     };
     
-    // 1. Оновити UI миттєво
     currentProjectData.content.locations.push(newLocation);
     const newIndex = currentProjectData.content.locations.length - 1;
     renderLocationList();
     selectLocation(newIndex);
-    updateSaveStatus('unsaved'); // v1.2.0
+    updateSaveStatus('unsaved'); 
 
-    // 2. Зберегти у фоні
     saveLocationsArray(true)
         .catch(err => {
-            // 3. Відкат у разі помилки
             logErrorToServer(err, "handleAddNewLocation (Optimistic Save)");
             showToast("Помилка! Не вдалося створити локацію.", 'error');
-            // Перевіряємо, чи існує currentProjectData.content перед фільтрацією
             if (currentProjectData && currentProjectData.content) {
                 currentProjectData.content.locations = currentProjectData.content.locations.filter(
                     c => c._tempId !== newLocation._tempId
@@ -1243,7 +1227,7 @@ function handleDeleteLocation() {
     const locationName = currentProjectData.content.locations[selectedLocationIndex].name;
     showConfirmModal(`Ви впевнені, що хочете видалити локацію "${locationName}"?`, async () => {
         currentProjectData.content.locations.splice(selectedLocationIndex, 1);
-        updateSaveStatus('unsaved'); // v1.2.0
+        updateSaveStatus('unsaved'); 
         await saveLocationsArray(true); 
         showLocationEditor(false); 
         renderLocationList(); 
@@ -1257,7 +1241,6 @@ async function handleLocationFieldSave(field, value) {
     if (field === 'name') {
         locationEditorTitle.textContent = `Редагування "${value}"`;
     }
-    // updateSaveStatus('unsaved') вже викликано
     await saveLocationsArray(); 
     renderLocationList();
 }
@@ -1265,7 +1248,7 @@ async function saveLocationsArray(immediate = false) {
     await saveArrayToDb("content.locations", currentProjectData.content.locations, "локацій", immediate);
 }
 
-// === ВКЛАДКА "СЮЖЕТНІ ЛІНІЇ" ===
+// === ВКЛАДКА "СЮЖЕТНІ ЛІНІЇ" === (Без змін v1.4.0)
 
 function renderPlotlineList() {
     if (!currentProjectData) return;
@@ -1300,27 +1283,22 @@ function selectPlotline(index) {
     showPlotlineEditor(true);
     renderPlotlineList();
 }
-// ОНОВЛЕНО v1.2.0: Оптимістичне оновлення (P7)
 function handleAddNewPlotline() {
     const newPlotline = { 
         title: "Нова сюжетна лінія", description: "",
-        _tempId: Date.now() // v1.2.0: ID для відкату
+        _tempId: Date.now() 
     };
 
-    // 1. Оновити UI миттєво
     currentProjectData.content.plotlines.push(newPlotline);
     const newIndex = currentProjectData.content.plotlines.length - 1;
     renderPlotlineList();
     selectPlotline(newIndex);
-    updateSaveStatus('unsaved'); // v1.2.0
+    updateSaveStatus('unsaved'); 
 
-    // 2. Зберегти у фоні
     savePlotlinesArray(true)
         .catch(err => {
-            // 3. Відкат у разі помилки
             logErrorToServer(err, "handleAddNewPlotline (Optimistic Save)");
             showToast("Помилка! Не вдалося створити сюжетну лінію.", 'error');
-            // Перевіряємо, чи існує currentProjectData.content перед фільтрацією
             if (currentProjectData && currentProjectData.content) {
                 currentProjectData.content.plotlines = currentProjectData.content.plotlines.filter(
                     c => c._tempId !== newPlotline._tempId
@@ -1335,7 +1313,7 @@ function handleDeletePlotline() {
     const plotlineTitle = currentProjectData.content.plotlines[selectedPlotlineIndex].title;
     showConfirmModal(`Ви впевнені, що хочете видалити сюжетну лінію "${plotlineTitle}"?`, async () => {
         currentProjectData.content.plotlines.splice(selectedPlotlineIndex, 1);
-        updateSaveStatus('unsaved'); // v1.2.0
+        updateSaveStatus('unsaved'); 
         await savePlotlinesArray(true); 
         showPlotlineEditor(false); 
         renderPlotlineList(); 
@@ -1349,7 +1327,6 @@ async function handlePlotlineFieldSave(field, value) {
     if (field === 'title') { 
         plotlineEditorTitle.textContent = `Редагування "${value}"`;
     }
-    // updateSaveStatus('unsaved') вже викликано
     await savePlotlinesArray(); 
     renderPlotlineList();
 }
@@ -1358,17 +1335,16 @@ async function savePlotlinesArray(immediate = false) {
 }
 
 
-// === СОРТУВАННЯ ===
+// === СОРТУВАННЯ === (Без змін v1.4.0)
 
 function initSortableLists() {
     if (!currentProjectData) return;
     
-    // Функція-обробник для всіх сортувань
     const onSortEnd = async (evt, array, saveFunction, renderFunction) => {
         const { oldIndex, newIndex } = evt;
         const [item] = array.splice(oldIndex, 1);
         array.splice(newIndex, 0, item);
-        updateSaveStatus('unsaved'); // v1.2.0
+        updateSaveStatus('unsaved'); 
         await saveFunction(true);
         renderFunction();
     };
@@ -1392,7 +1368,7 @@ function initSortableLists() {
 }
 
 
-// === УНІВЕРСАЛЬНА ФУНКЦІЯ ЗБЕРЕЖЕННЯ ===
+// === УНІВЕРСАЛЬНА ФУНКЦІЯ ЗБЕРЕЖЕННЯ === (Оновлено v1.4.0)
 /**
  * Універсальна функція для збереження масивів
  * @param {boolean} [isSimpleField=false] - (v1.2.0) Чи це просте поле (не масив)
@@ -1400,21 +1376,18 @@ function initSortableLists() {
 async function saveArrayToDb(field, array, nameForToast, immediate = false, isSimpleField = false) {
     if (!currentProjectID) return;
     
-    // v1.2.0: 'array' тепер може бути 'value' для простих полів
     const valueToSave = array; 
     
-    // v1.2.0: handleSimpleAutoSave вже встановив 'unsaved', тут ми ставимо 'saving'
     if (!immediate) {
         console.log(`Запит на збереження ${nameForToast}. Негайно: ${immediate}`);
         clearTimeout(saveTimer);
     }
     
     const doSave = async () => {
-        updateSaveStatus('saving'); // v1.2.0
+        updateSaveStatus('saving'); 
         try {
             let valueToSend = valueToSave;
 
-            // v1.2.0: Очищуємо _tempId з масивів перед відправкою
             if (Array.isArray(valueToSave)) {
                 valueToSend = valueToSave.map(item => {
                     if (item && typeof item === 'object' && item._tempId) {
@@ -1425,55 +1398,46 @@ async function saveArrayToDb(field, array, nameForToast, immediate = false, isSi
                 });
             }
 
-            // === КРОК 1: ЗБЕРЕГТИ ДАНІ (POST) ===
             const response = await fetch('/save-project-content', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     projectID: currentProjectID, 
                     field: field, 
-                    value: valueToSend // Надсилаємо очищені дані
+                    value: valueToSend 
                 })
             });
 
-            // === КРОК 2: ОТРИМАТИ ОНОВЛЕНИЙ СТАН (GET) ===
             const updatedProjectResponse = await fetch(`/get-project-content?projectID=${currentProjectID}`);
             if (!updatedProjectResponse.ok) throw new Error('Не вдалося оновити локальні дані');
             
-            // === ОНОВЛЕНО v1.2.1: ВИПРАВЛЕННЯ ПОМИЛКИ ===
-            // 1. Отримуємо .json() ТІЛЬКИ ОДИН РАЗ і зберігаємо
+            // v1.2.1: ВИПРАВЛЕННЯ ПОМИЛКИ
             const freshProjectData = await updatedProjectResponse.json();
-            
-            // 2. Повністю перезаписуємо наш локальний кеш даних
-            // Це виправляє помилку, коли currentProjectData ставав undefined
             currentProjectData = freshProjectData;
-            // ============================================
             
-            // 3. Оновлюємо Dashboard (тепер з `freshProjectData`)
+            // v1.2.1: Оновлюємо Dashboard
             renderDashboard(); 
             
-            // 4. Перевіряємо, чи успішно пройшов POST-запит (КРОК 1)
             if (!response.ok) {
-                // `response` - це відповідь від POST, її .json() ми ще не читали
                 const err = await response.json();
                 throw new Error(err.message || `Помилка збереження ${nameForToast}`);
             }
 
-            // 5. Все добре, ставимо статус "Збережено"
-            updateSaveStatus('saved'); // v1.2.0
+            updateSaveStatus('saved'); 
             showToast(`${nameForToast.charAt(0).toUpperCase() + nameForToast.slice(1)} збережено!`, 'success');
 
         } catch (error) {
             console.error(`Помилка автозбереження ${nameForToast}:`, error);
             showToast(error.message, 'error');
             logErrorToServer(error, "saveArrayToDb"); 
-            updateSaveStatus('error'); // v1.2.0
+            updateSaveStatus('error'); 
         }
     };
 
     if (immediate) {
         await doSave();
     } else {
-        saveTimer = setTimeout(doSave, 1000); 
+        // ОНОВЛЕНО v1.4.0: Використовуємо CONFIG
+        saveTimer = setTimeout(doSave, CONFIG.AUTOSAVE_DELAY); 
     }
 }

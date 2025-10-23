@@ -23,7 +23,8 @@ body {
 /* --- v0.7.0: ЕЛЕМЕНТИ ФОРМ (ТЕМНА ТЕМА) --- */
 /* ===================================== */
 
-input[type="text"], textarea, select {
+/* ОНОВЛЕНО v1.4.0: Додано input[type="number"] */
+input[type="text"], input[type="number"], textarea, select {
     width: calc(100% - 22px); 
     padding: 10px; 
     margin-bottom: 15px; 
@@ -34,7 +35,12 @@ input[type="text"], textarea, select {
     background-color: #444;
     color: #eee;
 }
-input[type="text"]::placeholder, textarea::placeholder {
+/* ОНОВЛЕНО v1.4.0: Додано resize */
+textarea {
+    resize: vertical;
+}
+
+input[type="text"]::placeholder, input[type="number"]::placeholder, textarea::placeholder {
     color: #999;
 }
 label {
@@ -369,15 +375,13 @@ button:disabled {
     min-height: 150px;
 }
 
-/* ОНОВЛЕНО v1.2.1: Стиль для <textarea> синопсису */
+/* v1.2.1: Стиль для <textarea> синопсису */
 .editor-synopsis-preview {
-    /* Використовує базові стилі <textarea> */
-    border-style: dashed; /* Штрихована рамка, щоб відрізняти */
+    border-style: dashed; 
     border-color: #666;
     font-size: 0.95em;
     font-style: italic;
     color: #ccc;
-    resize: vertical; /* Дозволити змінювати розмір */
 }
 .editor-synopsis-preview::placeholder {
     color: #888;
@@ -638,15 +642,12 @@ button:disabled {
 
 
 /* ===================================== */
-/* --- ОНОВЛЕНО v1.3.0: АДАПТИВНІСТЬ [P14] --- */
+/* --- v1.3.0: АДАПТИВНІСТЬ [P14] --- */
 /* ===================================== */
 
 /* --- Планшети (змінюємо 3 колонки на 2) --- */
 @media (max-width: 1024px) {
     .list-editor-layout {
-        /* Залишаємо 2 колонки: список (300px) і редактор (решта) */
-        /* Наша поточна верстка вже добре це обробляє, 
-           але ми можемо зробити редактор чату вищим */
         min-height: 60vh;
     }
     

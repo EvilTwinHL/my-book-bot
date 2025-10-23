@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <meta name="description" content="Опус: Бот-Співавтор - ваш особистий помічник для написання книг на базі Gemini 2.5 Flash.">
-    <meta name="theme-color" content="#2b2b2b"> <title>Опус: Бот-Співавтор</title>
+    <meta name="theme-color" content="#2b2b2b"> 
+    
+    <title>Опус: Бот-Співавтор</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -92,7 +94,7 @@
                 <div class="dashboard-grid">
                     <div class="widget widget-full"> <button id="dashboard-write-btn" class="btn-primary-large"> ✏️ Продовжити писати </button> </div>
                     <div class="widget"> <h4>Загальна кількість слів</h4> <div class="stat-number" id="dashboard-total-words">0</div> </div>
-                    <div class="widget"> <h4>Прогрес до мети (50k)</h4> <div class="progress-bar"> <div class="progress-fill" id="dashboard-progress-fill"></div> </div> <div class="stat-label" id="dashboard-progress-label">0%</div> </div>
+                    <div class="widget"> <h4>Прогрес до мети</h4> <div class="progress-bar"> <div class="progress-fill" id="dashboard-progress-fill"></div> </div> <div class="stat-label" id="dashboard-progress-label">0%</div> </div>
                     <div class="widget"> <h4>Останнє оновлення</h4> <div class="stat-label" id="dashboard-last-updated">...</div> </div>
                 </div>
             </div>
@@ -102,10 +104,16 @@
                 <p>Ключові концепції вашої історії. Автозбереження при виході з поля.</p>
                 <label for="core-premise-input">Про що ця книга (Logline):</label>
                 <input type="text" id="core-premise-input" data-field="content.premise" placeholder="Одним реченням: хто, що робить, і що стоїть на кону?">
+                
                 <label for="core-theme-input">Проблематика / Головна думка (Theme):</label>
                 <input type="text" id="core-theme-input" data-field="content.theme" placeholder="Про що *насправді* ця книга (напр., 'чи виправдовує мета засоби?')">
+                
                 <label for="core-arc-input">Головна сюжетна арка:</label>
                 <input type="text" id="core-arc-input" data-field="content.mainArc" placeholder="Напр., 'Подорож героя', 'З грязі в князі', 'Трагедія'">
+                
+                <label for="core-goal-input">Мета (кількість слів):</label>
+                <input type="number" id="core-goal-input" data-field="content.wordGoal" placeholder="Напр., 50000" min="0">
+
             </div>
             
             <div id="characters-tab" class="tab-content">

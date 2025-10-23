@@ -5,5 +5,8 @@
     "express": "^5.1.0",
     "express-rate-limit": "^8.1.0",
     "firebase-admin": "^13.5.0"
+  },
+  "devDependencies": {
+    "cypress": "^15.5.0"
   }
 }

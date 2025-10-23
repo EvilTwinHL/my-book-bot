@@ -179,34 +179,60 @@ button:disabled {
 #back-to-projects { background-color: #6c757d; color: white; }
 #back-to-projects:hover { background-color: #5a6268; }
 
-/* v1.2.0: Індикатор збереження */
+/* ОНОВЛЕНО v1.7.0: Стилі індикатора збереження */
 .autosave-status {
     font-size: 0.9em;
-    color: #aaa;
     display: flex;
     align-items: center;
     gap: 6px;
     margin: 0 auto; /* Центруємо між заголовком і кнопкою */
+    
+    /* Нові стилі для кнопки */
+    background-color: #28a745; /* Зелений (Збережено) */
+    color: white;
+    padding: 6px 12px;
+    border-radius: 5px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+.autosave-status .text {
+    color: white;
 }
 .autosave-status .dot {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background-color: #28a745; /* Зелений (Збережено) */
+    background-color: white; /* Біла крапка на зеленому фоні */
     transition: background-color 0.3s ease;
 }
 /* Статус "Збереження..." (Жовтий) */
-.autosave-status.saving .dot {
+.autosave-status.saving {
     background-color: #ffc107;
+}
+.autosave-status.saving .text {
+    display: none; /* Ховаємо текст за запитом */
+}
+.autosave-status.saving .dot {
+    display: none; /* Ховаємо крапку */
+}
+.autosave-status.saving .button-spinner {
+    display: inline-block !important; /* Показуємо спінер */
+}
+
+/* Статус "Не збережено" (Червоний) */
+.autosave-status.unsaved {
+    background-color: #dc3545;
+}
+.autosave-status.unsaved .dot {
+    background-color: white;
     animation: pulse 1.5s infinite;
 }
-/* Статус "Не збережено" (Сірий) */
-.autosave-status.unsaved .dot {
-    background-color: #6c757d;
-}
 /* Статус "Помилка" (Червоний) */
-.autosave-status.error .dot {
+.autosave-status.error {
     background-color: #dc3545;
+}
+.autosave-status.error .dot {
+    background-color: #ffc107; /* Жовта крапка на червоному */
 }
 @keyframes pulse {
     0% { opacity: 1; }
@@ -214,7 +240,22 @@ button:disabled {
     100% { opacity: 1; }
 }
 
-/* ОНОВЛЕНО v1.6.0: Панель Пошуку [P22] */
+/* Спінер для кнопки v1.7.0 */
+.button-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255,255,255,0.5);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+#manual-save-button.saving .button-spinner {
+    border: 2px solid rgba(0,0,0,0.3); /* Спінер для жовтої кнопки */
+    border-top-color: #212529;
+}
+
+
+/* v1.6.0: Панель Пошуку [P22] */
 #search-bar-container {
     margin: 15px 0 5px 0;
 }
@@ -497,7 +538,7 @@ button:disabled {
 .modal-buttons .btn-secondary:hover { background-color: #5a6268; }
 .modal-content button { width: auto; }
 
-/* ОНОВЛЕНО v1.6.0: Стилі Модального Вікна Пошуку [P22] */
+/* v1.6.0: Стилі Модального Вікна Пошуку [P22] */
 #search-results-modal .modal-content {
     max-width: 700px; /* Ширше, ніж звичайне */
     text-align: left;
@@ -756,6 +797,7 @@ button:disabled {
     .app-header h2 {
         margin: 0;
     }
+    /* v1.7.0: Адаптивність кнопки збереження */
     .autosave-status {
         margin: 5px 0;
         order: 3; /* Переносимо статус вниз */

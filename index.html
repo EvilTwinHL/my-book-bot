@@ -97,10 +97,15 @@
         
         <div class="app-header">
             <h2 id="workspace-title">Назва Проєкту</h2>
-            <div id="save-status-indicator" class="autosave-status">
-                <span id="save-status-dot" class="dot"></span>
+            
+            <button id="manual-save-button" class="btn-icon autosave-status">
+                <span id="save-status-icon-container">
+                    <span id="save-status-dot" class="dot"></span>
+                    <span id="save-status-spinner" class="button-spinner hidden"></span>
+                </span>
                 <span id="save-status-text" class="text">Збережено</span>
-            </div>
+            </button>
+            
             <button id="back-to-projects" style="background-color: #6c757d;">← До проєктів</button>
         </div>
 

@@ -69,7 +69,7 @@ app.get('/get-projects', apiLimiter, async (req, res) => {
     }
     try {
         const snapshot = await db.collection('projects')
-            .where('user', '==', user)
+            .where('owner', '==', user)
             .orderBy('updatedAt', 'desc') // v1.0.0: Сортування
             .get();
             
@@ -95,7 +95,7 @@ app.post('/create-project', sensitiveLimiter, async (req, res) => {
     try {
         // 1. Створюємо головний документ (тільки метадані)
         const projectData = {
-            user: user,
+            owner: user,
             title: title,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),

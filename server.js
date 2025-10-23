@@ -269,64 +269,66 @@ app.post('/save-project-content', apiLimiter, async (req, res) => {
     }
 });
 
-// === ОНОВЛЕНО v2.0.0: Чат (Subcollections) ===
-app.post('/chat', apiLimiter, async (req, res) => {
-    const { projectID, message } = req.body;
-    if (!projectID || !message) {
-        return res.status(400).json({ message: "Необхідно вказати projectID та message" });
-    }
-
+// === ОНОВЛЕНО v2.1.1: Чат з Опусом (з кешуванням сесії) ===
+app.post('/chat', async (req, res) => {
     try {
-        const chatHistoryRef = db.collection('projects').doc(projectID).collection('data').doc('chatHistory');
-        
-        // 1. Отримуємо поточну історію
-        const doc = await chatHistoryRef.get();
-        if (!doc.exists) {
-            throw new Error("Документ історії чату не знайдено.");
+        const { projectId, message } = req.body;
+        if (!projectId || !message) {
+            return res.status(400).json({ error: 'Відсутні projectId або message' });
         }
-        const chatHistory = doc.data().history || [];
-
-        // 2. Отримуємо контекст (збираємо як в get-project-content)
-        const projectDoc = await db.collection('projects').doc(projectID).get();
-        const dataSnapshot = await db.collection('projects').doc(projectID).collection('data').get();
         
-        let contentData = {};
-        dataSnapshot.docs.forEach(doc => {
-            if (doc.id === 'content') contentData = doc.data();
-            else if (doc.id !== 'chatHistory') contentData[doc.id] = doc.data().array || [];
-        });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         
-        const projectTitle = projectDoc.data().title || "Без назви";
-        // ... (інша логіка збірки контексту без змін) ...
-        let context = `--- КОНТЕКСТ ПРОЄКТУ "${projectTitle}" ---\n`;
-        context += `ЯДРО: ${contentData.premise || 'Не вказано'}. Тема: ${contentData.theme || 'Не вказано'}.\n`;
-        context += `РОЗДІЛИ (${contentData.chapters.length}):\n` + 
-                   contentData.chapters.map((c, i) => `${i+1}. ${c.title || 'Без назви'}: ${c.synopsis || c.text?.substring(0, 50) + '...' || 'Порожньо'}`).join('\n') + '\n';
-        context += `ПЕРСОНАЖІ (${contentData.characters.length}):\n` +
-                   contentData.characters.map(p => `${p.name || 'Без назви'}: ${p.description?.substring(0, 50) + '...' || 'Немає опису'}`).join('\n') + '\n';
-        context += `НОТАТКИ: ${contentData.notes?.substring(0, 100) + '...' || 'Немає'}\n`;
-        context += `--- КІНЕЦЬ КОНТЕКСТУ ---\n\n`;
+        // 1. Вказуємо шлях до нашої кешованої історії
+        const chatSessionRef = db.collection('projects').doc(projectId)
+                                 .collection('data').doc('chatSession');
+        
+        let history = [];
 
-        // 3. Формуємо запит до Gemini (без змін)
-        const fullMessage = `${message}\n\n${context}`;
-        const chat = model.startChat({ history: chatHistory });
-        const result = await chat.sendMessage(fullMessage);
-        const response = await result.response;
-        const botMessage = response.text();
+        // 2. Намагаємося завантажити історію
+        const doc = await chatSessionRef.get();
+        if (doc.exists && doc.data().history) {
+            history = doc.data().history;
+            console.log(`[Chat ${projectId}]: Відновлено історію чату.`);
+        } else {
+            // 3. Якщо історії немає (перший запуск) - генеруємо її
+            console.log(`[Chat ${projectId}]: Історія не знайдена. Створюю новий контекст...`);
+            // ВИКОРИСТОВУЄМО ВАШУ ІСНУЮЧУ ФУНКЦІЮ getProjectContext
+            const context = await getProjectContext(projectId); 
+            
+            history = [
+                {
+                    role: "user",
+                    parts: [{ text: "Привіт, Опус. Ось повний контекст мого проєкту для нашої розмови: \n\n" + context }]
+                },
+                {
+                    role: "model",
+                    parts: [{ text: "Дякую, я ознайомився з усім контекстом. Я готовий допомагати." }]
+                }
+            ];
+            console.log(`[Chat ${projectId}]: Новий контекст згенеровано.`);
+        }
 
-        // 4. Оновлюємо історію в Firestore
-        const newHistory = [
-            ...chatHistory,
-            { role: "user", parts: [{ text: message }] }, 
-            { role: "model", parts: [{ text: botMessage }] }
-        ];
-        await chatHistoryRef.set({ history: newHistory });
+        // 4. Ініціалізуємо чат з отриманою історією
+        const chat = model.startChat({ history });
 
-        res.status(200).json({ message: botMessage });
+        // 5. Надсилаємо ЛИШЕ нове повідомлення
+        console.log(`[Chat ${projectId}]: Надсилаю повідомлення...`);
+        const result = await chat.sendMessage(message);
+        const response = result.response;
+
+        // 6. Отримуємо ОНОВЛЕНУ історію
+        const updatedHistory = await chat.getHistory();
+
+        // 7. ЗБЕРІГАЄМО (або перезаписуємо) її в Firestore
+        await chatSessionRef.set({ history: updatedHistory });
+        console.log(`[Chat ${projectId}]: Історію чату оновлено.`);
+
+        res.json({ message: response.text() });
 
     } catch (error) {
-        console.error("Помилка чату:", error);
-        res.status(500).json({ message: "Помилка на боці сервера при обробці чату." });
+        console.error("Помилка в /chat:", error);
+        res.status(500).json({ error: 'Помилка обробки чату Gemini.' });
     }
 });
 

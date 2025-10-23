@@ -94,6 +94,7 @@
                     <div class="widget"> <h4>Останнє оновлення</h4> <div class="stat-label" id="dashboard-last-updated">...</div> </div>
                 </div>
             </div>
+            
             <div id="core-tab" class="tab-content active">
                 <h3>💡 Ядро Ідеї</h3>
                 <p>Ключові концепції вашої історії. Автозбереження при виході з поля.</p>
@@ -104,6 +105,7 @@
                 <label for="core-arc-input">Головна сюжетна арка:</label>
                 <input type="text" id="core-arc-input" data-field="content.mainArc" placeholder="Напр., 'Подорож героя', 'З грязі в князі', 'Трагедія'">
             </div>
+            
             <div id="characters-tab" class="tab-content">
                 <h3>👥 Персонажі</h3>
                 <div class="list-editor-layout">
@@ -146,13 +148,12 @@
                             </div>
                         </div>
                         
-                        <label>Синопсис (з картки):</label>
-                        <div id="chapter-editor-synopsis" class="editor-synopsis-preview">
-                            Немає синопсису...
-                        </div>
+                        <label for="chapter-synopsis-input">Синопсис (короткий опис):</label>
+                        <textarea id="chapter-synopsis-input" class="editor-synopsis-preview" rows="3" placeholder="Короткий опис того, що відбувається в цьому розділі..."></textarea>
 
                         <label for="chapter-text-input">Текст розділу:</label>
                         <textarea id="chapter-text-input" rows="15" placeholder="Почніть писати тут..."></textarea>
+                        
                         <div class="editor-word-count" id="chapter-current-word-count">0 слів</div>
                         <button id="delete-chapter-btn" class="btn-icon delete-btn" style="width: auto; margin-top: 10px;">Видалити розділ</button>
                     </div>
@@ -175,6 +176,7 @@
                     <div id="location-editor-placeholder" class="editor-pane-placeholder"> <p>← Оберіть локацію зі списку або створіть нову.</p> </div>
                 </div>
             </div>
+
             <div id="plotlines-tab" class="tab-content">
                 <h3>🧵 Сюжетні лінії</h3>
                  <div class="list-editor-layout">
@@ -188,6 +190,7 @@
                     <div id="plotline-editor-placeholder" class="editor-pane-placeholder"> <p>← Оберіть сюжетну лінію або створіть нову.</p> </div>
                 </div>
             </div>
+            
             <div id="notes-tab" class="tab-content">
                 <h3>📓 Нотатки та Дослідження</h3>
                 <p>Ваш особистий блокнот. Автозбереження при виході з поля.</p>
@@ -196,6 +199,7 @@
                 <label for="notes-research-input">Дослідження та Посилання:</label>
                 <textarea id="notes-research-input" data-field="content.research" rows="5" placeholder="Вставте сюди посилання, факти, історичні довідки..."></textarea>
             </div>
+            
             <div id="chat-tab" class="tab-content">
                 <h3>💬 Чат з Опусом</h3>
                 <p>Опус має доступ до всього, що ви пишете в інших вкладках.</p>

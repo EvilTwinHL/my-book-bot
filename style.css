@@ -368,19 +368,19 @@ button:disabled {
     min-height: 150px;
 }
 
-/* v1.2.0: Стиль для поля синопсису */
+/* ОНОВЛЕНО v1.2.1: Стиль для <textarea> синопсису */
 .editor-synopsis-preview {
-    background-color: #444;
-    border: 1px dashed #666; /* Штрихована рамка, щоб відрізняти */
-    border-radius: 6px;
-    padding: 10px;
-    margin-bottom: 15px;
+    /* Використовує базові стилі <textarea> */
+    border-style: dashed; /* Штрихована рамка, щоб відрізняти */
+    border-color: #666;
     font-size: 0.95em;
-    color: #ccc;
     font-style: italic;
-    min-height: 40px; /* Мінімальна висота */
-    box-sizing: border-box;
-    width: calc(100% - 22px);
+    color: #ccc;
+    resize: vertical; /* Дозволити змінювати розмір */
+}
+.editor-synopsis-preview::placeholder {
+    color: #888;
+    font-style: italic;
 }
 
 

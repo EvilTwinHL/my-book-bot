@@ -1,5 +1,5 @@
 // === ГЛОБАЛЬНІ ЗМІННІ ===
-const APP_VERSION = "1.2.0"; // ОНОВЛЕНО: v1.2.0
+const APP_VERSION = "1.2.1"; // ОНОВЛЕНО: v1.2.1
 
 let currentUser = null;
 let currentProjectID = null;
@@ -48,7 +48,7 @@ let chaptersList, addChapterBtn, chapterEditorPane,
     chapterEditorPlaceholder, chapterEditorTitle, chapterTitleInput,
     chapterStatusInput, chapterTextInput, deleteChapterBtn,
     chaptersTotalWordCount, chapterCurrentWordCount,
-    chapterEditorSynopsis; // v1.2.0
+    chapterSynopsisInput; // ОНОВЛЕНО v1.2.1 (було chapterEditorSynopsis)
 
 // ЕЛЕМЕНТИ (ВКЛАДКА ЛОКАЦІЙ)
 let locationsList, addLocationBtn, locationEditorPane,
@@ -138,7 +138,7 @@ function bindUIElements() {
     chapterTitleInput = document.getElementById('chapter-title-input');
     chapterStatusInput = document.getElementById('chapter-status-input');
     chapterTextInput = document.getElementById('chapter-text-input');
-    chapterEditorSynopsis = document.getElementById('chapter-editor-synopsis'); // v1.2.0
+    chapterSynopsisInput = document.getElementById('chapter-synopsis-input'); // ОНОВЛЕНО v1.2.1
     deleteChapterBtn = document.getElementById('delete-chapter-btn');
     chaptersTotalWordCount = document.getElementById('chapters-total-word-count');
     chapterCurrentWordCount = document.getElementById('chapter-current-word-count');
@@ -183,13 +183,14 @@ function bindEventListeners() {
         }
     });
 
-    // --- ОНОВЛЕНО v1.2.0: Слухачі для індикатора збереження ---
+    // --- ОНОВЛЕНО v1.2.1: Слухачі для індикатора збереження ---
     // Слухаємо *всі* поля вводу
     const inputs = document.querySelectorAll(
         '#core-premise-input, #core-theme-input, #core-arc-input, ' +
         '#notes-general-input, #notes-research-input, ' +
         '#character-name-input, #character-desc-input, #character-arc-input, ' +
         '#chapter-title-input, #chapter-status-input, #chapter-text-input, ' +
+        '#chapter-synopsis-input, ' + // ОНОВЛЕНО v1.2.1
         '#location-name-input, #location-desc-input, ' +
         '#plotline-title-input, #plotline-desc-input'
     );
@@ -217,6 +218,7 @@ function bindEventListeners() {
     deleteChapterBtn.addEventListener('click', handleDeleteChapter);
     chapterTitleInput.addEventListener('blur', (e) => handleChapterFieldSave('title', e.target.value));
     chapterStatusInput.addEventListener('change', (e) => handleChapterFieldSave('status', e.target.value)); 
+    chapterSynopsisInput.addEventListener('blur', (e) => handleChapterFieldSave('synopsis', e.target.value)); // ОНОВЛЕНО v1.2.1
     chapterTextInput.addEventListener('blur', (e) => handleChapterFieldSave('text', e.target.value));
     chapterTextInput.addEventListener('input', handleChapterTextInput);
 
@@ -330,6 +332,7 @@ async function openProjectWorkspace(projectID) {
 
 function renderWorkspace() {
     if (!currentProjectData) return;
+
     workspaceTitle.textContent = currentProjectData.title;
     const content = currentProjectData.content;
     corePremiseInput.value = content.premise || '';
@@ -337,12 +340,14 @@ function renderWorkspace() {
     coreArcInput.value = content.mainArc || '';
     notesGeneralInput.value = content.notes || '';
     notesResearchInput.value = content.research || '';
+
     chatWindow.innerHTML = ''; 
     (currentProjectData.chatHistory || []).slice(1).forEach(message => { 
         const sender = message.role === 'model' ? 'bot' : 'user';
         const text = message.parts[0].text.split("--- КОНТЕКСТ ПРОЄКТУ")[0]; 
         addMessageToChat(text, sender);
     });
+    
     renderCharacterList();
     showCharacterEditor(false); 
     renderChapterList();
@@ -381,12 +386,14 @@ async function loadProjects(user) {
             projects.forEach(project => {
                 const li = document.createElement('li');
                 li.className = 'project-card';
+                
                 const wordCount = (project.totalWordCount || 0).toLocaleString('uk-UA');
                 let lastUpdated = 'нещодавно';
                 if (project.updatedAt) {
                     const date = new Date(project.updatedAt._seconds * 1000);
                     lastUpdated = date.toLocaleDateString('uk-UA'); 
                 }
+
                 li.innerHTML = `
                     <div class="project-card-header">
                         <h3 class="project-card-title">${project.title}</h3>
@@ -397,13 +404,16 @@ async function loadProjects(user) {
                         <span>Оновлено: ${lastUpdated}</span>
                     </div>
                 `;
+
                 li.querySelector('.project-card-title').addEventListener('click', () => {
                     openProjectWorkspace(project.id);
                 });
+
                 li.querySelector('.project-card-menu-btn').addEventListener('click', (e) => {
                     e.stopPropagation(); 
                     showProjectContextMenu(e, project);
                 });
+
                 projectsList.appendChild(li);
             });
         }
@@ -427,9 +437,11 @@ async function handleCreateProject(title) {
             const err = await response.json();
             throw new Error(err.message || 'Сервер не зміг створити проєкт.');
         }
+        
         const newProject = await response.json(); 
         currentProjectData = newProject.data;
         currentProjectID = newProject.id;
+        
         appContainer.classList.add('hidden');
         workspaceContainer.classList.remove('hidden');
         renderWorkspace();
@@ -437,6 +449,7 @@ async function handleCreateProject(title) {
         initSortableLists();
         updateSaveStatus('saved'); // v1.2.0
         showToast('Проєкт створено!', 'success'); 
+
     } catch (error) { 
         console.error('Помилка при створенні проєкту:', error);
         showToast(error.message, 'error');
@@ -456,6 +469,7 @@ async function handleDeleteProject(projectID) {
         }
         loadProjects(currentUser);
         showToast('Проєкт видалено.', 'success'); 
+
     } catch (error) { 
         console.error('Помилка при видаленні:', error); 
         showToast(error.message, 'error');
@@ -478,13 +492,16 @@ async function handleEditTitle(projectID, newTitle) {
             const err = await response.json();
             throw new Error(err.message || 'Сервер не зміг оновити назву.');
         }
+        
         if (currentProjectID === projectID) {
             currentProjectData.title = newTitle;
             workspaceTitle.textContent = newTitle;
         }
+        
         loadProjects(currentUser); 
         updateSaveStatus('saved'); // v1.2.0
         showToast('Назву оновлено.', 'success'); 
+
     } catch (error) {
         console.error('Помилка при оновленні назви:', error);
         showToast(error.message, 'error');
@@ -497,10 +514,12 @@ async function handleEditTitle(projectID, newTitle) {
 
 async function handleSimpleAutoSave(field, value) {
     if (!currentProjectID || !currentProjectData) return;
+    
     const fieldName = field.split('.')[1]; 
     if (currentProjectData.content[fieldName] === value) {
         return; 
     }
+    
     currentProjectData.content[fieldName] = value;
     
     // v1.2.0: updateSaveStatus('unsaved') вже викликано слухачем 'input'
@@ -542,8 +561,10 @@ async function sendMessage() {
             const err = await response.json();
             throw new Error(err.message || 'Сервер повернув помилку');
         }
+        
         const data = await response.json();
         const botMessage = data.message;
+        
         addMessageToChat(botMessage, 'bot');
         currentProjectData.chatHistory.push({ role: "user", parts: [{ text: messageText }] });
         currentProjectData.chatHistory.push({ role: "model", parts: [{ text: botMessage }] });
@@ -583,8 +604,9 @@ function showToast(message, type = 'info') {
         toast.remove();
     }, 3000);
 
+    // ОНОВЛЕНО v1.1.0: Логуємо помилки на сервер
     if (type === 'error') {
-        // v1.1.0: Не логуємо помилки, які вже є Error, щоб уникнути дублів
+        // v1.2.1: Не логуємо помилки, які вже є Error, щоб уникнути дублів
         if (!(message instanceof Error)) {
             logErrorToServer(new Error(message), "showToast");
         }
@@ -600,9 +622,11 @@ function showCreateEditModal(mode, projectID = null, oldTitle = '') {
         createEditInput.value = oldTitle;
     }
     createEditInput.focus(); 
+
     createEditConfirmBtn.onclick = null;
     createEditCancelBtn.onclick = null;
     createEditInput.onkeypress = null;
+
     createEditConfirmBtn.onclick = () => {
         const newValue = createEditInput.value.trim();
         hideCreateEditModal();
@@ -627,8 +651,10 @@ function hideCreateEditModal() {
 function showConfirmModal(message, onConfirm) {
     confirmModal.classList.remove('hidden'); 
     confirmModalMessage.textContent = message;
+
     confirmOkBtn.onclick = null;
     confirmCancelBtn.onclick = null;
+
     confirmOkBtn.onclick = () => {
         hideConfirmModal();
         onConfirm(); 
@@ -645,6 +671,7 @@ function showProjectContextMenu(event, project) {
     projectContextMenu.classList.remove('hidden');
     projectContextMenu.style.top = `${event.pageY}px`;
     projectContextMenu.style.left = `${event.pageX}px`;
+
     contextEditBtn.onclick = () => {
         showCreateEditModal('edit', project.id, project.title);
     };
@@ -661,8 +688,13 @@ function hideProjectContextMenu() {
 }
 
 // === v1.1.0: ЛОГУВАННЯ ПОМИЛОК ===
+/**
+ * Відправляє помилки на сервер для логування
+ * @param {Error} error - Об'єкт помилки
+ * @param {string} contextName - Назва функції, де сталася помилка
+ */
 async function logErrorToServer(error, contextName) {
-    console.error(`[${contextName}]`, error); 
+    console.error(`[${contextName}]`, error); // Залишаємо лог в консолі
     try {
         await fetch('/log-error', {
             method: 'POST',
@@ -671,8 +703,11 @@ async function logErrorToServer(error, contextName) {
                 message: error.message,
                 stack: error.stack,
                 context: {
-                    name: contextName, user: currentUser, projectID: currentProjectID,
-                    href: window.location.href, userAgent: navigator.userAgent
+                    name: contextName,
+                    user: currentUser,
+                    projectID: currentProjectID,
+                    href: window.location.href,
+                    userAgent: navigator.userAgent
                 }
             })
         });
@@ -680,6 +715,8 @@ async function logErrorToServer(error, contextName) {
         console.error("Не вдалося відправити лог на сервер:", logError);
     }
 }
+
+// Глобальні обробники помилок
 window.onerror = (message, source, lineno, colno, error) => {
     logErrorToServer(error || new Error(message), 'window.onerror');
 };
@@ -728,8 +765,11 @@ function updateSaveStatus(status) {
 
 
 // === v0.5.1 - ЛІЧИЛЬНИК СЛІВ ===
+
 function countWords(text) {
-    if (!text || text.trim() === "") return 0;
+    if (!text || text.trim() === "") {
+        return 0;
+    }
     const words = text.trim().split(/\s+/);
     return words.length;
 }
@@ -752,12 +792,15 @@ function updateTotalWordCount() {
 }
 
 // === v0.8.0: DASHBOARD ===
+
 function renderDashboard() {
     if (!currentProjectData) return;
     const GOAL_WORDS = 50000; 
     const totalCount = currentProjectData.totalWordCount || 0;
+    
     dashboardProjectTitle.textContent = currentProjectData.title || "Без назви";
     dashboardTotalWords.textContent = totalCount.toLocaleString('uk-UA'); 
+
     if (currentProjectData.updatedAt) {
         const date = new Date(currentProjectData.updatedAt._seconds * 1000);
         dashboardLastUpdated.textContent = date.toLocaleString('uk-UA');
@@ -771,6 +814,7 @@ function renderDashboard() {
 
 
 // === ВКЛАДКА "ПЕРСОНАЖІ" ===
+
 function renderCharacterList() {
     if (!currentProjectData) return;
     charactersList.innerHTML = ''; 
@@ -825,9 +869,12 @@ function handleAddNewCharacter() {
             // 3. Відкат у разі помилки
             logErrorToServer(err, "handleAddNewCharacter (Optimistic Save)");
             showToast("Помилка! Не вдалося створити персонажа.", 'error');
-            currentProjectData.content.characters = currentProjectData.content.characters.filter(
-                c => c._tempId !== newCharacter._tempId
-            );
+            // Перевіряємо, чи існує currentProjectData.content перед фільтрацією
+            if (currentProjectData && currentProjectData.content) {
+                currentProjectData.content.characters = currentProjectData.content.characters.filter(
+                    c => c._tempId !== newCharacter._tempId
+                );
+            }
             showCharacterEditor(false);
             renderCharacterList();
         });
@@ -860,6 +907,7 @@ async function saveCharactersArray(immediate = false) {
 }
 
 // === ВКЛАДКА "РОЗДІЛИ" ===
+
 function getStatusIcon(status) {
     switch (status) {
         case "Заплановано": return "🗓️";
@@ -882,11 +930,13 @@ function renderChapterList() {
             selectChapter(index);
         });
         if (index === selectedChapterIndex) card.classList.add('active');
+        
         const order = index + 1;
         const title = chapter.title || 'Розділ без назви';
         const status = chapter.status || 'Заплановано';
         const icon = getStatusIcon(status);
         const wordCount = chapter.word_count || 0;
+        
         let snippet = '';
         let snippetClass = 'card-snippet';
         if (status === 'Заплановано') {
@@ -897,6 +947,7 @@ function renderChapterList() {
         } else {
             snippet = 'Немає тексту...';
         }
+        
         card.innerHTML = `
             <div class="card-header">
                 <span>${order}. ${title}</span>
@@ -936,8 +987,8 @@ function selectChapter(index) {
     chapterTitleInput.value = chapter.title || '';
     chapterStatusInput.value = chapter.status || 'Заплановано';
     chapterTextInput.value = chapter.text || '';
-    // ОНОВЛЕНО v1.2.0: Заповнюємо поле синопсису
-    chapterEditorSynopsis.textContent = chapter.synopsis || 'Немає синопсису...';
+    // ОНОВЛЕНО v1.2.1: Заповнюємо <textarea>
+    chapterSynopsisInput.value = chapter.synopsis || '';
 
     const count = chapter.word_count || countWords(chapter.text || '');
     chapter.word_count = count; 
@@ -966,9 +1017,12 @@ function handleAddNewChapter() {
             // 3. Відкат у разі помилки
             logErrorToServer(err, "handleAddNewChapter (Optimistic Save)");
             showToast("Помилка! Не вдалося створити розділ.", 'error');
-            currentProjectData.content.chapters = currentProjectData.content.chapters.filter(
-                c => c._tempId !== newChapter._tempId
-            );
+            // Перевіряємо, чи існує currentProjectData.content перед фільтрацією
+            if (currentProjectData && currentProjectData.content) {
+                currentProjectData.content.chapters = currentProjectData.content.chapters.filter(
+                    c => c._tempId !== newChapter._tempId
+                );
+            }
             showChapterEditor(false);
             renderChapterList();
         });
@@ -1019,9 +1073,9 @@ function updateSingleChapterCard(index) {
     let snippet = '';
     let snippetClass = 'card-snippet';
     if (status === 'Заплановано') {
-        // v1.2.0: Оновлюємо синопсис у редакторі, якщо він відкритий
+        // ОНОВЛЕНО v1.2.1: Оновлюємо синопсис у редакторі, якщо він відкритий
         if(index === selectedChapterIndex) {
-             chapterEditorSynopsis.textContent = chapter.synopsis || 'Немає синопсису...';
+             chapterSynopsisInput.value = chapter.synopsis || '';
         }
         snippet = chapter.synopsis || 'Немає синопсису...';
         snippetClass = 'card-snippet synopsis';
@@ -1051,6 +1105,7 @@ async function saveChaptersArray(immediate = false) {
 }
 
 // === ВКЛАДКА "ЛОКАЦІЇ" ===
+
 function renderLocationList() {
     if (!currentProjectData) return;
     locationsList.innerHTML = ''; 
@@ -1104,9 +1159,12 @@ function handleAddNewLocation() {
             // 3. Відкат у разі помилки
             logErrorToServer(err, "handleAddNewLocation (Optimistic Save)");
             showToast("Помилка! Не вдалося створити локацію.", 'error');
-            currentProjectData.content.locations = currentProjectData.content.locations.filter(
-                c => c._tempId !== newLocation._tempId
-            );
+            // Перевіряємо, чи існує currentProjectData.content перед фільтрацією
+            if (currentProjectData && currentProjectData.content) {
+                currentProjectData.content.locations = currentProjectData.content.locations.filter(
+                    c => c._tempId !== newLocation._tempId
+                );
+            }
             showLocationEditor(false);
             renderLocationList();
         });
@@ -1139,6 +1197,7 @@ async function saveLocationsArray(immediate = false) {
 }
 
 // === ВКЛАДКА "СЮЖЕТНІ ЛІНІЇ" ===
+
 function renderPlotlineList() {
     if (!currentProjectData) return;
     plotlinesList.innerHTML = ''; 
@@ -1192,9 +1251,12 @@ function handleAddNewPlotline() {
             // 3. Відкат у разі помилки
             logErrorToServer(err, "handleAddNewPlotline (Optimistic Save)");
             showToast("Помилка! Не вдалося створити сюжетну лінію.", 'error');
-            currentProjectData.content.plotlines = currentProjectData.content.plotlines.filter(
-                c => c._tempId !== newPlotline._tempId
-            );
+            // Перевіряємо, чи існує currentProjectData.content перед фільтрацією
+            if (currentProjectData && currentProjectData.content) {
+                currentProjectData.content.plotlines = currentProjectData.content.plotlines.filter(
+                    c => c._tempId !== newPlotline._tempId
+                );
+            }
             showPlotlineEditor(false);
             renderPlotlineList();
         });
@@ -1228,6 +1290,7 @@ async function savePlotlinesArray(immediate = false) {
 
 
 // === СОРТУВАННЯ ===
+
 function initSortableLists() {
     if (!currentProjectData) return;
     
@@ -1293,6 +1356,7 @@ async function saveArrayToDb(field, array, nameForToast, immediate = false, isSi
                 });
             }
 
+            // === КРОК 1: ЗБЕРЕГТИ ДАНІ (POST) ===
             const response = await fetch('/save-project-content', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1303,28 +1367,30 @@ async function saveArrayToDb(field, array, nameForToast, immediate = false, isSi
                 })
             });
 
-            // ОНОВЛЕНО v0.8.0: Отримуємо оновлені дані (для updatedAt, totalWordCount)
+            // === КРОК 2: ОТРИМАТИ ОНОВЛЕНИЙ СТАН (GET) ===
             const updatedProjectResponse = await fetch(`/get-project-content?projectID=${currentProjectID}`);
             if (!updatedProjectResponse.ok) throw new Error('Не вдалося оновити локальні дані');
             
-            // Оновлюємо локальні дані (v1.2.0: тепер з очищеними даними)
-            currentProjectData = await updatedProjectResponse.json();
+            // === ОНОВЛЕНО v1.2.1: ВИПРАВЛЕННЯ ПОМИЛКИ ===
+            // 1. Отримуємо .json() ТІЛЬКИ ОДИН РАЗ і зберігаємо
+            const freshProjectData = await updatedProjectResponse.json();
             
-            // v1.2.0: Синхронізуємо локальний стан з тим, що повернув сервер
-            // Це важливо, якщо ми щойно додали новий елемент
-            if (field.startsWith('content.')) {
-                 const key = field.split('.')[1];
-                 // Перезаписуємо локальний масив (з _tempId) на чистий масив з сервера
-                 currentProjectData.content[key] = updatedProjectResponse.json().content[key];
-            }
-
+            // 2. Повністю перезаписуємо наш локальний кеш даних
+            // Це виправляє помилку, коли currentProjectData ставав undefined
+            currentProjectData = freshProjectData;
+            // ============================================
+            
+            // 3. Оновлюємо Dashboard (тепер з `freshProjectData`)
             renderDashboard(); 
             
+            // 4. Перевіряємо, чи успішно пройшов POST-запит (КРОК 1)
             if (!response.ok) {
+                // `response` - це відповідь від POST, її .json() ми ще не читали
                 const err = await response.json();
                 throw new Error(err.message || `Помилка збереження ${nameForToast}`);
             }
 
+            // 5. Все добре, ставимо статус "Збережено"
             updateSaveStatus('saved'); // v1.2.0
             showToast(`${nameForToast.charAt(0).toUpperCase() + nameForToast.slice(1)} збережено!`, 'success');
 

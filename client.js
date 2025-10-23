@@ -1,17 +1,13 @@
 // === ГЛОБАЛЬНІ ЗМІННІ ===
-const APP_VERSION = "1.0.1"; // ОНОВЛЕНО: v1.0.0
+const APP_VERSION = "1.1.0"; // ОНОВЛЕНО: v1.1.0
 
 let currentUser = null;
 let currentProjectID = null;
 /** @type {object | null} Зберігає ВСІ дані поточного проєкту */
 let currentProjectData = null; 
-/** @type {number | null} Індекс обраного персонажа в масиві */
 let selectedCharacterIndex = null;
-/** @type {number | null} Індекс обраного розділу в масиві */
 let selectedChapterIndex = null;
-/** @type {number | null} Індекс обраної локації в масиві */
 let selectedLocationIndex = null;
-/** @type {number | null} Індекс обраної лінії в масиві */
 let selectedPlotlineIndex = null;
 /** @type {Timeout | null} Таймер для затримки автозбереження */
 let saveTimer = null;
@@ -70,74 +66,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /** Знаходить всі елементи DOM і зберігає їх у глобальні змінні */
 function bindUIElements() {
-    // Екрани
     loginContainer = document.getElementById('login-container');
     appContainer = document.getElementById('app-container');
     projectsContainer = document.getElementById('projects-container'); 
     workspaceContainer = document.getElementById('workspace-container');
-    
-    // Елементи UI
     spinnerOverlay = document.getElementById('spinner-overlay');
     toastContainer = document.getElementById('toast-container');
     versionNumberSpan = document.getElementById('version-number');
-    
-    // Елементи логіну / виходу
     loginInput = document.getElementById('login-input');
     loginButton = document.getElementById('login-button');
     logoutButton = document.getElementById('logout-button');
     usernameDisplay = document.getElementById('username-display');
-    
-    // Список проєктів
     projectsList = document.getElementById('projects-list');
     createProjectButton = document.getElementById('create-project-button');
-    
-    // Модалки (Створення/Редагування)
     createEditModal = document.getElementById('create-edit-modal');
     createEditModalTitle = document.getElementById('create-edit-modal-title');
     createEditInput = document.getElementById('create-edit-input');
     createEditConfirmBtn = document.getElementById('create-edit-confirm-btn');
     createEditCancelBtn = document.getElementById('create-edit-cancel-btn');
-    
-    // Модалки (Підтвердження)
     confirmModal = document.getElementById('confirm-modal');
     confirmModalMessage = document.getElementById('confirm-modal-message');
     confirmOkBtn = document.getElementById('confirm-ok-btn');
     confirmCancelBtn = document.getElementById('confirm-cancel-btn');
-
-    // v1.0.0: Контекстне меню
     projectContextMenu = document.getElementById('project-context-menu');
     contextEditBtn = document.getElementById('context-edit-btn');
     contextExportBtn = document.getElementById('context-export-btn');
     contextDeleteBtn = document.getElementById('context-delete-btn');
-
-    // Елементи робочого простору
     workspaceTitle = document.getElementById('workspace-title');
     backToProjectsButton = document.getElementById('back-to-projects');
     workspaceNav = document.getElementById('workspace-nav');
-    
-    // Вкладка "Чат"
     chatWindow = document.getElementById('chat-window');
     userInput = document.getElementById('userInput');
     sendButton = document.getElementById('sendButton');
-    
-    // Вкладка "Ядро"
     corePremiseInput = document.getElementById('core-premise-input');
     coreThemeInput = document.getElementById('core-theme-input');
     coreArcInput = document.getElementById('core-arc-input');
-
-    // Вкладка "Нотатки"
     notesGeneralInput = document.getElementById('notes-general-input');
     notesResearchInput = document.getElementById('notes-research-input');
-
-    // v0.8.0: Вкладка "Dashboard"
     dashboardProjectTitle = document.getElementById('dashboard-project-title');
     dashboardWriteBtn = document.getElementById('dashboard-write-btn');
     dashboardTotalWords = document.getElementById('dashboard-total-words');
     dashboardProgressFill = document.getElementById('dashboard-progress-fill');
     dashboardProgressLabel = document.getElementById('dashboard-progress-label');
     dashboardLastUpdated = document.getElementById('dashboard-last-updated');
-
-    // Вкладка "Персонажі"
     charactersList = document.getElementById('characters-list');
     addCharacterBtn = document.getElementById('add-character-btn');
     characterEditorPane = document.getElementById('character-editor-pane');
@@ -147,8 +118,6 @@ function bindUIElements() {
     characterDescInput = document.getElementById('character-desc-input');
     characterArcInput = document.getElementById('character-arc-input');
     deleteCharacterBtn = document.getElementById('delete-character-btn');
-
-    // Вкладка "Розділи"
     chaptersList = document.getElementById('chapters-list');
     addChapterBtn = document.getElementById('add-chapter-btn');
     chapterEditorPane = document.getElementById('chapter-editor-pane');
@@ -160,8 +129,6 @@ function bindUIElements() {
     deleteChapterBtn = document.getElementById('delete-chapter-btn');
     chaptersTotalWordCount = document.getElementById('chapters-total-word-count');
     chapterCurrentWordCount = document.getElementById('chapter-current-word-count');
-
-    // Вкладка "Локації"
     locationsList = document.getElementById('locations-list');
     addLocationBtn = document.getElementById('add-location-btn');
     locationEditorPane = document.getElementById('location-editor-pane');
@@ -170,8 +137,6 @@ function bindUIElements() {
     locationNameInput = document.getElementById('location-name-input');
     locationDescInput = document.getElementById('location-desc-input');
     deleteLocationBtn = document.getElementById('delete-location-btn');
-
-    // Вкладка "Сюжетні лінії"
     plotlinesList = document.getElementById('plotlines-list');
     addPlotlineBtn = document.getElementById('add-plotline-btn');
     plotlineEditorPane = document.getElementById('plotline-editor-pane');
@@ -184,39 +149,26 @@ function bindUIElements() {
 
 /** Прив'язує всі обробники подій до елементів */
 function bindEventListeners() {
-    // Логін / Вихід
     loginButton.addEventListener('click', handleLogin);
     logoutButton.addEventListener('click', handleLogout);
     loginInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleLogin(); });
-
-    // Створення проєкту
     createProjectButton.addEventListener('click', () => showCreateEditModal('create')); 
-    
-    // Повернення до списку проєктів
     backToProjectsButton.addEventListener('click', showProjectsList); 
-    
-    // Чат
     sendButton.addEventListener('click', sendMessage);
     userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 
-    // Навігація по вкладках
     workspaceNav.addEventListener('click', (e) => {
         if (e.target.classList.contains('tab-btn')) {
             showTab(e.target.dataset.tab);
         }
     });
 
-    // Автозбереження (прості поля)
     corePremiseInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
     coreThemeInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
     coreArcInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
     notesGeneralInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
     notesResearchInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
-
-    // v0.8.0: Обробники для "Dashboard"
-    dashboardWriteBtn.addEventListener('click', () => {
-        showTab('chapters-tab'); 
-    });
+    dashboardWriteBtn.addEventListener('click', () => { showTab('chapters-tab'); });
     
     // v1.0.0: Закриття контекстного меню
     document.addEventListener('click', (e) => {
@@ -224,15 +176,13 @@ function bindEventListeners() {
             hideProjectContextMenu();
         }
     });
-
-    // Обробники для вкладки "Персонажі"
+    
     addCharacterBtn.addEventListener('click', handleAddNewCharacter);
     deleteCharacterBtn.addEventListener('click', handleDeleteCharacter);
     characterNameInput.addEventListener('blur', (e) => handleCharacterFieldSave('name', e.target.value));
     characterDescInput.addEventListener('blur', (e) => handleCharacterFieldSave('description', e.target.value));
     characterArcInput.addEventListener('blur', (e) => handleCharacterFieldSave('arc', e.target.value));
 
-    // Обробники для вкладки "Розділи"
     addChapterBtn.addEventListener('click', handleAddNewChapter);
     deleteChapterBtn.addEventListener('click', handleDeleteChapter);
     chapterTitleInput.addEventListener('blur', (e) => handleChapterFieldSave('title', e.target.value));
@@ -240,13 +190,11 @@ function bindEventListeners() {
     chapterTextInput.addEventListener('blur', (e) => handleChapterFieldSave('text', e.target.value));
     chapterTextInput.addEventListener('input', handleChapterTextInput);
 
-    // Обробники для вкладки "Локації"
     addLocationBtn.addEventListener('click', handleAddNewLocation);
     deleteLocationBtn.addEventListener('click', handleDeleteLocation);
     locationNameInput.addEventListener('blur', (e) => handleLocationFieldSave('name', e.target.value));
     locationDescInput.addEventListener('blur', (e) => handleLocationFieldSave('description', e.target.value));
 
-    // Обробники для вкладки "Сюжетні лінії"
     addPlotlineBtn.addEventListener('click', handleAddNewPlotline);
     deletePlotlineBtn.addEventListener('click', handleDeletePlotline);
     plotlineTitleInput.addEventListener('blur', (e) => handlePlotlineFieldSave('title', e.target.value));
@@ -302,66 +250,49 @@ function showProjectsList() {
     loadProjects(currentUser); 
 }
 
-/**
- * Відкриває робочий простір проєкту
- */
 async function openProjectWorkspace(projectID) {
     showSpinner();
     try {
         const response = await fetch(`/get-project-content?projectID=${projectID}`);
-        if (!response.ok) throw new Error('Не вдалося завантажити проєкт');
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || 'Не вдалося завантажити проєкт');
+        }
         
         currentProjectData = await response.json();
         currentProjectID = projectID; 
 
-        if (!currentProjectData.content) {
-            currentProjectData.content = {};
-        }
-        if (!currentProjectData.content.characters) {
-            currentProjectData.content.characters = [];
-        }
-        if (!currentProjectData.content.chapters) {
-            currentProjectData.content.chapters = [];
-        }
-        if (!currentProjectData.content.locations) {
-            currentProjectData.content.locations = [];
-        }
-        if (!currentProjectData.content.plotlines) {
-            currentProjectData.content.plotlines = [];
-        }
-        if (!currentProjectData.chatHistory) {
-            currentProjectData.chatHistory = [];
-        }
+        if (!currentProjectData.content) currentProjectData.content = {};
+        if (!currentProjectData.content.characters) currentProjectData.content.characters = [];
+        if (!currentProjectData.content.chapters) currentProjectData.content.chapters = [];
+        if (!currentProjectData.content.locations) currentProjectData.content.locations = [];
+        if (!currentProjectData.content.plotlines) currentProjectData.content.plotlines = [];
+        if (!currentProjectData.chatHistory) currentProjectData.chatHistory = [];
 
         appContainer.classList.add('hidden');
         workspaceContainer.classList.remove('hidden');
 
         renderWorkspace();
         showTab('dashboard-tab');
-        
         initSortableLists(); 
 
     } catch (error) {
         console.error("Помилка при відкритті проєкту:", error);
         showToast(error.message, 'error');
+        logErrorToServer(error, "openProjectWorkspace"); // v1.1.0
     } finally {
         hideSpinner();
     }
 }
 
-/**
- * Заповнює робочий простір даними з `currentProjectData`
- */
 function renderWorkspace() {
     if (!currentProjectData) return;
 
     workspaceTitle.textContent = currentProjectData.title;
-
     const content = currentProjectData.content;
     corePremiseInput.value = content.premise || '';
     coreThemeInput.value = content.theme || '';
     coreArcInput.value = content.mainArc || '';
-
     notesGeneralInput.value = content.notes || '';
     notesResearchInput.value = content.research || '';
 
@@ -374,26 +305,18 @@ function renderWorkspace() {
     
     renderCharacterList();
     showCharacterEditor(false); 
-    
     renderChapterList();
     showChapterEditor(false); 
-    
     renderLocationList();
     showLocationEditor(false);
-
     renderPlotlineList();
     showPlotlineEditor(false);
-
     renderDashboard();
 }
 
-/**
- * Логіка перемикання вкладок
- */
 function showTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-
     document.getElementById(tabId).classList.add('active');
     workspaceNav.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
 }
@@ -401,14 +324,14 @@ function showTab(tabId) {
 
 // === ЛОГІКА API (КАРТОТЕКА) ===
 
-/**
- * ОНОВЛЕНО v1.0.0: Повністю переписано для створення карток
- */
 async function loadProjects(user) {
     projectsList.innerHTML = '<li>Завантаження...</li>'; 
     try {
         const response = await fetch(`/get-projects?user=${user}`);
-        if (!response.ok) throw new Error('Помилка мережі. Перевірте лог сервера.');
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || 'Помилка мережі. Перевірте лог сервера.');
+        }
         const projects = await response.json();
         
         projectsList.innerHTML = ''; 
@@ -419,15 +342,13 @@ async function loadProjects(user) {
                 const li = document.createElement('li');
                 li.className = 'project-card';
                 
-                // --- Форматуємо дані ---
-                const wordCount = project.totalWordCount.toLocaleString('uk-UA');
+                const wordCount = (project.totalWordCount || 0).toLocaleString('uk-UA');
                 let lastUpdated = 'нещодавно';
                 if (project.updatedAt) {
                     const date = new Date(project.updatedAt._seconds * 1000);
-                    lastUpdated = date.toLocaleDateString('uk-UA'); // '10.22.2025'
+                    lastUpdated = date.toLocaleDateString('uk-UA'); 
                 }
 
-                // --- Створюємо HTML картки ---
                 li.innerHTML = `
                     <div class="project-card-header">
                         <h3 class="project-card-title">${project.title}</h3>
@@ -439,16 +360,12 @@ async function loadProjects(user) {
                     </div>
                 `;
 
-                // --- Додаємо обробники подій ---
-                
-                // Клік на назву відкриває проєкт
                 li.querySelector('.project-card-title').addEventListener('click', () => {
                     openProjectWorkspace(project.id);
                 });
 
-                // Клік на кнопку "..." відкриває меню
                 li.querySelector('.project-card-menu-btn').addEventListener('click', (e) => {
-                    e.stopPropagation(); // Зупиняємо клік, щоб не закрилося одразу
+                    e.stopPropagation(); 
                     showProjectContextMenu(e, project);
                 });
 
@@ -459,6 +376,7 @@ async function loadProjects(user) {
         console.error('Не вдалося завантажити проєкти:', error);
         projectsList.innerHTML = '<li>Не вдалося завантажити проєкти.</li>';
         showToast(error.message, 'error');
+        logErrorToServer(error, "loadProjects"); // v1.1.0
     }
 }
 
@@ -470,7 +388,10 @@ async function handleCreateProject(title) {
     showSpinner(); 
     try {
         const response = await fetch('/create-project', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user: currentUser, title: title.trim() }) });
-        if (!response.ok) throw new Error('Сервер не зміг створити проєкт.');
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || 'Сервер не зміг створити проєкт.');
+        }
         
         const newProject = await response.json(); 
         currentProjectData = newProject.data;
@@ -480,13 +401,13 @@ async function handleCreateProject(title) {
         workspaceContainer.classList.remove('hidden');
         renderWorkspace();
         showTab('dashboard-tab'); 
-
         initSortableLists();
-
         showToast('Проєкт створено!', 'success'); 
+
     } catch (error) { 
         console.error('Помилка при створенні проєкту:', error);
-        showToast('Не вдалося створити проєкт.', 'error');
+        showToast(error.message, 'error');
+        logErrorToServer(error, "handleCreateProject"); // v1.1.0
     } finally {
         hideSpinner(); 
     }
@@ -496,12 +417,17 @@ async function handleDeleteProject(projectID) {
     showSpinner(); 
     try {
         const response = await fetch('/delete-project', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectID: projectID }) });
-        if (!response.ok) throw new Error('Сервер не зміг видалити проєкт.');
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || 'Сервер не зміг видалити проєкт.');
+        }
         loadProjects(currentUser);
         showToast('Проєкт видалено.', 'success'); 
+
     } catch (error) { 
         console.error('Помилка при видаленні:', error); 
-        showToast('Не вдалося видалити проєкт.', 'error');
+        showToast(error.message, 'error');
+        logErrorToServer(error, "handleDeleteProject"); // v1.1.0
     } finally {
         hideSpinner(); 
     }
@@ -515,7 +441,10 @@ async function handleEditTitle(projectID, newTitle) {
     showSpinner(); 
     try {
         const response = await fetch('/update-title', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectID: projectID, newTitle: newTitle.trim() }) });
-        if (!response.ok) throw new Error('Сервер не зміг оновити назву.');
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || 'Сервер не зміг оновити назву.');
+        }
         
         if (currentProjectID === projectID) {
             currentProjectData.title = newTitle;
@@ -524,17 +453,16 @@ async function handleEditTitle(projectID, newTitle) {
         
         loadProjects(currentUser); 
         showToast('Назву оновлено.', 'success'); 
+
     } catch (error) {
         console.error('Помилка при оновленні назви:', error);
-        showToast('Не вдалося оновити назву.', 'error');
+        showToast(error.message, 'error');
+        logErrorToServer(error, "handleEditTitle"); // v1.1.0
     } finally {
         hideSpinner(); 
     }
 }
 
-/**
- * Автозбереження для простих полів (Ядро, Нотатки)
- */
 async function handleSimpleAutoSave(field, value) {
     if (!currentProjectID || !currentProjectData) return;
     
@@ -559,12 +487,16 @@ async function handleSimpleAutoSave(field, value) {
                     value: value 
                 })
             });
-            if (!response.ok) throw new Error('Помилка збереження');
-            
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || 'Помилка збереження');
+            }
             showToast('Збережено!', 'success');
+
         } catch (error) {
             console.error('Помилка автозбереження:', error);
-            showToast('Помилка збереження.', 'error');
+            showToast(error.message, 'error');
+            logErrorToServer(error, "handleSimpleAutoSave"); // v1.1.0
         }
     }, 1000); 
 }
@@ -588,19 +520,22 @@ async function sendMessage() {
                 message: messageText 
             }) 
         });
-        if (!response.ok) throw new Error('Сервер повернув помилку');
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || 'Сервер повернув помилку');
+        }
         
         const data = await response.json();
         const botMessage = data.message;
         
         addMessageToChat(botMessage, 'bot');
-
         currentProjectData.chatHistory.push({ role: "user", parts: [{ text: messageText }] });
         currentProjectData.chatHistory.push({ role: "model", parts: [{ text: botMessage }] });
 
     } catch (error) { 
         console.error("Помилка відправки повідомлення:", error);
-        showToast("Ой, сталася помилка. Спробуйте ще раз.", 'error');
+        showToast(error.message, 'error');
+        logErrorToServer(error, "sendMessage"); // v1.1.0
     } finally { 
         sendButton.disabled = false; 
     }
@@ -631,6 +566,11 @@ function showToast(message, type = 'info') {
     setTimeout(() => {
         toast.remove();
     }, 3000);
+
+    // ОНОВЛЕНО v1.1.0: Логуємо помилки на сервер
+    if (type === 'error') {
+        logErrorToServer(new Error(message), "showToast");
+    }
 }
 function showCreateEditModal(mode, projectID = null, oldTitle = '') {
     createEditModal.classList.remove('hidden'); 
@@ -685,16 +625,13 @@ function hideConfirmModal() {
     confirmModal.classList.add('hidden');
 }
 
-// === v1.0.0: НОВІ ФУНКЦІЇ КОНТЕКСТНОГО МЕНЮ ===
+// === v1.0.0: КОНТЕКСТНЕ МЕНЮ ===
 
 function showProjectContextMenu(event, project) {
     projectContextMenu.classList.remove('hidden');
-    
-    // Позиціонування
     projectContextMenu.style.top = `${event.pageY}px`;
     projectContextMenu.style.left = `${event.pageX}px`;
 
-    // Прив'язка дій
     contextEditBtn.onclick = () => {
         showCreateEditModal('edit', project.id, project.title);
     };
@@ -710,7 +647,44 @@ function hideProjectContextMenu() {
     projectContextMenu.classList.add('hidden');
 }
 
-// === v0.5.1 - ФУНКЦІЇ ЛІЧИЛЬНИКА СЛІВ ===
+// === v1.1.0: ЛОГУВАННЯ ПОМИЛОК ===
+/**
+ * Відправляє помилки на сервер для логування
+ * @param {Error} error - Об'єкт помилки
+ * @param {string} contextName - Назва функції, де сталася помилка
+ */
+async function logErrorToServer(error, contextName) {
+    console.error(`[${contextName}]`, error); // Залишаємо лог в консолі
+    try {
+        await fetch('/log-error', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: error.message,
+                stack: error.stack,
+                context: {
+                    name: contextName,
+                    user: currentUser,
+                    projectID: currentProjectID,
+                    href: window.location.href,
+                    userAgent: navigator.userAgent
+                }
+            })
+        });
+    } catch (logError) {
+        console.error("Не вдалося відправити лог на сервер:", logError);
+    }
+}
+
+// Глобальні обробники помилок
+window.onerror = (message, source, lineno, colno, error) => {
+    logErrorToServer(error || new Error(message), 'window.onerror');
+};
+window.onunhandledrejection = (event) => {
+    logErrorToServer(event.reason || new Error('Unhandled rejection'), 'window.onunhandledrejection');
+};
+
+// === v0.5.1 - ЛІЧИЛЬНИК СЛІВ ===
 
 function countWords(text) {
     if (!text || text.trim() === "") {
@@ -719,32 +693,27 @@ function countWords(text) {
     const words = text.trim().split(/\s+/);
     return words.length;
 }
-
 function handleChapterTextInput(e) {
     if (selectedChapterIndex === null) return;
     const count = countWords(e.target.value);
     chapterCurrentWordCount.textContent = `${count} слів`;
 }
-
 function updateTotalWordCount() {
     if (!currentProjectData || !currentProjectData.content.chapters) {
         chaptersTotalWordCount.textContent = 'Загалом: 0 слів';
         return;
     }
-    
     const totalCount = currentProjectData.content.chapters.reduce((sum, chapter) => {
         const count = chapter.word_count || countWords(chapter.text);
         return sum + count;
     }, 0);
-    
     chaptersTotalWordCount.textContent = `Загалом: ${totalCount} слів`;
 }
 
-// === v0.8.0: НОВА ФУНКЦІЯ DASHBOARD ===
+// === v0.8.0: DASHBOARD ===
 
 function renderDashboard() {
     if (!currentProjectData) return;
-
     const GOAL_WORDS = 50000; 
     const totalCount = currentProjectData.totalWordCount || 0;
     
@@ -757,14 +726,13 @@ function renderDashboard() {
     } else {
         dashboardLastUpdated.textContent = 'Ще не зберігалось';
     }
-
     const progressPercent = Math.min((totalCount / GOAL_WORDS) * 100, 100);
     dashboardProgressFill.style.width = `${progressPercent}%`;
     dashboardProgressLabel.textContent = `${Math.floor(progressPercent)}% до мети (${GOAL_WORDS.toLocaleString('uk-UA')} слів)`;
 }
 
 
-// === ФУНКЦІЇ: ВКЛАДКА "ПЕРСОНАЖІ" ===
+// === ВКЛАДКА "ПЕРСОНАЖІ" ===
 
 function renderCharacterList() {
     if (!currentProjectData) return;
@@ -773,12 +741,8 @@ function renderCharacterList() {
         const li = document.createElement('li');
         li.textContent = `${index + 1}. ${character.name || 'Персонаж без імені'}`;
         li.dataset.index = index;
-        li.addEventListener('click', () => {
-            selectCharacter(index);
-        });
-        if (index === selectedCharacterIndex) {
-            li.classList.add('active');
-        }
+        li.addEventListener('click', () => { selectCharacter(index); });
+        if (index === selectedCharacterIndex) li.classList.add('active');
         charactersList.appendChild(li);
     });
 }
@@ -805,11 +769,7 @@ function selectCharacter(index) {
     renderCharacterList();
 }
 async function handleAddNewCharacter() {
-    const newCharacter = {
-        name: "Новий персонаж",
-        description: "",
-        arc: ""
-    };
+    const newCharacter = { name: "Новий персонаж", description: "", arc: "" };
     currentProjectData.content.characters.push(newCharacter);
     await saveCharactersArray(true); 
     const newIndex = currentProjectData.content.characters.length - 1;
@@ -829,7 +789,6 @@ async function handleCharacterFieldSave(field, value) {
     if (selectedCharacterIndex === null) return;
     const character = currentProjectData.content.characters[selectedCharacterIndex];
     if (character[field] === value) return; 
-    
     character[field] = value;
     if (field === 'name') {
         characterEditorTitle.textContent = `Редагування "${value}"`;
@@ -841,7 +800,7 @@ async function saveCharactersArray(immediate = false) {
     await saveArrayToDb("content.characters", currentProjectData.content.characters, "персонажів", immediate);
 }
 
-// === ФУНКЦІЇ: ВКЛАДКА "РОЗДІЛИ" ===
+// === ВКЛАДКА "РОЗДІЛИ" ===
 
 function getStatusIcon(status) {
     switch (status) {
@@ -853,24 +812,18 @@ function getStatusIcon(status) {
         default: return "📝";
     }
 }
-
 function renderChapterList() {
     if (!currentProjectData) return;
     chaptersList.innerHTML = ''; 
-    
     currentProjectData.content.chapters.forEach((chapter, index) => {
         const card = document.createElement('div');
         card.className = 'chapter-card';
         card.dataset.index = index;
-        
         card.addEventListener('click', (e) => {
             if (e.target.classList.contains('card-drag-handle')) return;
             selectChapter(index);
         });
-        
-        if (index === selectedChapterIndex) {
-            card.classList.add('active');
-        }
+        if (index === selectedChapterIndex) card.classList.add('active');
         
         const order = index + 1;
         const title = chapter.title || 'Розділ без назви';
@@ -880,7 +833,6 @@ function renderChapterList() {
         
         let snippet = '';
         let snippetClass = 'card-snippet';
-        
         if (status === 'Заплановано') {
             snippet = chapter.synopsis || 'Немає синопсису...';
             snippetClass = 'card-snippet synopsis'; 
@@ -905,13 +857,10 @@ function renderChapterList() {
                 </div>
             </div>
         `;
-        
         chaptersList.appendChild(card);
     });
-    
     updateTotalWordCount();
 }
-
 function showChapterEditor(show = true) {
     if (show) {
         chapterEditorPane.classList.remove('hidden');
@@ -928,27 +877,20 @@ function selectChapter(index) {
     selectedChapterIndex = index;
     const chapter = currentProjectData.content.chapters[index];
     if (!chapter) return;
-    
     chapterEditorTitle.textContent = `Редагування "${chapter.title}"`;
     chapterTitleInput.value = chapter.title || '';
     chapterStatusInput.value = chapter.status || 'Заплановано';
     chapterTextInput.value = chapter.text || '';
-    
     const count = chapter.word_count || countWords(chapter.text || '');
     chapter.word_count = count; 
     chapterCurrentWordCount.textContent = `${count} слів`;
-
     showChapterEditor(true);
     renderChapterList();
 }
 async function handleAddNewChapter() {
     const newChapter = {
-        title: "Новий розділ",
-        status: "Заплановано",
-        text: "",
-        synopsis: "", 
-        word_count: 0,
-        updated_at: new Date().toISOString()
+        title: "Новий розділ", status: "Заплановано", text: "",
+        synopsis: "", word_count: 0, updated_at: new Date().toISOString()
     };
     currentProjectData.content.chapters.push(newChapter);
     await saveChaptersArray(true); 
@@ -967,50 +909,37 @@ function handleDeleteChapter() {
         renderDashboard(); 
     });
 }
-
 async function handleChapterFieldSave(field, value) {
     if (selectedChapterIndex === null) return;
     const chapter = currentProjectData.content.chapters[selectedChapterIndex];
     if (chapter[field] === value) return; 
-    
     chapter[field] = value;
-    
     if (field === 'title') {
         chapterEditorTitle.textContent = `Редагування "${value}"`;
     }
-    
     if (field === 'text') {
         const count = countWords(value);
         chapter.word_count = count;
         chapterCurrentWordCount.textContent = `${count} слів`;
     }
-
     chapter.updated_at = new Date().toISOString();
-    
     await saveChaptersArray(); 
-    
     updateSingleChapterCard(selectedChapterIndex);
-    
     updateTotalWordCount();
     renderDashboard(); 
 }
-
 function updateSingleChapterCard(index) {
     const chapter = currentProjectData.content.chapters[index];
     if (!chapter) return;
-
     const card = chaptersList.querySelector(`[data-index="${index}"]`);
     if (!card) return; 
-
     const order = index + 1;
     const title = chapter.title || 'Розділ без назви';
     const status = chapter.status || 'Заплановано';
     const icon = getStatusIcon(status);
     const wordCount = chapter.word_count || 0;
-    
     let snippet = '';
     let snippetClass = 'card-snippet';
-    
     if (status === 'Заплановано') {
         snippet = chapter.synopsis || 'Немає синопсису...';
         snippetClass = 'card-snippet synopsis';
@@ -1019,7 +948,6 @@ function updateSingleChapterCard(index) {
     } else {
         snippet = 'Немає тексту...';
     }
-
     card.innerHTML = `
         <div class="card-header">
             <span>${order}. ${title}</span>
@@ -1036,14 +964,11 @@ function updateSingleChapterCard(index) {
         </div>
     `;
 }
-
-
 async function saveChaptersArray(immediate = false) {
     await saveArrayToDb("content.chapters", currentProjectData.content.chapters, "розділів", immediate);
 }
 
-
-// === ФУНКЦІЇ: ВКЛАДКА "ЛОКАЦІЇ" ===
+// === ВКЛАДКА "ЛОКАЦІЇ" ===
 
 function renderLocationList() {
     if (!currentProjectData) return;
@@ -1052,12 +977,8 @@ function renderLocationList() {
         const li = document.createElement('li');
         li.textContent = `${index + 1}. ${location.name || 'Локація без назви'}`;
         li.dataset.index = index;
-        li.addEventListener('click', () => {
-            selectLocation(index);
-        });
-        if (index === selectedLocationIndex) {
-            li.classList.add('active');
-        }
+        li.addEventListener('click', () => { selectLocation(index); });
+        if (index === selectedLocationIndex) li.classList.add('active');
         locationsList.appendChild(li);
     });
 }
@@ -1083,10 +1004,7 @@ function selectLocation(index) {
     renderLocationList();
 }
 async function handleAddNewLocation() {
-    const newLocation = {
-        name: "Нова локація",
-        description: ""
-    };
+    const newLocation = { name: "Нова локація", description: "" };
     currentProjectData.content.locations.push(newLocation);
     await saveLocationsArray(true); 
     const newIndex = currentProjectData.content.locations.length - 1;
@@ -1106,7 +1024,6 @@ async function handleLocationFieldSave(field, value) {
     if (selectedLocationIndex === null) return;
     const location = currentProjectData.content.locations[selectedLocationIndex];
     if (location[field] === value) return; 
-    
     location[field] = value;
     if (field === 'name') {
         locationEditorTitle.textContent = `Редагування "${value}"`;
@@ -1118,7 +1035,7 @@ async function saveLocationsArray(immediate = false) {
     await saveArrayToDb("content.locations", currentProjectData.content.locations, "локацій", immediate);
 }
 
-// === ФУНКЦІЇ: ВКЛАДКА "СЮЖЕТНІ ЛІНІЇ" ===
+// === ВКЛАДКА "СЮЖЕТНІ ЛІНІЇ" ===
 
 function renderPlotlineList() {
     if (!currentProjectData) return;
@@ -1127,12 +1044,8 @@ function renderPlotlineList() {
         const li = document.createElement('li');
         li.textContent = `${index + 1}. ${plotline.title || 'Лінія без назви'}`;
         li.dataset.index = index;
-        li.addEventListener('click', () => {
-            selectPlotline(index);
-        });
-        if (index === selectedChapterIndex) {
-            li.classList.add('active');
-        }
+        li.addEventListener('click', () => { selectPlotline(index); });
+        if (index === selectedPlotlineIndex) li.classList.add('active'); // ВИПРАВЛЕНО
         plotlinesList.appendChild(li);
     });
 }
@@ -1158,10 +1071,7 @@ function selectPlotline(index) {
     renderPlotlineList();
 }
 async function handleAddNewPlotline() {
-    const newPlotline = {
-        title: "Нова сюжетна лінія",
-        description: ""
-    };
+    const newPlotline = { title: "Нова сюжетна лінія", description: "" };
     currentProjectData.content.plotlines.push(newPlotline);
     await savePlotlinesArray(true); 
     const newIndex = currentProjectData.content.plotlines.length - 1;
@@ -1181,9 +1091,8 @@ async function handlePlotlineFieldSave(field, value) {
     if (selectedPlotlineIndex === null) return;
     const plotline = currentProjectData.content.plotlines[selectedPlotlineIndex];
     if (plotline[field] === value) return; 
-    
     plotline[field] = value;
-    if (field === 'name') {
+    if (field === 'title') { // ВИПРАВЛЕНО (було 'name')
         plotlineEditorTitle.textContent = `Редагування "${value}"`;
     }
     await savePlotlinesArray(); 
@@ -1194,16 +1103,12 @@ async function savePlotlinesArray(immediate = false) {
 }
 
 
-// ===========================================
-// === ІНІЦІАЛІЗАЦІЯ СОРТУВАННЯ ===
-// ===========================================
+// === СОРТУВАННЯ ===
+
 function initSortableLists() {
     if (!currentProjectData) return;
-
     new Sortable(chaptersList, {
-        animation: 150,
-        ghostClass: 'sortable-ghost',
-        handle: '.card-drag-handle', 
+        animation: 150, ghostClass: 'sortable-ghost', handle: '.card-drag-handle', 
         onEnd: async (evt) => {
             const { oldIndex, newIndex } = evt;
             const [item] = currentProjectData.content.chapters.splice(oldIndex, 1);
@@ -1212,10 +1117,8 @@ function initSortableLists() {
             renderChapterList();
         }
     });
-
     new Sortable(charactersList, {
-        animation: 150,
-        ghostClass: 'sortable-ghost',
+        animation: 150, ghostClass: 'sortable-ghost',
         onEnd: async (evt) => {
             const { oldIndex, newIndex } = evt;
             const [item] = currentProjectData.content.characters.splice(oldIndex, 1);
@@ -1224,10 +1127,8 @@ function initSortableLists() {
             renderCharacterList();
         }
     });
-
     new Sortable(locationsList, {
-        animation: 150,
-        ghostClass: 'sortable-ghost',
+        animation: 150, ghostClass: 'sortable-ghost',
         onEnd: async (evt) => {
             const { oldIndex, newIndex } = evt;
             const [item] = currentProjectData.content.locations.splice(oldIndex, 1);
@@ -1236,10 +1137,8 @@ function initSortableLists() {
             renderLocationList();
         }
     });
-
     new Sortable(plotlinesList, {
-        animation: 150,
-        ghostClass: 'sortable-ghost',
+        animation: 150, ghostClass: 'sortable-ghost',
         onEnd: async (evt) => {
             const { oldIndex, newIndex } = evt;
             const [item] = currentProjectData.content.plotlines.splice(oldIndex, 1);
@@ -1251,17 +1150,11 @@ function initSortableLists() {
 }
 
 
-// ===========================================
 // === УНІВЕРСАЛЬНА ФУНКЦІЯ ЗБЕРЕЖЕННЯ ===
-// ===========================================
 
-/**
- * Універсальна функція для збереження масивів
- */
 async function saveArrayToDb(field, array, nameForToast, immediate = false) {
     if (!currentProjectID) return;
     console.log(`Запит на збереження ${nameForToast}. Негайно: ${immediate}`);
-
     clearTimeout(saveTimer); 
 
     const doSave = async () => {
@@ -1277,19 +1170,21 @@ async function saveArrayToDb(field, array, nameForToast, immediate = false) {
                 })
             });
 
-            // ОНОВЛЕНО v0.8.0: Отримуємо оновлені дані (для updatedAt, totalWordCount)
             const updatedProjectResponse = await fetch(`/get-project-content?projectID=${currentProjectID}`);
             if (!updatedProjectResponse.ok) throw new Error('Не вдалося оновити локальні дані');
             currentProjectData = await updatedProjectResponse.json();
             renderDashboard(); 
             
-            if (!response.ok) throw new Error(`Помилка збереження ${nameForToast}`);
-            
-            // v0.8.0-fix: Виправлено одрук 'nameForTest' -> 'nameForToast'
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || `Помилка збереження ${nameForToast}`);
+            }
             showToast(`${nameForToast.charAt(0).toUpperCase() + nameForToast.slice(1)} збережено!`, 'success');
+
         } catch (error) {
             console.error(`Помилка автозбереження ${nameForToast}:`, error);
-            showToast(`Помилка збереження ${nameForToast}.`, 'error');
+            showToast(error.message, 'error');
+            logErrorToServer(error, "saveArrayToDb"); // v1.1.0
         }
     };
 

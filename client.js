@@ -1,5 +1,5 @@
 // === ГЛОБАЛЬНІ ЗМІННІ ===
-const APP_VERSION = "1.0.0"; // ОНОВЛЕНО: v1.0.0
+const APP_VERSION = "1.0.1"; // ОНОВЛЕНО: v1.0.0
 
 let currentUser = null;
 let currentProjectID = null;

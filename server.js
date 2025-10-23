@@ -32,7 +32,7 @@ const db = admin.firestore();
 
 // --- Налаштування Gemini (без змін) ---
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); 
+// (Примітка: ми ініціалізуємо model всередині ендпоінту /chat для сумісності з v2.1.1)
 
 // --- v1.1.0: Налаштування Rate Limiter (без змін) ---
 const apiLimiter = rateLimit({
@@ -61,7 +61,6 @@ app.get('/', (req, res) => {
 });
 
 // --- Отримання списку проєктів (без змін) ---
-// (Цей ендпоінт не змінився, оскільки він читає тільки головні документи)
 app.get('/get-projects', apiLimiter, async (req, res) => {
     const user = req.query.user;
     if (!user) {
@@ -70,7 +69,7 @@ app.get('/get-projects', apiLimiter, async (req, res) => {
     try {
         const snapshot = await db.collection('projects')
             .where('owner', '==', user)
-            .orderBy('updatedAt', 'desc') // v1.0.0: Сортування
+            .orderBy('updatedAt', 'desc') 
             .get();
             
         const projects = snapshot.docs.map(doc => ({
@@ -111,8 +110,13 @@ app.post('/create-project', sensitiveLimiter, async (req, res) => {
             premise: "", theme: "", mainArc: "",
             wordGoal: 50000, notes: "", research: ""
         };
+        
+        // v2.2.1: Виправлено початкову історію, щоб уникнути помилок
         const defaultChatHistory = { 
-            history: [{ role: "user", parts: [{ text: "start" }] }, { role: "model", parts: [{ text: "start" }] }]
+            history: [
+                { role: "user", parts: [{ text: "Привіт, Опус." }] }, 
+                { role: "model", parts: [{ text: "Вітаю! Я готовий до роботи." }] }
+            ]
         };
         
         dataBatch.set(dataSubcollectionRef.doc('content'), defaultContent);
@@ -147,7 +151,7 @@ app.post('/create-project', sensitiveLimiter, async (req, res) => {
     }
 });
 
-// === ОНОВЛЕНО v2.0.0: Отримання контенту проєкту (Subcollections) ===
+// === ОНОВЛЕНО v2.2.2: Отримання контенту проєкту (ВИПРАВЛЕНО) ===
 app.get('/get-project-content', apiLimiter, async (req, res) => {
     const projectID = req.query.projectID;
     if (!projectID) {
@@ -166,21 +170,25 @@ app.get('/get-project-content', apiLimiter, async (req, res) => {
         const dataSnapshot = await db.collection('projects').doc(projectID).collection('data').get();
 
         // 3. "Збираємо" об'єкт `content` та `chatHistory`
-        let contentData = {};
+        
+        // --- v2.2.2: ВИПРАВЛЕНА ЛОГІКА ---
+        // Ініціалізуємо contentData базовими полями, щоб уникнути перезапису
+        let contentData = dataSnapshot.docs.find(doc => doc.id === 'content')?.data() || {};
         let chatHistoryData = [];
         
         dataSnapshot.docs.forEach(doc => {
             const docId = doc.id;
             const data = doc.data();
             
-            if (docId === 'content') {
-                contentData = data;
-            } else if (docId === 'chatHistory') {
+            if (docId === 'chatHistory') {
                 chatHistoryData = data.history || [];
             } else if (docId === 'chapters' || docId === 'characters' || docId === 'locations' || docId === 'plotlines') {
+                // Додаємо масиви до вже існуючого об'єкта contentData
                 contentData[docId] = data.array || [];
             }
+            // (Нам більше не потрібен 'else if' для 'content', бо ми завантажили його спочатку)
         });
+        // --- КІНЕЦЬ ВИПРАВЛЕННЯ v2.2.2 ---
 
         // 4. Комбінуємо все в один об'єкт, як того очікує клієнт
         const fullProjectData = {
@@ -198,6 +206,7 @@ app.get('/get-project-content', apiLimiter, async (req, res) => {
 });
 
 // === ОНОВЛЕНО v2.0.0: Збереження контенту (Subcollections) ===
+// (Цей код був правильний, НЕ ЗМІНЮЄМО)
 app.post('/save-project-content', apiLimiter, async (req, res) => {
     const { projectID, field, value } = req.body;
     if (!projectID || !field) {
@@ -269,19 +278,19 @@ app.post('/save-project-content', apiLimiter, async (req, res) => {
     }
 });
 
-// === ОНОВЛЕНО v2.1.1: Чат з Опусом (з кешуванням сесії) ===
+// === ОНОВЛЕНО v2.2.1: Чат з Опусом (БЕЗ ЗМІН v2.2.2) ===
 app.post('/chat', async (req, res) => {
     try {
-        const { projectId, message } = req.body;
-        if (!projectId || !message) {
-            return res.status(400).json({ error: 'Відсутні projectId або message' });
+        const { projectID, message } = req.body; 
+        if (!projectID || !message) {
+            return res.status(400).json({ error: 'Відсутні projectID або message' });
         }
         
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         
         // 1. Вказуємо шлях до нашої кешованої історії
-        const chatSessionRef = db.collection('projects').doc(projectId)
-                                 .collection('data').doc('chatSession');
+        const chatSessionRef = db.collection('projects').doc(projectID)
+                                 .collection('data').doc('chatHistory'); 
         
         let history = [];
 
@@ -289,12 +298,12 @@ app.post('/chat', async (req, res) => {
         const doc = await chatSessionRef.get();
         if (doc.exists && doc.data().history) {
             history = doc.data().history;
-            console.log(`[Chat ${projectId}]: Відновлено історію чату.`);
+            console.log(`[Chat ${projectID}]: Відновлено історію чату.`);
         } else {
             // 3. Якщо історії немає (перший запуск) - генеруємо її
-            console.log(`[Chat ${projectId}]: Історія не знайдена. Створюю новий контекст...`);
-            // ВИКОРИСТОВУЄМО ВАШУ ІСНУЮЧУ ФУНКЦІЮ getProjectContext
-            const context = await getProjectContext(projectId); 
+            console.log(`[Chat ${projectID}]: Історія не знайдена. Створюю новий контекст...`);
+            
+            const context = await getProjectContext(projectID); // Викликаємо хелпер
             
             history = [
                 {
@@ -306,14 +315,14 @@ app.post('/chat', async (req, res) => {
                     parts: [{ text: "Дякую, я ознайомився з усім контекстом. Я готовий допомагати." }]
                 }
             ];
-            console.log(`[Chat ${projectId}]: Новий контекст згенеровано.`);
+            console.log(`[Chat ${projectID}]: Новий контекст згенеровано.`);
         }
 
         // 4. Ініціалізуємо чат з отриманою історією
         const chat = model.startChat({ history });
 
         // 5. Надсилаємо ЛИШЕ нове повідомлення
-        console.log(`[Chat ${projectId}]: Надсилаю повідомлення...`);
+        console.log(`[Chat ${projectID}]: Надсилаю повідомлення...`);
         const result = await chat.sendMessage(message);
         const response = result.response;
 
@@ -322,7 +331,7 @@ app.post('/chat', async (req, res) => {
 
         // 7. ЗБЕРІГАЄМО (або перезаписуємо) її в Firestore
         await chatSessionRef.set({ history: updatedHistory });
-        console.log(`[Chat ${projectId}]: Історію чату оновлено.`);
+        console.log(`[Chat ${projectID}]: Історію чату оновлено.`);
 
         res.json({ message: response.text() });
 
@@ -333,13 +342,14 @@ app.post('/chat', async (req, res) => {
 });
 
 // === ОНОВЛЕНО v2.0.0: Експорт (Subcollections) ===
+// (Цей код був правильний, НЕ ЗМІНЮЄМО)
 app.get('/export-project', apiLimiter, async (req, res) => {
     const projectID = req.query.projectID;
     if (!projectID) {
         return res.status(400).send("Необхідно вказати projectID");
     }
     try {
-        // 1. "Збираємо" проєкт, як в /get-project-content
+        // 1. "Збираємо" проєкт (v2.2.2 - використовуємо ту ж логіку, що й у /get-project-content)
         const projectDoc = await db.collection('projects').doc(projectID).get();
         if (!projectDoc.exists) {
             return res.status(404).send("Проєкт не знайдено.");
@@ -347,14 +357,13 @@ app.get('/export-project', apiLimiter, async (req, res) => {
         const projectData = projectDoc.data();
         const dataSnapshot = await db.collection('projects').doc(projectID).collection('data').get();
 
-        let contentData = {};
+        let contentData = dataSnapshot.docs.find(doc => doc.id === 'content')?.data() || {};
         let chatHistoryData = [];
         
         dataSnapshot.docs.forEach(doc => {
             const docId = doc.id;
             const data = doc.data();
-            if (docId === 'content') contentData = data;
-            else if (docId === 'chatHistory') chatHistoryData = data.history || [];
+            if (docId === 'chatHistory') chatHistoryData = data.history || [];
             else if (docId === 'chapters' || docId === 'characters' || docId === 'locations' || docId === 'plotlines') {
                 contentData[docId] = data.array || [];
             }
@@ -376,8 +385,14 @@ app.get('/export-project', apiLimiter, async (req, res) => {
         fileContent += `Головна арка: ${content.mainArc || '...'}\n`;
         fileContent += `Мета (слів): ${content.wordGoal || 0}\n\n`;
         
-        fileContent += `--- РОЗДІЛИ (${content.chapters.length}) ---\n\n`;
-        content.chapters.forEach((chapter, index) => {
+        // (v2.2.2: Переконуємось, що 'chapters' та 'characters' існують, навіть якщо порожні)
+        const chapters = content.chapters || [];
+        const characters = content.characters || [];
+        const locations = content.locations || [];
+        const plotlines = content.plotlines || [];
+
+        fileContent += `--- РОЗДІЛИ (${chapters.length}) ---\n\n`;
+        chapters.forEach((chapter, index) => {
             fileContent += `[ РОЗДІЛ ${index + 1}: ${chapter.title || 'Без назви'} ]\n`;
             fileContent += `(Статус: ${chapter.status || '...'}, Слів: ${chapter.word_count || 0})\n\n`;
             if (chapter.synopsis) {
@@ -387,17 +402,16 @@ app.get('/export-project', apiLimiter, async (req, res) => {
             fileContent += `--------------------\n\n`;
         });
         
-        // ... (інші секції експорту без змін) ...
-        fileContent += `--- ПЕРСОНАЖІ (${content.characters.length}) ---\n\n`;
-        content.characters.forEach(p => {
+        fileContent += `--- ПЕРСОНАЖІ (${characters.length}) ---\n\n`;
+        characters.forEach(p => {
             fileContent += `Ім'я: ${p.name || '...'}\nОпис: ${p.description || '...'}\nАрка: ${p.arc || '...'}\n\n`;
         });
-        fileContent += `--- ЛОКАЦІЇ (${content.locations.length}) ---\n\n`;
-        content.locations.forEach(l => {
+        fileContent += `--- ЛОКАЦІЇ (${locations.length}) ---\n\n`;
+        locations.forEach(l => {
             fileContent += `Назва: ${l.name || '...'}\nОпис: ${l.description || '...'}\n\n`;
         });
-        fileContent += `--- СЮЖЕТНІ ЛІНІЇ (${content.plotlines.length}) ---\n\n`;
-        content.plotlines.forEach(p => {
+        fileContent += `--- СЮЖЕТНІ ЛІНІЇ (${plotlines.length}) ---\n\n`;
+        plotlines.forEach(p => {
             fileContent += `Назва: ${p.title || '...'}\nОпис: ${p.description || '...'}\n\n`;
         });
         fileContent += `--- НОТАТКИ ---\n\n`;
@@ -440,6 +454,7 @@ app.post('/update-title', apiLimiter, async (req, res) => {
 });
 
 // === ОНОВЛЕНО v2.0.0: Видалення проєкту (Subcollections) ===
+// (Цей код був правильний, НЕ ЗМІНЮЄМО)
 app.post('/delete-project', sensitiveLimiter, async (req, res) => {
     const { projectID } = req.body; 
     if (!projectID) {
@@ -469,12 +484,7 @@ app.listen(port, () => {
 
 
 // === ОНОВЛЕНО v2.0.0: Допоміжна функція для видалення субколекцій ===
-/**
- * Рекурсивно видаляє колекцію в Firestore.
- * @param {admin.firestore.Firestore} db - Екземпляр Firestore.
- * @param {admin.firestore.CollectionReference} collectionRef - Посилання на колекцію.
- * @param {number} batchSize - Розмір пачки.
- */
+// (Цей код був правильний, НЕ ЗМІНЮЄМО)
 async function deleteCollection(db, collectionRef, batchSize) {
     const query = collectionRef.limit(batchSize);
 
@@ -488,18 +498,15 @@ async function deleteQueryBatch(db, query, resolve, reject) {
         const snapshot = await query.get();
 
         if (snapshot.size === 0) {
-            // Якщо документів немає, завершуємо
             return resolve();
         }
 
-        // Створюємо пачку для видалення
         const batch = db.batch();
         snapshot.docs.forEach(doc => {
             batch.delete(doc.ref);
         });
         await batch.commit();
 
-        // Рекурсивно викликаємо для наступної пачки
         process.nextTick(() => {
             deleteQueryBatch(db, query, resolve, reject);
         });
@@ -507,5 +514,78 @@ async function deleteQueryBatch(db, query, resolve, reject) {
     } catch (err) {
         console.error("Помилка при видаленні пачки субколекції:", err);
         return reject(err);
+    }
+}
+
+// === ОНОВЛЕНО v2.2.2: Допоміжна функція для збірки контексту (ВИПРАВЛЕНО) ===
+/**
+ * Збирає повний текстовий контекст проєкту з субколекцій.
+ * (Логіка взята з вашого ендпоінту /export-project)
+ * @param {string} projectID - ID проєкту
+ * @returns {Promise<string>} - Текстовий рядок з усім вмістом.
+ */
+async function getProjectContext(projectID) {
+    let context = "";
+    
+    try {
+        const dataSnapshot = await db.collection('projects').doc(projectID).collection('data').get();
+
+        // --- v2.2.2: ВИПРАВЛЕНА ЛОГІКА ---
+        let contentData = dataSnapshot.docs.find(doc => doc.id === 'content')?.data() || {};
+        dataSnapshot.docs.forEach(doc => {
+            const docId = doc.id;
+            const data = doc.data();
+            if (docId === 'chapters' || docId === 'characters' || docId === 'locations' || docId === 'plotlines') {
+                contentData[docId] = data.array || [];
+            }
+        });
+        // --- КІНЕЦЬ ВИПРАВЛЕННЯ v2.2.2 ---
+
+        const content = contentData; // v2.2.2: Пряме присвоєння
+
+        // (v2.2.2: Переконуємось, що 'chapters' та 'characters' існують, навіть якщо порожні)
+        const chapters = content.chapters || [];
+        const characters = content.characters || [];
+        const locations = content.locations || [];
+        const plotlines = content.plotlines || [];
+
+        // Збираємо контекст (логіка з /export-project)
+        context += `--- ЯДРО ІДЕЇ ---\n`;
+        context += `Logline: ${content.premise || '...'}\n`;
+        context += `Тема: ${content.theme || '...'}\n`;
+        context += `Головна арка: ${content.mainArc || '...'}\n\n`;
+
+        context += `--- РОЗДІЛИ (${chapters.length}) ---\n\n`;
+        chapters.forEach((chapter, index) => {
+            context += `[ РОЗДІЛ ${index + 1}: ${chapter.title || 'Без назви'} ]\n`;
+            if (chapter.synopsis) {
+                context += `Синопсис:\n${chapter.synopsis}\n\n`;
+            }
+            context += `Текст:\n${chapter.text || '(Немає тексту)'}\n\n`;
+        });
+        
+        context += `--- ПЕРСОНАЖІ (${characters.length}) ---\n\n`;
+        characters.forEach(p => {
+            context += `Ім'я: ${p.name || '...'}\nОпис: ${p.description || '...'}\nАрка: ${p.arc || '...'}\n\n`;
+        });
+        
+        context += `--- ЛОКАЦІЇ (${locations.length}) ---\n\n`;
+        locations.forEach(l => {
+            context += `Назва: ${l.name || '...'}\nОпис: ${l.description || '...'}\n\n`;
+        });
+        
+        context += `--- СЮЖЕТНІ ЛІНІЇ (${plotlines.length}) ---\n\n`;
+        plotlines.forEach(p => {
+            context += `Назва: ${p.title || '...'}\nОпис: ${p.description || '...'}\n\n`;
+        });
+        
+        context += `--- НОТАТКИ ---\n\n`;
+        context += `Загальні:\n${content.notes || '...'}\n\nДослідження:\n${content.research || '...'}\n\n`;
+
+        return context.trim();
+
+    } catch (error) {
+        console.error("Помилка при збірці контексту:", error);
+        return "Помилка завантаження контексту.";
     }
 }

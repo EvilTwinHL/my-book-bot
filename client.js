@@ -1,6 +1,6 @@
 // === КОНФІГУРАЦІЯ ДОДАТКУ [v1.4.0 - P11] ===
 const CONFIG = {
-    APP_VERSION: "2.2.0", // ОНОВЛЕНО v2.2.0 (Фаза 1.2: Налаштування E2E тестів)
+    APP_VERSION: "2.2.2", // ОНОВЛЕНО v2.2.2 (Fix: Критична помилка логіки збірки контенту на сервері)
     AUTOSAVE_DELAY: 1500, // ms
     DEFAULT_GOAL_WORDS: 50000,
     SNIPPET_LENGTH: 80, // characters

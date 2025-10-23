@@ -134,7 +134,7 @@ button:disabled {
     margin: 0 5px;
 }
 
-/* ОНОВЛЕНО v1.5.0: Стилі Skeleton Loader [P6] */
+/* v1.5.0: Стилі Skeleton Loader [P6] */
 .project-card.skeleton {
     border-color: #444;
 }
@@ -212,6 +212,22 @@ button:disabled {
     0% { opacity: 1; }
     50% { opacity: 0.4; }
     100% { opacity: 1; }
+}
+
+/* ОНОВЛЕНО v1.6.0: Панель Пошуку [P22] */
+#search-bar-container {
+    margin: 15px 0 5px 0;
+}
+#global-search-input {
+    width: calc(100% - 22px);
+    margin-bottom: 0;
+    border-color: #666;
+    background-color: #2b2b2b; /* Темніший фон для пошуку */
+}
+#global-search-input:focus {
+    border-color: #ffc107;
+    outline: none;
+    box-shadow: 0 0 5px rgba(255, 193, 7, 0.3);
 }
 
 
@@ -481,6 +497,51 @@ button:disabled {
 .modal-buttons .btn-secondary:hover { background-color: #5a6268; }
 .modal-content button { width: auto; }
 
+/* ОНОВЛЕНО v1.6.0: Стилі Модального Вікна Пошуку [P22] */
+#search-results-modal .modal-content {
+    max-width: 700px; /* Ширше, ніж звичайне */
+    text-align: left;
+}
+#search-results-list {
+    max-height: 60vh;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    padding-right: 10px;
+}
+.search-result-item {
+    padding: 12px;
+    border: 1px solid #555;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    background-color: #444;
+}
+.search-result-item:hover {
+    background-color: #4f4f4f;
+    border-color: #ffc107;
+}
+.search-result-item h5 {
+    margin: 0 0 5px 0;
+    color: #eee;
+}
+.search-result-type {
+    font-size: 0.8em;
+    font-weight: 500;
+    color: #aaa;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+.search-result-snippet {
+    font-size: 0.9em;
+    color: #ccc;
+    font-style: italic;
+}
+.search-result-snippet b {
+    color: #ffc107; /* Підсвітка збігу (поки не реалізовано) */
+    font-style: normal;
+}
+
+
 /* --- ФУТЕР (ТЕМНА ТЕМА) --- */
 #app-footer {
     text-align: center;
@@ -702,11 +763,15 @@ button:disabled {
     #back-to-projects {
         order: 2; /* Кнопка "назад" буде під заголовком */
     }
-
-    /* Навігація */
+    
+    /* v1.6.0: Адаптивність пошуку */
+    #search-bar-container {
+        margin: 10px 0 0 0;
+    }
     #workspace-nav {
         margin: 15px 0;
     }
+
     .tab-btn {
         font-size: 14px;
         padding: 8px 10px;
@@ -756,5 +821,10 @@ button:disabled {
     .modal-content {
         width: 90%;
         padding: 20px;
+    }
+
+    /* Модальне вікно пошуку */
+    #search-results-modal .modal-content {
+        max-width: 90%;
     }
 }

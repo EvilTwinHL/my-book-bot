@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
     <meta name="description" content="Опус: Бот-Співавтор - ваш особистий помічник для написання книг на базі Gemini 2.5 Flash.">
     <meta name="theme-color" content="#2b2b2b"> 
-    
     <title>Опус: Бот-Співавтор</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -104,6 +102,10 @@
                 <span id="save-status-text" class="text">Збережено</span>
             </div>
             <button id="back-to-projects" style="background-color: #6c757d;">← До проєктів</button>
+        </div>
+
+        <div id="search-bar-container">
+            <input type="text" id="global-search-input" placeholder="Пошук по проєкту (натисніть Enter)">
         </div>
 
         <nav id="workspace-nav">
@@ -264,6 +266,17 @@
         <button id="context-edit-btn">Змінити назву</button>
         <button id="context-export-btn">Експортувати (.txt)</button>
         <button id="context-delete-btn">Видалити проєкт</button>
+    </div>
+
+    <div id="search-results-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Результати пошуку</h3>
+            <div id="search-results-list">
+                </div>
+            <div class="modal-buttons">
+                <button id="search-results-close-btn" class="btn-secondary">Закрити</button>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>

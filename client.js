@@ -1,14 +1,15 @@
 // === КОНФІГУРАЦІЯ ДОДАТКУ [v1.4.0 - P11] ===
 const CONFIG = {
-    APP_VERSION: "1.5.0", // ОНОВЛЕНО v1.5.0
+    APP_VERSION: "1.6.0", // ОНОВЛЕНО v1.6.0
     AUTOSAVE_DELAY: 1500, // ms
     DEFAULT_GOAL_WORDS: 50000,
     SNIPPET_LENGTH: 80, // characters
     TOAST_DURATION: 3000, // ms
-    
-    // ОНОВЛЕНО v1.5.0: [P5]
     CACHE_KEY_PROJECT: 'opusProjectCache',
-    CACHE_DURATION_MIN: 5 // час життя кешу проєкту в хвилинах
+    CACHE_DURATION_MIN: 5, // час життя кешу проєкту в хвилинах
+    
+    // ОНОВЛЕНО v1.6.0: [P17]
+    HISTORY_DEBOUNCE: 500 // ms
 };
 
 // === ГЛОБАЛЬНІ ЗМІННІ ===
@@ -25,6 +26,15 @@ let saveTimer = null;
 /** @type {boolean} v1.2.0: Прапор для P15/P21 */
 let hasUnsavedChanges = false;
 
+// ОНОВЛЕНО v1.6.0: Менеджер Історії (Undo/Redo) [P17]
+let historyManager = {
+    stack: [],
+    pointer: -1,
+    currentField: null,
+    debounceTimer: null,
+    isRestoring: false // Прапор, щоб запобігти запису в історію під час undo/redo
+};
+
 
 // === ЕЛЕМЕНТИ DOM ===
 let loginContainer, appContainer, loginInput, loginButton, logoutButton, usernameDisplay,
@@ -32,7 +42,7 @@ let loginContainer, appContainer, loginInput, loginButton, logoutButton, usernam
     spinnerOverlay, toastContainer,
     createEditModal, createEditModalTitle, createEditInput, createEditConfirmBtn, createEditCancelBtn,
     confirmModal, confirmModalMessage, confirmOkBtn, confirmCancelBtn,
-    projectsListSkeleton; // ОНОВЛЕНО v1.5.0
+    projectsListSkeleton; // v1.5.0
 
 // ЕЛЕМЕНТИ РОБОЧОГО ПРОСТОРУ
 let workspaceContainer, workspaceTitle, backToProjectsButton, workspaceNav,
@@ -42,7 +52,9 @@ let workspaceContainer, workspaceTitle, backToProjectsButton, workspaceNav,
     versionNumberSpan,
     // v0.8.0
     dashboardProjectTitle, dashboardWriteBtn, dashboardTotalWords,
-    dashboardProgressFill, dashboardProgressLabel, dashboardLastUpdated;
+    dashboardProgressFill, dashboardProgressLabel, dashboardLastUpdated,
+    // ОНОВЛЕНО v1.6.0: Пошук [P22]
+    globalSearchInput, searchResultsModal, searchResultsList, searchResultsCloseBtn;
 
 // v1.0.0: КОНТЕКСТНЕ МЕНЮ
 let projectContextMenu, contextEditBtn, contextExportBtn, contextDeleteBtn;
@@ -96,7 +108,7 @@ function bindUIElements() {
     logoutButton = document.getElementById('logout-button');
     usernameDisplay = document.getElementById('username-display');
     projectsList = document.getElementById('projects-list');
-    projectsListSkeleton = document.getElementById('projects-list-skeleton'); // ОНОВЛЕНО v1.5.0
+    projectsListSkeleton = document.getElementById('projects-list-skeleton'); // v1.5.0
     createProjectButton = document.getElementById('create-project-button');
     createEditModal = document.getElementById('create-edit-modal');
     createEditModalTitle = document.getElementById('create-edit-modal-title');
@@ -134,6 +146,13 @@ function bindUIElements() {
     dashboardProgressFill = document.getElementById('dashboard-progress-fill');
     dashboardProgressLabel = document.getElementById('dashboard-progress-label');
     dashboardLastUpdated = document.getElementById('dashboard-last-updated');
+    
+    // ОНОВЛЕНО v1.6.0: Пошук [P22]
+    globalSearchInput = document.getElementById('global-search-input');
+    searchResultsModal = document.getElementById('search-results-modal');
+    searchResultsList = document.getElementById('search-results-list');
+    searchResultsCloseBtn = document.getElementById('search-results-close-btn');
+
     charactersList = document.getElementById('characters-list');
     addCharacterBtn = document.getElementById('add-character-btn');
     characterEditorPane = document.getElementById('character-editor-pane');
@@ -213,6 +232,17 @@ function bindEventListeners() {
         input.addEventListener('change', () => updateSaveStatus('unsaved'));
     });
     
+    // ОНОВЛЕНО v1.6.0: Слухачі для Історії (Undo/Redo) [P17]
+    const textareas = document.querySelectorAll(
+        'textarea, ' +
+        // Також додамо ключові input
+        '#character-name-input, #location-name-input, #plotline-title-input, #chapter-title-input'
+    );
+    textareas.forEach(textarea => {
+        textarea.addEventListener('focus', initHistory);
+        textarea.addEventListener('blur', clearHistoryListeners);
+    });
+
     // Слухачі для автозбереження
     corePremiseInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
     coreThemeInput.addEventListener('blur', (e) => handleSimpleAutoSave(e.target.dataset.field, e.target.value));
@@ -245,9 +275,13 @@ function bindEventListeners() {
     deletePlotlineBtn.addEventListener('click', handleDeletePlotline);
     plotlineTitleInput.addEventListener('blur', (e) => handlePlotlineFieldSave('title', e.target.value));
     plotlineDescInput.addEventListener('blur', (e) => handlePlotlineFieldSave('description', e.target.value));
+
+    // ОНОВЛЕНО v1.6.0: Слухачі Пошуку [P22]
+    globalSearchInput.addEventListener('keypress', handleGlobalSearch);
+    searchResultsCloseBtn.addEventListener('click', () => searchResultsModal.classList.add('hidden'));
 }
 
-// === ЛОГІКА НАВІГАЦІЇ ===
+// === ЛОГІКА НАВІГАЦІЇ === (Без змін v1.6.0)
 
 function checkLoginOnLoad() {
     const savedUser = localStorage.getItem('bookBotUser');
@@ -278,7 +312,7 @@ function handleLogout() {
     hasUnsavedChanges = false; 
     window.onbeforeunload = null; 
     localStorage.removeItem('bookBotUser');
-    clearCachedProject(); // ОНОВЛЕНО v1.5.0 [P5]
+    clearCachedProject(); // v1.5.0 [P5]
     chatWindow.innerHTML = ''; 
     showLoginScreen();
 }
@@ -304,17 +338,12 @@ function showProjectsList() {
     currentProjectData = null;
     hasUnsavedChanges = false; 
     window.onbeforeunload = null; 
-    
-    // ОНОВЛЕНО v1.5.0: Очищуємо кеш, щоб наступне відкриття проєкту завантажило свіжі дані [P5]
-    clearCachedProject();
-    
+    clearCachedProject(); // v1.5.0 [P5]
     loadProjects(currentUser); 
 }
 
-// ОНОВЛЕНО v1.5.0: Логіка кешування [P5]
+// v1.5.0: Логіка кешування [P5] (Без змін v1.6.0)
 async function openProjectWorkspace(projectID) {
-    
-    // 1. Спробувати завантажити з кешу
     const cachedData = getCachedProject(projectID);
     if (cachedData) {
         console.log("Завантажено проєкт з кешу (швидке завантаження)");
@@ -328,10 +357,9 @@ async function openProjectWorkspace(projectID) {
         showTab('dashboard-tab');
         initSortableLists(); 
         updateSaveStatus('saved');
-        return; // Завершуємо, оскільки дані вже є
+        return; 
     }
 
-    // 2. Якщо в кеші немає - завантажуємо з сервера (повільне завантаження)
     console.log("Завантаження проєкту з сервера (повільне завантаження)");
     showSpinner();
     try {
@@ -351,7 +379,6 @@ async function openProjectWorkspace(projectID) {
         if (!currentProjectData.content.plotlines) currentProjectData.content.plotlines = [];
         if (!currentProjectData.chatHistory) currentProjectData.chatHistory = [];
 
-        // 3. Зберігаємо свіжі дані в кеш
         setCachedProject(projectID, currentProjectData);
 
         appContainer.classList.add('hidden');
@@ -409,14 +436,12 @@ function showTab(tabId) {
 }
 
 
-// === ЛОГІКА API (КАРТОТЕКА) ===
+// === ЛОГІКА API (КАРТОТЕКА) === (Без змін v1.6.0)
 
-// ОНОВЛЕНО v1.5.0: Skeleton Loader [P6]
+// v1.5.0: Skeleton Loader [P6]
 async function loadProjects(user) {
-    // 1. Очистити старий список і показати скелетон
     projectsList.innerHTML = ''; 
     projectsListSkeleton.classList.remove('hidden');
-    // (Не показуємо глобальний спінер)
 
     try {
         const response = await fetch(`/get-projects?user=${user}`);
@@ -426,7 +451,6 @@ async function loadProjects(user) {
         }
         const projects = await response.json();
         
-        // (Очищення вже відбулося)
         if (projects.length === 0) {
             projectsList.innerHTML = '<li>У вас ще немає проєктів.</li>';
         } else {
@@ -470,7 +494,6 @@ async function loadProjects(user) {
         showToast(error.message, 'error');
         logErrorToServer(error, "loadProjects"); 
     } finally {
-        // 3. Ховаємо скелетон, коли все готово
         projectsListSkeleton.classList.add('hidden');
     }
 }
@@ -492,8 +515,7 @@ async function handleCreateProject(title) {
         currentProjectData = newProject.data;
         currentProjectID = newProject.id;
         
-        // ОНОВЛЕНО v1.5.0: Кешуємо щойно створений проєкт [P5]
-        setCachedProject(currentProjectID, currentProjectData);
+        setCachedProject(currentProjectID, currentProjectData); // v1.5.0 [P5]
 
         appContainer.classList.add('hidden');
         workspaceContainer.classList.remove('hidden');
@@ -521,8 +543,7 @@ async function handleDeleteProject(projectID) {
             throw new Error(err.message || 'Сервер не зміг видалити проєкт.');
         }
         
-        // ОНОВЛЕНО v1.5.0: Очищуємо кеш, якщо видалили проєкт [P5]
-        clearCachedProject(); 
+        clearCachedProject(); // v1.5.0 [P5]
 
         loadProjects(currentUser);
         showToast('Проєкт видалено.', 'success'); 
@@ -553,8 +574,7 @@ async function handleEditTitle(projectID, newTitle) {
         if (currentProjectID === projectID) {
             currentProjectData.title = newTitle;
             workspaceTitle.textContent = newTitle;
-            // ОНОВЛЕНО v1.5.0: Оновлюємо кеш новою назвою [P5]
-            setCachedProject(currentProjectID, currentProjectData);
+            setCachedProject(currentProjectID, currentProjectData); // v1.5.0 [P5]
         }
         
         loadProjects(currentUser); 
@@ -595,7 +615,7 @@ async function handleSimpleAutoSave(field, value) {
     }, CONFIG.AUTOSAVE_DELAY); 
 }
 
-// === ЛОГІКА API (ЧАТ) === (Без змін v1.5.0)
+// === ЛОГІКА API (ЧАТ) === (Без змін v1.6.0)
         
 async function sendMessage() {
     const messageText = userInput.value.trim();
@@ -626,8 +646,7 @@ async function sendMessage() {
         currentProjectData.chatHistory.push({ role: "user", parts: [{ text: messageText }] });
         currentProjectData.chatHistory.push({ role: "model", parts: [{ text: botMessage }] });
         
-        // ОНОВЛЕНО v1.5.0: Оновлюємо кеш історією чату [P5]
-        setCachedProject(currentProjectID, currentProjectData);
+        setCachedProject(currentProjectID, currentProjectData); // v1.5.0 [P5]
 
     } catch (error) { 
         console.error("Помилка відправки повідомлення:", error);
@@ -647,7 +666,7 @@ function addMessageToChat(text, sender) {
 }
 
 
-// === ДОПОМІЖНІ ФУНКЦІЇ (UI) === (Без змін v1.5.0)
+// === ДОПОМІЖНІ ФУНКЦІЇ (UI) === (Без змін v1.6.0)
 
 function showSpinner() {
     spinnerOverlay.classList.remove('hidden');
@@ -724,7 +743,7 @@ function hideConfirmModal() {
     confirmModal.classList.add('hidden');
 }
 
-// === v1.0.0: КОНТЕКСТНЕ МЕНЮ === (Без змін v1.5.0)
+// === v1.0.0: КОНТЕКСТНЕ МЕНЮ === (Без змін v1.6.0)
 
 function showProjectContextMenu(event, project) {
     projectContextMenu.classList.remove('hidden');
@@ -746,7 +765,7 @@ function hideProjectContextMenu() {
     projectContextMenu.classList.add('hidden');
 }
 
-// === v1.1.0: ЛОГУВАННЯ ПОМИЛОК === (Без змін v1.5.0)
+// === v1.1.0: ЛОГУВАННЯ ПОМИЛОК === (Без змін v1.6.0)
 async function logErrorToServer(error, contextName) {
     console.error(`[${contextName}]`, error); 
     try {
@@ -776,12 +795,15 @@ window.onunhandledrejection = (event) => {
     logErrorToServer(event.reason || new Error('Unhandled rejection'), 'window.onunhandledrejection');
 };
 
-// === v1.3.0: ГАРЯЧІ КЛАВІШІ [P16] === (Без змін v1.5.0)
+// === v1.3.0: ГАРЯЧІ КЛАВІШІ [P16] === (ОНОВЛЕНО v1.6.0)
 
 function handleGlobalHotkeys(e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    const key = e.key.toLowerCase();
+    const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+
+    // P16: Ctrl+S або Cmd+S для Збереження
+    if (isCtrlOrCmd && key === 's') {
         e.preventDefault(); 
-        
         if (hasUnsavedChanges) {
             console.log('Hotkey: Force save (blur) triggered.');
             if (document.activeElement && typeof document.activeElement.blur === 'function') {
@@ -790,9 +812,31 @@ function handleGlobalHotkeys(e) {
         } else {
             showToast('Немає що зберігати.', 'info');
         }
+        return; // P17: Важливо, щоб не спрацював Esc
     }
 
-    if (e.key === 'Escape') {
+    // ОНОВЛЕНО v1.6.0: Ctrl+Z (Undo) [P17]
+    if (isCtrlOrCmd && key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+        return;
+    }
+
+    // ОНОВЛЕНО v1.6.0: Ctrl+Y / Ctrl+Shift+Z (Redo) [P17]
+    if ((isCtrlOrCmd && key === 'y') || (isCtrlOrCmd && e.shiftKey && key === 'z')) {
+        e.preventDefault();
+        redo();
+        return;
+    }
+
+    // P16: Клавіша Escape
+    if (key === 'escape') {
+        // 1. Закрити модальне вікно пошуку
+        if (!searchResultsModal.classList.contains('hidden')) {
+            searchResultsModal.classList.add('hidden');
+            return;
+        }
+        // 2. Закрити модальні вікна (створення/підтвердження)
         if (!createEditModal.classList.contains('hidden')) {
             hideCreateEditModal();
             return;
@@ -801,11 +845,13 @@ function handleGlobalHotkeys(e) {
             hideConfirmModal();
             return;
         }
+        // 3. Закрити контекстне меню
         if (!projectContextMenu.classList.contains('hidden')) {
             hideProjectContextMenu();
             return;
         }
         
+        // 4. Закрити активний редактор (повернутися до списку)
         const activeTabId = document.querySelector('.tab-content.active')?.id;
         if (!activeTabId) return;
 
@@ -834,7 +880,7 @@ function handleGlobalHotkeys(e) {
     }
 }
 
-// === v1.2.0: НОВА ФУНКЦІЯ ІНДИКАТОРА ЗБЕРЕЖЕННЯ (P15, P21) === (Без змін v1.5.0)
+// === v1.2.0: НОВА ФУНКЦІЯ ІНДИКАТОРА ЗБЕРЕЖЕННЯ (P15, P21) === (Без змін v1.6.0)
 function updateSaveStatus(status) {
     if (!saveStatusIndicator) return; 
 
@@ -870,7 +916,7 @@ function updateSaveStatus(status) {
 }
 
 
-// === v0.5.1 - ЛІЧИЛЬНИК СЛІВ === (Без змін v1.5.0)
+// === v0.5.1 - ЛІЧИЛЬНИК СЛІВ === (Без змін v1.6.0)
 
 function countWords(text) {
     if (!text || text.trim() === "") {
@@ -897,7 +943,7 @@ function updateTotalWordCount() {
     chaptersTotalWordCount.textContent = `Загалом: ${totalCount} слів`;
 }
 
-// === v0.8.0: DASHBOARD === (Без змін v1.5.0)
+// === v0.8.0: DASHBOARD === (Без змін v1.6.0)
 
 function renderDashboard() {
     if (!currentProjectData) return;
@@ -923,7 +969,7 @@ function renderDashboard() {
 }
 
 
-// === ВКЛАДКА "ПЕРСОНАЖІ" === (Без змін v1.5.0)
+// === ВКЛАДКА "ПЕРСОНАЖІ" === (Без змін v1.6.0)
 
 function renderCharacterList() {
     if (!currentProjectData) return;
@@ -1010,7 +1056,7 @@ async function saveCharactersArray(immediate = false) {
     await saveArrayToDb("content.characters", currentProjectData.content.characters, "персонажів", immediate);
 }
 
-// === ВКЛАДКА "РОЗДІЛИ" === (Без змін v1.5.0)
+// === ВКЛАДКА "РОЗДІЛИ" === (Без змін v1.6.0)
 
 function getStatusIcon(status) {
     switch (status) {
@@ -1201,7 +1247,7 @@ async function saveChaptersArray(immediate = false) {
     await saveArrayToDb("content.chapters", currentProjectData.content.chapters, "розділів", immediate);
 }
 
-// === ВКЛАДКА "ЛОКАЦІЇ" === (Без змін v1.5.0)
+// === ВКЛАДКА "ЛОКАЦІЇ" === (Без змін v1.6.0)
 
 function renderLocationList() {
     if (!currentProjectData) return;
@@ -1287,7 +1333,7 @@ async function saveLocationsArray(immediate = false) {
     await saveArrayToDb("content.locations", currentProjectData.content.locations, "локацій", immediate);
 }
 
-// === ВКЛАДКА "СЮЖЕТНІ ЛІНІЇ" === (Без змін v1.5.0)
+// === ВКЛАДКА "СЮЖЕТНІ ЛІНІЇ" === (Без змін v1.6.0)
 
 function renderPlotlineList() {
     if (!currentProjectData) return;
@@ -1374,7 +1420,7 @@ async function savePlotlinesArray(immediate = false) {
 }
 
 
-// === СОРТУВАННЯ === (Без змін v1.5.0)
+// === СОРТУВАННЯ === (Без змін v1.6.0)
 
 function initSortableLists() {
     if (!currentProjectData) return;
@@ -1407,9 +1453,9 @@ function initSortableLists() {
 }
 
 
-// === УНІВЕРСАЛЬНА ФУНКЦІЯ ЗБЕРЕЖЕННЯ ===
+// === УНІВЕРСАЛЬНА ФУНКЦІЯ ЗБЕРЕЖЕННЯ === (Без змін v1.6.0)
 
-// ОНОВЛЕНО v1.5.0: Оновлення кешу при збереженні [P5]
+// v1.5.0: Оновлення кешу при збереженні [P5]
 async function saveArrayToDb(field, array, nameForToast, immediate = false, isSimpleField = false) {
     if (!currentProjectID) return;
     
@@ -1451,8 +1497,7 @@ async function saveArrayToDb(field, array, nameForToast, immediate = false, isSi
             const freshProjectData = await updatedProjectResponse.json();
             currentProjectData = freshProjectData;
             
-            // ОНОВЛЕНО v1.5.0: Оновлюємо кеш новими даними [P5]
-            setCachedProject(currentProjectID, freshProjectData);
+            setCachedProject(currentProjectID, freshProjectData); // v1.5.0 [P5]
 
             renderDashboard(); 
             
@@ -1480,13 +1525,8 @@ async function saveArrayToDb(field, array, nameForToast, immediate = false, isSi
 }
 
 
-// === ОНОВЛЕНО v1.5.0: НОВІ ФУНКЦІЇ КЕШУВАННЯ [P5] ===
+// === v1.5.0: ФУНКЦІЇ КЕШУВАННЯ [P5] === (Без змін v1.6.0)
 
-/**
- * Зберігає поточний проєкт в sessionStorage
- * @param {string} projectID
- * @param {object} data
- */
 function setCachedProject(projectID, data) {
     try {
         const cacheEntry = {
@@ -1498,16 +1538,9 @@ function setCachedProject(projectID, data) {
         console.log(`Проєкт ${projectID} збережено в кеш.`);
     } catch (error) {
         console.error("Помилка збереження в sessionStorage (можливо, переповнено):", error);
-        // Якщо кеш переповнений, очищуємо його
         clearCachedProject();
     }
 }
-
-/**
- * Отримує проєкт з sessionStorage, якщо він свіжий
- * @param {string} projectID
- * @returns {object | null}
- */
 function getCachedProject(projectID) {
     const cached = sessionStorage.getItem(CONFIG.CACHE_KEY_PROJECT);
     if (!cached) return null;
@@ -1515,14 +1548,12 @@ function getCachedProject(projectID) {
     try {
         const cacheEntry = JSON.parse(cached);
 
-        // 1. Перевіряємо, чи це той самий проєкт
         if (cacheEntry.projectID !== projectID) {
             console.log("Кеш знайдено, але ID проєкту не збігається. Очищення.");
             clearCachedProject();
             return null;
         }
 
-        // 2. Перевіряємо, чи кеш не застарів
         const ageInMinutes = (Date.now() - cacheEntry.timestamp) / (1000 * 60);
         if (ageInMinutes > CONFIG.CACHE_DURATION_MIN) {
             console.log(`Кеш для проєкту ${projectID} застарів (вік: ${ageInMinutes.toFixed(1)} хв). Очищення.`);
@@ -1530,7 +1561,6 @@ function getCachedProject(projectID) {
             return null;
         }
 
-        // 3. Кеш свіжий і правильний
         console.log(`Кеш для проєкту ${projectID} знайдено (вік: ${ageInMinutes.toFixed(1)} хв).`);
         return cacheEntry.data;
 
@@ -1540,11 +1570,285 @@ function getCachedProject(projectID) {
         return null;
     }
 }
-
-/**
- * Очищує кеш проєкту з sessionStorage
- */
 function clearCachedProject() {
     console.log("Кеш проєкту очищено.");
     sessionStorage.removeItem(CONFIG.CACHE_KEY_PROJECT);
+}
+
+
+// === ОНОВЛЕНО v1.6.0: ФУНКЦІЇ ПОШУКУ [P22] ===
+
+/** Обробляє 'Enter' в полі пошуку */
+function handleGlobalSearch(e) {
+    if (e.key !== 'Enter') return;
+    const query = globalSearchInput.value.trim();
+    if (query.length < 2) {
+        showToast("Введіть щонайменше 2 символи для пошуку", 'info');
+        return;
+    }
+    
+    const results = searchInProject(query);
+    renderSearchResults(results, query);
+    searchResultsModal.classList.remove('hidden');
+}
+
+/**
+ * Шукає по всіх даних проєкту
+ * @param {string} query - Пошуковий запит
+ * @returns {Array<object>} - Масив результатів
+ */
+function searchInProject(query) {
+    const results = [];
+    if (!currentProjectData || !currentProjectData.content) return results;
+    
+    const q = query.toLowerCase();
+    const content = currentProjectData.content;
+    const SNIPPET_CONTEXT = 30; // 30 символів до і після
+
+    // 1. Пошук в Розділах (chapters)
+    content.chapters.forEach((item, index) => {
+        let match = false;
+        let snippet = '';
+        if (item.title?.toLowerCase().includes(q)) {
+            match = true;
+            snippet = item.synopsis || item.text || '';
+        } else if (item.synopsis?.toLowerCase().includes(q)) {
+            match = true;
+            snippet = item.synopsis;
+        } else if (item.text?.toLowerCase().includes(q)) {
+            match = true;
+            snippet = item.text;
+        }
+        
+        if (match) {
+            results.push({
+                type: 'Розділ',
+                typeKey: 'chapter',
+                title: item.title || 'Розділ без назви',
+                snippet: snippet.substring(0, CONFIG.SNIPPET_LENGTH * 2) + '...',
+                index: index
+            });
+        }
+    });
+
+    // 2. Пошук в Персонажах (characters)
+    content.characters.forEach((item, index) => {
+        let match = false;
+        let snippet = '';
+        if (item.name?.toLowerCase().includes(q)) {
+            match = true;
+            snippet = item.description || item.arc || '';
+        } else if (item.description?.toLowerCase().includes(q)) {
+            match = true;
+            snippet = item.description;
+        } else if (item.arc?.toLowerCase().includes(q)) {
+            match = true;
+            snippet = item.arc;
+        }
+        
+        if (match) {
+            results.push({
+                type: 'Персонаж',
+                typeKey: 'character',
+                title: item.name || 'Персонаж без назви',
+                snippet: snippet.substring(0, CONFIG.SNIPPET_LENGTH * 2) + '...',
+                index: index
+            });
+        }
+    });
+
+    // 3. Пошук в Локаціях (locations)
+    content.locations.forEach((item, index) => {
+        let match = false;
+        let snippet = '';
+        if (item.name?.toLowerCase().includes(q)) {
+            match = true;
+            snippet = item.description || '';
+        } else if (item.description?.toLowerCase().includes(q)) {
+            match = true;
+            snippet = item.description;
+        }
+        
+        if (match) {
+            results.push({
+                type: 'Локація',
+                typeKey: 'location',
+                title: item.name || 'Локація без назви',
+                snippet: snippet.substring(0, CONFIG.SNIPPET_LENGTH * 2) + '...',
+                index: index
+            });
+        }
+    });
+
+    // 4. Пошук в Сюжетних Лініях (plotlines)
+    content.plotlines.forEach((item, index) => {
+        let match = false;
+        let snippet = '';
+        if (item.title?.toLowerCase().includes(q)) {
+            match = true;
+            snippet = item.description || '';
+        } else if (item.description?.toLowerCase().includes(q)) {
+            match = true;
+            snippet = item.description;
+        }
+        
+        if (match) {
+            results.push({
+                type: 'Сюжетна лінія',
+                typeKey: 'plotline',
+                title: item.title || 'Лінія без назви',
+                snippet: snippet.substring(0, CONFIG.SNIPPET_LENGTH * 2) + '...',
+                index: index
+            });
+        }
+    });
+    
+    // 5. Пошук в Нотатках (notes)
+    if (content.notes?.toLowerCase().includes(q)) {
+        results.push({ type: 'Нотатки', typeKey: 'note', title: 'Загальні нотатки', snippet: content.notes.substring(0, CONFIG.SNIPPET_LENGTH * 2) + '...', index: 0 });
+    }
+    if (content.research?.toLowerCase().includes(q)) {
+        results.push({ type: 'Нотатки', typeKey: 'note', title: 'Дослідження', snippet: content.research.substring(0, CONFIG.SNIPPET_LENGTH * 2) + '...', index: 1 });
+    }
+    
+    return results;
+}
+
+/** Рендерить результати пошуку в модальному вікні */
+function renderSearchResults(results, query) {
+    searchResultsList.innerHTML = '';
+    if (results.length === 0) {
+        searchResultsList.innerHTML = '<p>Збігів не знайдено.</p>';
+        return;
+    }
+    
+    results.forEach(res => {
+        const item = document.createElement('div');
+        item.className = 'search-result-item';
+        item.dataset.type = res.typeKey;
+        item.dataset.index = res.index;
+        
+        item.innerHTML = `
+            <div class="search-result-type">${res.type}</div>
+            <h5>${res.title}</h5>
+            <div class="search-result-snippet">${res.snippet.replace(new RegExp(query, 'gi'), (match) => `<b>${match}</b>`)}</div>
+        `;
+        
+        item.addEventListener('click', () => handleSearchResultClick(res.typeKey, res.index));
+        searchResultsList.appendChild(item);
+    });
+}
+
+/** Обробляє клік на результаті пошуку */
+function handleSearchResultClick(typeKey, index) {
+    searchResultsModal.classList.add('hidden');
+    globalSearchInput.value = ''; // Очищуємо пошук
+
+    switch (typeKey) {
+        case 'chapter':
+            showTab('chapters-tab');
+            selectChapter(index);
+            break;
+        case 'character':
+            showTab('characters-tab');
+            selectCharacter(index);
+            break;
+        case 'location':
+            showTab('locations-tab');
+            selectLocation(index);
+            break;
+        case 'plotline':
+            showTab('plotlines-tab');
+            selectPlotline(index);
+            break;
+        case 'note':
+            showTab('notes-tab');
+            if (index === 0) notesGeneralInput.focus();
+            else notesResearchInput.focus();
+            break;
+    }
+}
+
+
+// === ОНОВЛЕНО v1.6.0: ФУНКЦІЇ ІСТОРІЇ (UNDO/REDO) [P17] ===
+
+/** Ініціалізує історію для поля, яке отримало фокус */
+function initHistory(e) {
+    const field = e.target;
+    historyManager.stack = [field.value];
+    historyManager.pointer = 0;
+    historyManager.currentField = field;
+    field.addEventListener('input', handleHistoryInput);
+}
+
+/** Прибирає слухача 'input' при втраті фокусу */
+function clearHistoryListeners(e) {
+    const field = e.target;
+    field.removeEventListener('input', handleHistoryInput);
+    // Не очищуємо currentField, щоб Undo/Redo працювало навіть після blur,
+    // але нові зміни не будуть записуватись.
+}
+
+/** Обробляє 'input' (з дебаунсом) для запису в історію */
+function handleHistoryInput(e) {
+    // Не записувати, якщо ми відновлюємо з історії
+    if (historyManager.isRestoring) return;
+    
+    clearTimeout(historyManager.debounceTimer);
+    const value = e.target.value;
+    
+    historyManager.debounceTimer = setTimeout(() => {
+        recordHistory(value);
+    }, CONFIG.HISTORY_DEBOUNCE);
+}
+
+/** Записує новий стан в стек історії */
+function recordHistory(value) {
+    if (!historyManager.currentField) return;
+    
+    // Якщо ми зробили undo, а потім почали писати,
+    // ми маємо "відрізати" майбутні стани (redo stack)
+    if (historyManager.pointer < historyManager.stack.length - 1) {
+        historyManager.stack = historyManager.stack.slice(0, historyManager.pointer + 1);
+    }
+    
+    // Додаємо новий стан
+    historyManager.stack.push(value);
+    historyManager.pointer++;
+}
+
+/** Виконує Undo (Ctrl+Z) */
+function undo() {
+    if (!historyManager.currentField || historyManager.pointer <= 0) {
+        return; // Немає куди скасовувати
+    }
+    
+    historyManager.isRestoring = true;
+    historyManager.pointer--;
+    const value = historyManager.stack[historyManager.pointer];
+    historyManager.currentField.value = value;
+    
+    // Емулюємо 'input' та 'change', щоб оновити лічильники слів та статус збереження
+    historyManager.currentField.dispatchEvent(new Event('input', { bubbles: true }));
+    historyManager.currentField.dispatchEvent(new Event('change', { bubbles: true }));
+    
+    historyManager.isRestoring = false;
+}
+
+/** Виконує Redo (Ctrl+Y) */
+function redo() {
+    if (!historyManager.currentField || historyManager.pointer >= historyManager.stack.length - 1) {
+        return; // Немає куди повторювати
+    }
+    
+    historyManager.isRestoring = true;
+    historyManager.pointer++;
+    const value = historyManager.stack[historyManager.pointer];
+    historyManager.currentField.value = value;
+
+    // Емулюємо 'input' та 'change', щоб оновити лічильники слів та статус збереження
+    historyManager.currentField.dispatchEvent(new Event('input', { bubbles: true }));
+    historyManager.currentField.dispatchEvent(new Event('change', { bubbles: true }));
+    
+    historyManager.isRestoring = false;
 }

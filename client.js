@@ -1,5 +1,5 @@
 // === ГЛОБАЛЬНІ ЗМІННІ ===
-const APP_VERSION = "1.2.1"; // ОНОВЛЕНО: v1.2.1
+const APP_VERSION = "1.3.0"; // ОНОВЛЕНО: v1.3.0
 
 let currentUser = null;
 let currentProjectID = null;
@@ -48,7 +48,7 @@ let chaptersList, addChapterBtn, chapterEditorPane,
     chapterEditorPlaceholder, chapterEditorTitle, chapterTitleInput,
     chapterStatusInput, chapterTextInput, deleteChapterBtn,
     chaptersTotalWordCount, chapterCurrentWordCount,
-    chapterSynopsisInput; // ОНОВЛЕНО v1.2.1 (було chapterEditorSynopsis)
+    chapterSynopsisInput; // v1.2.1
 
 // ЕЛЕМЕНТИ (ВКЛАДКА ЛОКАЦІЙ)
 let locationsList, addLocationBtn, locationEditorPane,
@@ -138,7 +138,7 @@ function bindUIElements() {
     chapterTitleInput = document.getElementById('chapter-title-input');
     chapterStatusInput = document.getElementById('chapter-status-input');
     chapterTextInput = document.getElementById('chapter-text-input');
-    chapterSynopsisInput = document.getElementById('chapter-synopsis-input'); // ОНОВЛЕНО v1.2.1
+    chapterSynopsisInput = document.getElementById('chapter-synopsis-input'); // v1.2.1
     deleteChapterBtn = document.getElementById('delete-chapter-btn');
     chaptersTotalWordCount = document.getElementById('chapters-total-word-count');
     chapterCurrentWordCount = document.getElementById('chapter-current-word-count');
@@ -183,18 +183,19 @@ function bindEventListeners() {
         }
     });
 
-    // --- ОНОВЛЕНО v1.2.1: Слухачі для індикатора збереження ---
-    // Слухаємо *всі* поля вводу
+    // ОНОВЛЕНО v1.3.0: Глобальний слухач гарячих клавіш [P16]
+    document.addEventListener('keydown', handleGlobalHotkeys);
+
+    // --- v1.2.1: Слухачі для індикатора збереження ---
     const inputs = document.querySelectorAll(
         '#core-premise-input, #core-theme-input, #core-arc-input, ' +
         '#notes-general-input, #notes-research-input, ' +
         '#character-name-input, #character-desc-input, #character-arc-input, ' +
         '#chapter-title-input, #chapter-status-input, #chapter-text-input, ' +
-        '#chapter-synopsis-input, ' + // ОНОВЛЕНО v1.2.1
+        '#chapter-synopsis-input, ' + 
         '#location-name-input, #location-desc-input, ' +
         '#plotline-title-input, #plotline-desc-input'
     );
-    // 'input' спрацьовує миттєво (для textarea), 'change' (для select)
     inputs.forEach(input => {
         input.addEventListener('input', () => updateSaveStatus('unsaved'));
         input.addEventListener('change', () => updateSaveStatus('unsaved'));
@@ -218,7 +219,7 @@ function bindEventListeners() {
     deleteChapterBtn.addEventListener('click', handleDeleteChapter);
     chapterTitleInput.addEventListener('blur', (e) => handleChapterFieldSave('title', e.target.value));
     chapterStatusInput.addEventListener('change', (e) => handleChapterFieldSave('status', e.target.value)); 
-    chapterSynopsisInput.addEventListener('blur', (e) => handleChapterFieldSave('synopsis', e.target.value)); // ОНОВЛЕНО v1.2.1
+    chapterSynopsisInput.addEventListener('blur', (e) => handleChapterFieldSave('synopsis', e.target.value)); // v1.2.1
     chapterTextInput.addEventListener('blur', (e) => handleChapterFieldSave('text', e.target.value));
     chapterTextInput.addEventListener('input', handleChapterTextInput);
 
@@ -723,6 +724,74 @@ window.onerror = (message, source, lineno, colno, error) => {
 window.onunhandledrejection = (event) => {
     logErrorToServer(event.reason || new Error('Unhandled rejection'), 'window.onunhandledrejection');
 };
+
+// === ОНОВЛЕНО v1.3.0: ГАРЯЧІ КЛАВІШІ [P16] ===
+/**
+ * Обробляє глобальні гарячі клавіші (Ctrl+S, Esc)
+ * @param {KeyboardEvent} e
+ */
+function handleGlobalHotkeys(e) {
+    // P16: Ctrl+S або Cmd+S для Збереження
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault(); // Забороняємо браузеру зберігати сторінку
+        
+        if (hasUnsavedChanges) {
+            console.log('Hotkey: Force save (blur) triggered.');
+            // Викликаємо 'blur' на активному елементі, щоб спрацював слухач
+            if (document.activeElement && typeof document.activeElement.blur === 'function') {
+                document.activeElement.blur();
+            }
+            // Таймер збереження спрацює через 'blur'
+        } else {
+            showToast('Немає що зберігати.', 'info');
+        }
+    }
+
+    // P16: Клавіша Escape
+    if (e.key === 'Escape') {
+        // 1. Закрити модальні вікна (мають вищий пріоритет)
+        if (!createEditModal.classList.contains('hidden')) {
+            hideCreateEditModal();
+            return;
+        }
+        if (!confirmModal.classList.contains('hidden')) {
+            hideConfirmModal();
+            return;
+        }
+        // 2. Закрити контекстне меню
+        if (!projectContextMenu.classList.contains('hidden')) {
+            hideProjectContextMenu();
+            return;
+        }
+        
+        // 3. Закрити активний редактор (повернутися до списку)
+        const activeTabId = document.querySelector('.tab-content.active')?.id;
+        if (!activeTabId) return;
+
+        switch (activeTabId) {
+            case 'characters-tab':
+                if (!characterEditorPane.classList.contains('hidden')) {
+                    showCharacterEditor(false);
+                }
+                break;
+            case 'chapters-tab':
+                 if (!chapterEditorPane.classList.contains('hidden')) {
+                    showChapterEditor(false);
+                }
+                break;
+            case 'locations-tab':
+                 if (!locationEditorPane.classList.contains('hidden')) {
+                    showLocationEditor(false);
+                }
+                break;
+            case 'plotlines-tab':
+                 if (!plotlineEditorPane.classList.contains('hidden')) {
+                    showPlotlineEditor(false);
+                }
+                break;
+        }
+    }
+}
 
 // === v1.2.0: НОВА ФУНКЦІЯ ІНДИКАТОРА ЗБЕРЕЖЕННЯ (P15, P21) ===
 /**

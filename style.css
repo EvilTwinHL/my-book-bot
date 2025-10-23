@@ -288,6 +288,7 @@ button:disabled {
     padding: 20px;
     display: flex;
     flex-direction: column;
+    overflow-y: auto; /* Додано для прокрутки на малих екранах */
 }
 .editor-pane-placeholder {
     flex: 1;
@@ -633,4 +634,102 @@ button:disabled {
 #context-delete-btn:hover {
     background-color: #dc3545;
     color: #fff;
+}
+
+
+/* ===================================== */
+/* --- ОНОВЛЕНО v1.3.0: АДАПТИВНІСТЬ [P14] --- */
+/* ===================================== */
+
+/* --- Планшети (змінюємо 3 колонки на 2) --- */
+@media (max-width: 1024px) {
+    .list-editor-layout {
+        /* Залишаємо 2 колонки: список (300px) і редактор (решта) */
+        /* Наша поточна верстка вже добре це обробляє, 
+           але ми можемо зробити редактор чату вищим */
+        min-height: 60vh;
+    }
+    
+    #chat-tab {
+        height: 70vh;
+    }
+}
+
+/* --- Мобільні телефони (змінюємо на 1 колонку) --- */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px; /* Менші відступи */
+    }
+
+    /* Хедер */
+    .app-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start; /* Вирівнюємо по лівому краю */
+    }
+    .app-header h2 {
+        margin: 0;
+    }
+    .autosave-status {
+        margin: 5px 0;
+        order: 3; /* Переносимо статус вниз */
+    }
+    #back-to-projects {
+        order: 2; /* Кнопка "назад" буде під заголовком */
+    }
+
+    /* Навігація */
+    #workspace-nav {
+        margin: 15px 0;
+    }
+    .tab-btn {
+        font-size: 14px;
+        padding: 8px 10px;
+    }
+
+    /* 3-колонний макет -> 1-колонний */
+    .list-editor-layout {
+        flex-direction: column;
+        height: auto; /* Автоматична висота */
+        min-height: 0;
+    }
+    .list-pane {
+        flex: 0 0 auto; /* Не розтягувати */
+        height: 40vh; /* Список займає 40% висоти екрану */
+        border-right: none;
+        border-bottom: 1px solid #444;
+        width: 100%;
+        padding: 10px;
+        box-sizing: border-box; /* Враховуємо padding */
+    }
+    .editor-pane {
+        height: auto;
+        padding: 15px;
+        overflow-y: visible; /* Вимикаємо прокрутку (буде скрол тіла) */
+    }
+    .editor-pane-placeholder {
+        display: none; /* Ховаємо "оберіть елемент" на мобільному */
+    }
+    
+    /* Ховаємо редактор, якщо нічого не обрано (поведінка за замовчуванням) */
+    .editor-pane.hidden {
+        display: none;
+    }
+
+    /* Колонки в редакторі розділів */
+    .input-row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    /* Чат */
+    #chat-tab {
+        height: 65vh; /* Більше місця для чату */
+    }
+    
+    /* Модальні вікна */
+    .modal-content {
+        width: 90%;
+        padding: 20px;
+    }
 }

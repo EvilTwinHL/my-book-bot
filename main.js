@@ -1,6 +1,12 @@
+// === V2.5.2: ІМПОРТ FIREBASE (для Vite/ES Modules) ===
+import firebase from 'firebase/app';
+import 'firebase/auth';
+import 'firebase/firestore'; 
+
+
 // === КОНФІГУРАЦІЯ ДОДАТКУ [v1.4.0 - P11] ===
 const CONFIG = {
-    APP_VERSION: "2.5.0", // ОНОВЛЕНО v2.5.0 (Фаза 2.1: Інтеграція Vite)
+    APP_VERSION: "2.5.2", // ОНОВЛЕНО v2.5.2 (Fix: Firebase imports for Vite)
     AUTOSAVE_DELAY: 1500, // ms
     DEFAULT_GOAL_WORDS: 50000,
     SNIPPET_LENGTH: 80, // characters
@@ -454,17 +460,22 @@ function setSaveStatus(status) {
     }
 }
 
-// === v1.1.0: Ініціалізація Firebase ===
+// === v2.5.2: Ініціалізація Firebase ===
 let auth, provider, firestore;
 
 function initializeFirebase() {
     try {
-        // Ми припускаємо, що firebase.js вже завантажено в index.html
-        // і 'firebaseConfig' доступна глобально.
+        // v2.5.2: Використовуємо глобальний window.firebaseConfig, переданий з index.html
+        const firebaseConfig = window.firebaseConfig; 
+        
+        // Викликаємо імпортований об'єкт firebase
         const app = firebase.initializeApp(firebaseConfig);
-        auth = firebase.auth();
+        
+        // v2.5.2: Тепер доступ до auth та firestore йде через app
+        auth = app.auth();
         provider = new firebase.auth.GoogleAuthProvider();
-        firestore = firebase.firestore();
+        firestore = app.firestore(); // Використовуємо app.firestore()
+        
         console.log("Firebase ініціалізовано.");
         setupAuthObserver();
     } catch (error) {

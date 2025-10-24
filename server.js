@@ -32,7 +32,7 @@ const db = admin.firestore();
 
 // --- Налаштування Gemini (без змін) ---
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-// (Примітка: ми ініціалізуємо model всередині ендпоінту /chat для сумісності з v2.1.1)
+// (Примітка: ми ініціалізуємо model всередині ендпоінту /chat)
 
 // --- v1.1.0: Налаштування Rate Limiter (без змін) ---
 const apiLimiter = rateLimit({
@@ -151,7 +151,7 @@ app.post('/create-project', sensitiveLimiter, async (req, res) => {
     }
 });
 
-// === ОНОВЛЕНО v2.2.2: Отримання контенту проєкту (ВИПРАВЛЕНО) ===
+// === ОНОВЛЕНО v2.2.3: Отримання контенту проєкту (ВИПРАВЛЕНО) ===
 app.get('/get-project-content', apiLimiter, async (req, res) => {
     const projectID = req.query.projectID;
     if (!projectID) {
@@ -171,8 +171,8 @@ app.get('/get-project-content', apiLimiter, async (req, res) => {
 
         // 3. "Збираємо" об'єкт `content` та `chatHistory`
         
-        // --- v2.2.2: ВИПРАВЛЕНА ЛОГІКА ---
-        // Ініціалізуємо contentData базовими полями, щоб уникнути перезапису
+        // --- v2.2.3: ВИПРАВЛЕНА ЛОГІКА ---
+        // Ініціалізуємо contentData базовими полями (з 'content'), щоб уникнути перезапису
         let contentData = dataSnapshot.docs.find(doc => doc.id === 'content')?.data() || {};
         let chatHistoryData = [];
         
@@ -186,9 +186,8 @@ app.get('/get-project-content', apiLimiter, async (req, res) => {
                 // Додаємо масиви до вже існуючого об'єкта contentData
                 contentData[docId] = data.array || [];
             }
-            // (Нам більше не потрібен 'else if' для 'content', бо ми завантажили його спочатку)
         });
-        // --- КІНЕЦЬ ВИПРАВЛЕННЯ v2.2.2 ---
+        // --- КІНЕЦЬ ВИПРАВЛЕННЯ v2.2.3 ---
 
         // 4. Комбінуємо все в один об'єкт, як того очікує клієнт
         const fullProjectData = {
@@ -258,7 +257,6 @@ app.post('/save-project-content', apiLimiter, async (req, res) => {
             case 'content.notes':
             case 'content.research':
                 const fieldName = field.split('.')[1];
-                // Використовуємо `update` з `merge: true` для оновлення одного поля
                 updatePromise = dataSubcollectionRef.doc('content').set({ [fieldName]: value }, { merge: true });
                 break;
                 
@@ -278,10 +276,11 @@ app.post('/save-project-content', apiLimiter, async (req, res) => {
     }
 });
 
-// === ОНОВЛЕНО v2.2.1: Чат з Опусом (БЕЗ ЗМІН v2.2.2) ===
+// === ОНОВЛЕНО v2.3.0: Чат з Опусом (з селективним контекстом) ===
 app.post('/chat', async (req, res) => {
     try {
-        const { projectID, message } = req.body; 
+        // v2.3.0: Отримуємо contextOptions
+        const { projectID, message, contextOptions } = req.body; 
         if (!projectID || !message) {
             return res.status(400).json({ error: 'Відсутні projectID або message' });
         }
@@ -303,16 +302,17 @@ app.post('/chat', async (req, res) => {
             // 3. Якщо історії немає (перший запуск) - генеруємо її
             console.log(`[Chat ${projectID}]: Історія не знайдена. Створюю новий контекст...`);
             
-            const context = await getProjectContext(projectID); // Викликаємо хелпер
+            // v2.3.0: Передаємо опції в хелпер
+            const context = await getProjectContext(projectID, contextOptions); 
             
             history = [
                 {
                     role: "user",
-                    parts: [{ text: "Привіт, Опус. Ось повний контекст мого проєкту для нашої розмови: \n\n" + context }]
+                    parts: [{ text: "Привіт, Опус. Ось контекст мого проєкту (або його частина) для нашої розмови: \n\n" + context }]
                 },
                 {
                     role: "model",
-                    parts: [{ text: "Дякую, я ознайомився з усім контекстом. Я готовий допомагати." }]
+                    parts: [{ text: "Дякую, я ознайомився з наданим контекстом. Я готовий допомагати." }]
                 }
             ];
             console.log(`[Chat ${projectID}]: Новий контекст згенеровано.`);
@@ -341,15 +341,14 @@ app.post('/chat', async (req, res) => {
     }
 });
 
-// === ОНОВЛЕНО v2.0.0: Експорт (Subcollections) ===
-// (Цей код був правильний, НЕ ЗМІНЮЄМО)
+// === ОНОВЛЕНО v2.2.3: Експорт (БЕЗ ЗМІН v2.3.0) ===
 app.get('/export-project', apiLimiter, async (req, res) => {
     const projectID = req.query.projectID;
     if (!projectID) {
         return res.status(400).send("Необхідно вказати projectID");
     }
     try {
-        // 1. "Збираємо" проєкт (v2.2.2 - використовуємо ту ж логіку, що й у /get-project-content)
+        // 1. "Збираємо" проєкт
         const projectDoc = await db.collection('projects').doc(projectID).get();
         if (!projectDoc.exists) {
             return res.status(404).send("Проєкт не знайдено.");
@@ -375,7 +374,7 @@ app.get('/export-project', apiLimiter, async (req, res) => {
             chatHistory: chatHistoryData
         };
 
-        // 2. Генеруємо .txt файл (логіка без змін)
+        // 2. Генеруємо .txt файл
         const { title, content, chatHistory } = fullProjectData;
         let fileContent = `--- ПРОЄКТ: ${title} ---\n`;
         fileContent += `(Згенеровано ${new Date().toLocaleString('uk-UA')})\n\n`;
@@ -385,7 +384,6 @@ app.get('/export-project', apiLimiter, async (req, res) => {
         fileContent += `Головна арка: ${content.mainArc || '...'}\n`;
         fileContent += `Мета (слів): ${content.wordGoal || 0}\n\n`;
         
-        // (v2.2.2: Переконуємось, що 'chapters' та 'characters' існують, навіть якщо порожні)
         const chapters = content.chapters || [];
         const characters = content.characters || [];
         const locations = content.locations || [];
@@ -423,7 +421,7 @@ app.get('/export-project', apiLimiter, async (req, res) => {
             fileContent += `${sender}:\n${text}\n\n---\n\n`;
         });
 
-        // 3. Відправляємо файл браузеру (без змін)
+        // 3. Відправляємо файл браузеру
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.setHeader('Content-Disposition', `attachment; filename=\"${title.replace(/[^a-z0-9]/gi, '_')}.txt\"`);
         res.send(fileContent);
@@ -443,7 +441,7 @@ app.post('/update-title', apiLimiter, async (req, res) => {
     try {
         await db.collection('projects').doc(projectID).update({
             title: newTitle,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp() // v1.0.0
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
         console.log(`Назву проєкту ${projectID} оновлено на: ${newTitle}`);
         res.status(200).json({ message: 'Назву оновлено' });
@@ -463,10 +461,7 @@ app.post('/delete-project', sensitiveLimiter, async (req, res) => {
     try {
         const projectRef = db.collection('projects').doc(projectID);
         
-        // 1. Видаляємо субколекцію 'data'
         await deleteCollection(db, projectRef.collection('data'), 100);
-        
-        // 2. Видаляємо головний документ
         await projectRef.delete();
         
         console.log(`Проєкт ${projectID} та його субколекції видалено.`);
@@ -517,20 +512,28 @@ async function deleteQueryBatch(db, query, resolve, reject) {
     }
 }
 
-// === ОНОВЛЕНО v2.2.2: Допоміжна функція для збірки контексту (ВИПРАВЛЕНО) ===
+// === ОНОВЛЕНО v2.3.0: Допоміжна функція для збірки СЕЛЕКТИВНОГО контексту ===
 /**
- * Збирає повний текстовий контекст проєкту з субколекцій.
- * (Логіка взята з вашого ендпоінту /export-project)
+ * Збирає повний АБО частковий текстовий контекст проєкту з субколекцій.
  * @param {string} projectID - ID проєкту
- * @returns {Promise<string>} - Текстовий рядок з усім вмістом.
+ * @param {object} options - Опції для включення
+ * @returns {Promise<string>} - Текстовий рядок з обраним вмістом.
  */
-async function getProjectContext(projectID) {
+async function getProjectContext(projectID, options = {}) {
     let context = "";
     
+    // v2.3.0: Встановлюємо значення за замовчуванням (включати все, якщо опції не передано)
+    const {
+        includeWorld = true,
+        includeChapters = true,
+        includeCharacters = true,
+        includeLocations = true,
+        includePlotlines = true
+    } = options;
+
     try {
         const dataSnapshot = await db.collection('projects').doc(projectID).collection('data').get();
 
-        // --- v2.2.2: ВИПРАВЛЕНА ЛОГІКА ---
         let contentData = dataSnapshot.docs.find(doc => doc.id === 'content')?.data() || {};
         dataSnapshot.docs.forEach(doc => {
             const docId = doc.id;
@@ -539,50 +542,62 @@ async function getProjectContext(projectID) {
                 contentData[docId] = data.array || [];
             }
         });
-        // --- КІНЕЦЬ ВИПРАВЛЕННЯ v2.2.2 ---
 
-        const content = contentData; // v2.2.2: Пряме присвоєння
+        const content = contentData; 
 
-        // (v2.2.2: Переконуємось, що 'chapters' та 'characters' існують, навіть якщо порожні)
         const chapters = content.chapters || [];
         const characters = content.characters || [];
         const locations = content.locations || [];
         const plotlines = content.plotlines || [];
 
-        // Збираємо контекст (логіка з /export-project)
-        context += `--- ЯДРО ІДЕЇ ---\n`;
-        context += `Logline: ${content.premise || '...'}\n`;
-        context += `Тема: ${content.theme || '...'}\n`;
-        context += `Головна арка: ${content.mainArc || '...'}\n\n`;
+        // v2.3.0: Збираємо контекст на основі опцій
+        
+        if (includeWorld) {
+            context += `--- ЯДРО ІДЕЇ ---\n`;
+            context += `Logline: ${content.premise || '...'}\n`;
+            context += `Тема: ${content.theme || '...'}\n`;
+            context += `Головна арка: ${content.mainArc || '...'}\n\n`;
+        }
 
-        context += `--- РОЗДІЛИ (${chapters.length}) ---\n\n`;
-        chapters.forEach((chapter, index) => {
-            context += `[ РОЗДІЛ ${index + 1}: ${chapter.title || 'Без назви'} ]\n`;
-            if (chapter.synopsis) {
-                context += `Синопсис:\n${chapter.synopsis}\n\n`;
-            }
-            context += `Текст:\n${chapter.text || '(Немає тексту)'}\n\n`;
-        });
+        if (includeChapters && chapters.length > 0) {
+            context += `--- РОЗДІЛИ (${chapters.length}) ---\n\n`;
+            chapters.forEach((chapter, index) => {
+                context += `[ РОЗДІЛ ${index + 1}: ${chapter.title || 'Без назви'} ]\n`;
+                if (chapter.synopsis) {
+                    context += `Синопсис:\n${chapter.synopsis}\n\n`;
+                }
+                // (Прибираємо повний текст, щоб зекономити токени, залишаємо синопсис)
+                // context += `Текст:\n${chapter.text || '(Немає тексту)'}\n\n`; 
+            });
+            context += `\n`;
+        }
         
-        context += `--- ПЕРСОНАЖІ (${characters.length}) ---\n\n`;
-        characters.forEach(p => {
-            context += `Ім'я: ${p.name || '...'}\nОпис: ${p.description || '...'}\nАрка: ${p.arc || '...'}\n\n`;
-        });
+        if (includeCharacters && characters.length > 0) {
+            context += `--- ПЕРСОНАЖІ (${characters.length}) ---\n\n`;
+            characters.forEach(p => {
+                context += `Ім'я: ${p.name || '...'}\nОпис: ${p.description || '...'}\nАрка: ${p.arc || '...'}\n\n`;
+            });
+        }
         
-        context += `--- ЛОКАЦІЇ (${locations.length}) ---\n\n`;
-        locations.forEach(l => {
-            context += `Назва: ${l.name || '...'}\nОпис: ${l.description || '...'}\n\n`;
-        });
+        if (includeLocations && locations.length > 0) {
+            context += `--- ЛОКАЦІЇ (${locations.length}) ---\n\n`;
+            locations.forEach(l => {
+                context += `Назва: ${l.name || '...'}\nОпис: ${l.description || '...'}\n\n`;
+            });
+        }
         
-        context += `--- СЮЖЕТНІ ЛІНІЇ (${plotlines.length}) ---\n\n`;
-        plotlines.forEach(p => {
-            context += `Назва: ${p.title || '...'}\nОпис: ${p.description || '...'}\n\n`;
-        });
+        if (includePlotlines && plotlines.length > 0) {
+            context += `--- СЮЖЕТНІ ЛІНІЇ (${plotlines.length}) ---\n\n`;
+            plotlines.forEach(p => {
+                context += `Назва: ${p.title || '...'}\nОпис: ${p.description || '...'}\n\n`;
+            });
+        }
         
-        context += `--- НОТАТКИ ---\n\n`;
-        context += `Загальні:\n${content.notes || '...'}\n\nДослідження:\n${content.research || '...'}\n\n`;
+        // (Нотатки та дослідження поки не включаємо в контекст за замовчуванням)
+        // context += `--- НОТАТКИ ---\n\n`;
+        // context += `Загальні:\n${content.notes || '...'}\n\nДослідження:\n${content.research || '...'}\n\n`;
 
-        return context.trim();
+        return context.trim() === "" ? "Контекст не обрано." : context.trim();
 
     } catch (error) {
         console.error("Помилка при збірці контексту:", error);

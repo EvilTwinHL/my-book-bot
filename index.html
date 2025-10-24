@@ -29,228 +29,216 @@
 
     <div id="confirm-modal" class="modal hidden">
         <div class="modal-content">
-            <h3 id="confirm-modal-message"></h3>
+            <h3 id="confirm-modal-title"></h3>
+            <p id="confirm-modal-text"></p>
             <div class="modal-buttons">
-                <button id="confirm-ok-btn" class="btn-primary">Так</button>
-                <button id="confirm-cancel-btn" class="btn-secondary">Ні</button>
+                <button id="confirm-modal-confirm-btn" class="btn-danger">OK</button>
+                <button id="confirm-modal-cancel-btn" class="btn-secondary">Відміна</button>
             </div>
         </div>
     </div>
 
-
-    <div id="login-container" class="container">
-        <h2>Вітаю!</h2>
-        <p>Будь ласка, введіть ваш унікальний логін, щоб почати.</p>
-        <input type="text" id="login-input" placeholder="Наприклад, Mykhailo_V">
-        <button id="login-button">Увійти</button>
+    <div id="auth-container" class="container hidden">
+        <h2>Опус: Бот-Співавтор</h2>
+        <p>Ваш персональний помічник для написання книг на базі Gemini.</p>
+        <button id="sign-in-btn" class="btn-primary">Увійти через Google</button>
     </div>
 
-    <div id="app-container" class="container hidden">
-        
-        <div class="app-header">
-            <p>Ви увійшли як: <b id="username-display"></b></p>
-            <button id="logout-button" class="btn-icon delete-btn">Вийти</button>
+    <div id="projects-container" class="container hidden">
+        <div class="projects-header">
+            <h2>Мої проєкти</h2>
+            <div>
+                <span id="user-display"></span>
+                <button id="sign-out-btn" class="btn-secondary hidden">Вийти</button>
+            </div>
         </div>
-        
-        <hr>
-
-        <div id="projects-container">
-            <h2>Ваші проєкти</h2>
-            <button id="create-project-button" class="btn-icon export-btn" style="background-color: #28a745;">[ + ] Створити нову книгу</button>
-            
-            <ul id="projects-list-skeleton" class="project-card-list hidden">
-                <li class="project-card skeleton">
-                    <div class="project-card-header">
-                        <h3 class="skeleton-line" style="width: 60%;"></h3>
-                    </div>
-                    <div class="project-card-footer">
-                        <span class="skeleton-line" style="width: 30%;"></span>
-                        <span class="skeleton-line" style="width: 40%;"></span>
-                    </div>
-                </li>
-                <li class="project-card skeleton">
-                    <div class="project-card-header">
-                        <h3 class="skeleton-line" style="width: 80%;"></h3>
-                    </div>
-                    <div class="project-card-footer">
-                        <span class="skeleton-line" style="width: 25%;"></span>
-                        <span class="skeleton-line" style="width: 50%;"></span>
-                    </div>
-                </li>
-                <li class="project-card skeleton">
-                    <div class="project-card-header">
-                        <h3 class="skeleton-line" style="width: 50%;"></h3>
-                    </div>
-                    <div class="project-card-footer">
-                        <span class="skeleton-line" style="width: 35%;"></span>
-                        <span class="skeleton-line" style="width: 30%;"></span>
-                    </div>
-                </li>
-            </ul>
-
-            <ul id="projects-list" class="project-card-list">
-                </ul>
-        </div>
+        <button id="create-project-btn" class="btn-primary">Створити проєкт</button>
+        <div id="projects-list">
+            </div>
     </div>
-
+    
     <div id="workspace-container" class="container hidden">
-        
-        <div class="app-header">
-            <h2 id="workspace-title">Назва Проєкту</h2>
-            
-            <button id="manual-save-button" class="btn-icon autosave-status">
-                <span id="save-status-icon-container">
-                    <span id="save-status-dot" class="dot"></span>
-                    <span id="save-status-spinner" class="button-spinner hidden"></span>
-                </span>
-                <span id="save-status-text" class="text">Збережено</span>
-            </button>
-            
-            <button id="back-to-projects" style="background-color: #6c757d;">← До проєктів</button>
-        </div>
-
-        <div id="search-bar-container">
-            <input type="text" id="global-search-input" placeholder="Пошук по проєкту (натисніть Enter)">
-        </div>
+        <header id="workspace-header">
+            <div class="header-left">
+                <button id="back-to-projects-btn" class="btn-secondary">&larr; До проєктів</button>
+                <div>
+                    <h2 id="workspace-title">Назва Проєкту</h2>
+                    <input type="text" id="workspace-title-input" class="hidden">
+                </div>
+                <div id="save-status-indicator" title="Натисніть для примусового збереження (Ctrl+S)">
+                    <span id="save-status-spinner" class="hidden"></span>
+                    <span id="save-status-text">Збережено</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <input type="text" id="global-search-input" placeholder="Пошук по проєкту (Enter)">
+            </div>
+        </header>
 
         <nav id="workspace-nav">
-            <button class="tab-btn" data-tab="dashboard-tab">📈 Dashboard</button>
-            <button class="tab-btn active" data-tab="core-tab">💡 Ядро</button>
-            <button class="tab-btn" data-tab="characters-tab">👥 Персонажі</button>
-            <button class="tab-btn" data-tab="chapters-tab">📝 Розділи</button>
-            <button class="tab-btn" data-tab="locations-tab">🗺️ Локації</button>
-            <button class="tab-btn" data-tab="plotlines-tab">🧵 Сюжетні лінії</button>
-            <button class="tab-btn" data-tab="notes-tab">📓 Нотатки</button>
-            <button class="tab-btn" data-tab="chat-tab">💬 Чат з Опусом</button>
+            <button class="tab-btn active" data-tab="chapters-tab">Розділи</button>
+            <button class="tab-btn" data-tab="characters-tab">Персонажі</button>
+            <button class="tab-btn" data-tab="locations-tab">Локації</button>
+            <button class="tab-btn" data-tab="plotlines-tab">Сюжет</button>
+            <button class="tab-btn" data-tab="world-tab">Світ</button>
+            <button class="tab-btn" data-tab="chat-tab">Чат (Опус)</button>
         </nav>
 
-        <div id="workspace-content">
-
-            <div id="dashboard-tab" class="tab-content">
-                <h3>📈 Dashboard: <span id="dashboard-project-title"></span></h3>
-                <p>Загальний огляд Вашого проєкту.</p>
-                <div class="dashboard-grid">
-                    <div class="widget widget-full"> <button id="dashboard-write-btn" class="btn-primary-large"> ✏️ Продовжити писати </button> </div>
-                    <div class="widget"> <h4>Загальна кількість слів</h4> <div class="stat-number" id="dashboard-total-words">0</div> </div>
-                    <div class="widget"> <h4>Прогрес до мети</h4> <div class="progress-bar"> <div class="progress-fill" id="dashboard-progress-fill"></div> </div> <div class="stat-label" id="dashboard-progress-label">0%</div> </div>
-                    <div class="widget"> <h4>Останнє оновлення</h4> <div class="stat-label" id="dashboard-last-updated">...</div> </div>
-                </div>
-            </div>
+        <div id="workspace-tabs">
             
-            <div id="core-tab" class="tab-content active">
-                <h3>💡 Ядро Ідеї</h3>
-                <p>Ключові концепції вашої історії. Автозбереження при виході з поля.</p>
-                <label for="core-premise-input">Про що ця книга (Logline):</label>
-                <input type="text" id="core-premise-input" data-field="content.premise" placeholder="Одним реченням: хто, що робить, і що стоїть на кону?">
-                
-                <label for="core-theme-input">Проблематика / Головна думка (Theme):</label>
-                <input type="text" id="core-theme-input" data-field="content.theme" placeholder="Про що *насправді* ця книга (напр., 'чи виправдовує мета засоби?')">
-                
-                <label for="core-arc-input">Головна сюжетна арка:</label>
-                <input type="text" id="core-arc-input" data-field="content.mainArc" placeholder="Напр., 'Подорож героя', 'З грязі в князі', 'Трагедія'">
-                
-                <label for="core-goal-input">Мета (кількість слів):</label>
-                <input type="number" id="core-goal-input" data-field="content.wordGoal" placeholder="Напр., 50000" min="0">
-
-            </div>
-            
-            <div id="characters-tab" class="tab-content">
-                <h3>👥 Персонажі</h3>
-                <div class="list-editor-layout">
-                    <div class="list-pane"> <button id="add-character-btn" class="btn-icon export-btn" style="width: 100%; background-color: #28a745;">[ + ] Новий персонаж</button> <ul id="characters-list" class="item-list"></ul> </div>
-                    <div id="character-editor-pane" class="editor-pane hidden">
-                        <h4 id="character-editor-title">Редагування</h4>
-                        <label for="character-name-input">Ім'я:</label> <input type="text" id="character-name-input" placeholder="Ім'я, прізвисько...">
-                        <label for="character-desc-input">Опис:</label> <textarea id="character-desc-input" rows="6" placeholder="Зовнішність, мотивація, звички..."></textarea>
-                        <label for="character-arc-input">Сюжетна арка:</label> <textarea id="character-arc-input" rows="4" placeholder="Як цей персонаж зміниться протягом історії?"></textarea>
-                        <button id="delete-character-btn" class="btn-icon delete-btn" style="width: auto; margin-top: 10px;">Видалити персонажа</button>
+            <div id="chapters-tab" class="tab-content active list-editor-layout">
+                <aside class="list-pane">
+                    <div class="list-header">
+                        <h3>Розділи</h3>
+                        <button id="add-chapter-btn" class="btn-primary">+</button>
                     </div>
-                    <div id="character-editor-placeholder" class="editor-pane-placeholder"> <p>← Оберіть персонажа зі списку або створіть нового.</p> </div>
-                </div>
-            </div>
-            
-            <div id="chapters-tab" class="tab-content">
-                <h3>📝 Розділи</h3>
-                 <div class="list-editor-layout">
-                    <div class="list-pane">
-                        <button id="add-chapter-btn" class="btn-icon export-btn" style="width: 100%; background-color: #28a745;">[ + ] Новий розділ</button>
-                        <div id="chapters-list" class="item-list card-list-container"></div>
-                        <div class="list-summary" id="chapters-total-word-count"></div>
-                    </div>
-                    <div id="chapter-editor-pane" class="editor-pane hidden">
-                        <h4 id="chapter-editor-title">Редагування</h4>
-                        <div class="input-row">
-                            <div class="input-group">
-                                <label for="chapter-title-input">Назва розділу:</label>
-                                <input type="text" id="chapter-title-input" placeholder="Назва...">
-                            </div>
-                            <div class="input-group">
-                                <label for="chapter-status-input">Статус:</label>
-                                <select id="chapter-status-input">
-                                    <option value="Заплановано">🗓️ Заплановано</option>
-                                    <option value="В роботі">✏️ В роботі</option>
-                                    <option value="Завершено">✅ Завершено</option>
-                                    <option value="На редагуванні">🔄 На редагуванні</option>
-                                    <option value="Потребує уваги">❓ Потребує уваги</option>
-                                </select>
-                            </div>
+                    <div class="chapter-stats-summary">
+                        <p id="total-word-count">Загальна кількість слів: 0</p>
+                        <p id="word-goal-display">(Мета: 50000 слів)</p>
+                        <div class="word-goal-progress-bar">
+                            <div id="word-goal-progress" style="width: 0%;"></div>
                         </div>
-                        
-                        <label for="chapter-synopsis-input">Синопсис (короткий опис):</label>
-                        <textarea id="chapter-synopsis-input" class="editor-synopsis-preview" rows="3" placeholder="Короткий опис того, що відбувається в цьому розділі..."></textarea>
-
-                        <label for="chapter-text-input">Текст розділу:</label>
-                        <textarea id="chapter-text-input" rows="15" placeholder="Почніть писати тут..."></textarea>
-                        
-                        <div class="editor-word-count" id="chapter-current-word-count">0 слів</div>
-                        <button id="delete-chapter-btn" class="btn-icon delete-btn" style="width: auto; margin-top: 10px;">Видалити розділ</button>
                     </div>
-                    <div id="chapter-editor-placeholder" class="editor-pane-placeholder">
-                        <p>← Оберіть розділ зі списку або створіть новий.</p>
+                    <div id="chapters-list"></div>
+                </aside>
+                <main id="chapter-editor-pane" class="editor-pane hidden">
+                    <div class="editor-pane-header">
+                        <input type="text" id="chapter-title" placeholder="Назва розділу">
+                        <select id="chapter-status">
+                            <option value="draft">Чернетка</option>
+                            <option value="first-draft">Перша версія</option>
+                            <option value="edited">Редаговано</option>
+                            <option value="final">Фінал</option>
+                        </select>
+                        <button id="chapter-delete-btn" class="btn-danger">Видалити</button>
                     </div>
+                    <label for="chapter-synopsis">Синопсис (короткий опис):</label>
+                    <textarea id="chapter-synopsis"></textarea>
+                    <label for="chapter-text">Текст розділу:</label>
+                    <textarea id="chapter-text"></textarea>
+                    <p id="chapter-stats">Слів у розділі: 0</p>
+                </main>
+                <div id="chapter-editor-placeholder" class="editor-pane-placeholder">
+                    <p>Оберіть розділ зі списку або створіть новий.</p>
                 </div>
             </div>
 
-            <div id="locations-tab" class="tab-content">
-                <h3>🗺️ Локації</h3>
-                 <div class="list-editor-layout">
-                    <div class="list-pane"> <button id="add-location-btn" class="btn-icon export-btn" style="width: 100%; background-color: #28a745;">[ + ] Нова локація</button> <ul id="locations-list" class="item-list"></ul> </div>
-                    <div id="location-editor-pane" class="editor-pane hidden">
-                        <h4 id="location-editor-title">Редагування</h4>
-                        <label for="location-name-input">Назва локації:</label> <input type="text" id="location-name-input" placeholder="Назва...">
-                        <label for="location-desc-input">Опис:</label> <textarea id="location-desc-input" rows="10" placeholder="Атмосфера, ключові риси, запахи, звуки..."></textarea>
-                        <button id="delete-location-btn" class="btn-icon delete-btn" style="width: auto; margin-top: 10px;">Видалити локацію</button>
+            <div id="characters-tab" class="tab-content list-editor-layout">
+                <aside class="list-pane">
+                    <div class="list-header">
+                        <h3>Персонажі</h3>
+                        <button id="add-character-btn" class="btn-primary">+</button>
                     </div>
-                    <div id="location-editor-placeholder" class="editor-pane-placeholder"> <p>← Оберіть локацію зі списку або створіть нову.</p> </div>
-                </div>
-            </div>
-
-            <div id="plotlines-tab" class="tab-content">
-                <h3>🧵 Сюжетні лінії</h3>
-                 <div class="list-editor-layout">
-                    <div class="list-pane"> <button id="add-plotline-btn" class="btn-icon export-btn" style="width: 100%; background-color: #28a745;">[ + ] Нова лінія</button> <ul id="plotlines-list" class="item-list"></ul> </div>
-                    <div id="plotline-editor-pane" class="editor-pane hidden">
-                        <h4 id="plotline-editor-title">Редагування</h4>
-                        <label for="plotline-title-input">Назва (A-Plot, B-Plot, арка персонажа):</label> <input type="text" id="plotline-title-input" placeholder="Назва...">
-                        <label for="plotline-desc-input">Опис / Ключові події:</label> <textarea id="plotline-desc-input" rows="10" placeholder="Опишіть ключові точки цієї сюжетної лінії..."></textarea>
-                        <button id="delete-plotline-btn" class="btn-icon delete-btn" style="width: auto; margin-top: 10px;">Видалити лінію</button>
+                    <div id="characters-list"></div>
+                </aside>
+                <main id="character-editor-pane" class="editor-pane hidden">
+                    <div class="editor-pane-header">
+                        <input type="text" id="character-name" placeholder="Ім'я персонажа">
+                        <button id="character-delete-btn" class="btn-danger">Видалити</button>
                     </div>
-                    <div id="plotline-editor-placeholder" class="editor-pane-placeholder"> <p>← Оберіть сюжетну лінію або створіть нову.</p> </div>
+                    <label for="character-description">Опис / Біографія:</label>
+                    <textarea id="character-description"></textarea>
+                    <label for="character-arc">Арка / Мотивація:</label>
+                    <textarea id="character-arc"></textarea>
+                </main>
+                <div id="character-editor-placeholder" class="editor-pane-placeholder">
+                    <p>Оберіть персонажа зі списку або створіть нового.</p>
                 </div>
             </div>
             
-            <div id="notes-tab" class="tab-content">
-                <h3>📓 Нотатки та Дослідження</h3>
-                <p>Ваш особистий блокнот. Автозбереження при виході з поля.</p>
-                <label for="notes-general-input">Загальні нотатки:</label>
-                <textarea id="notes-general-input" data-field="content.notes" rows="10" placeholder="Записуйте будь-які ідеї, думки, діалоги..."></textarea>
-                <label for="notes-research-input">Дослідження та Посилання:</label>
-                <textarea id="notes-research-input" data-field="content.research" rows="5" placeholder="Вставте сюди посилання, факти, історичні довідки..."></textarea>
+            <div id="locations-tab" class="tab-content list-editor-layout">
+                <aside class="list-pane">
+                    <div class="list-header">
+                        <h3>Локації</h3>
+                        <button id="add-location-btn" class="btn-primary">+</button>
+                    </div>
+                    <div id="locations-list"></div>
+                </aside>
+                <main id="location-editor-pane" class="editor-pane hidden">
+                    <div class="editor-pane-header">
+                        <input type="text" id="location-name" placeholder="Назва локації">
+                        <button id="location-delete-btn" class="btn-danger">Видалити</button>
+                    </div>
+                    <label for="location-description">Опис локації:</label>
+                    <textarea id="location-description"></textarea>
+                </main>
+                <div id="location-editor-placeholder" class="editor-pane-placeholder">
+                    <p>Оберіть локацію зі списку або створіть нову.</p>
+                </div>
             </div>
-            
+
+            <div id="plotlines-tab" class="tab-content list-editor-layout">
+                <aside class="list-pane">
+                    <div class="list-header">
+                        <h3>Сюжетні лінії</h3>
+                        <button id="add-plotline-btn" class="btn-primary">+</button>
+                    </div>
+                    <div id="plotlines-list"></div>
+                </aside>
+                <main id="plotline-editor-pane" class="editor-pane hidden">
+                    <div class="editor-pane-header">
+                        <input type="text" id="plotline-title" placeholder="Назва сюжетної лінії">
+                        <button id="plotline-delete-btn" class="btn-danger">Видалити</button>
+                    </div>
+                    <label for="plotline-description">Опис / Ключові події:</label>
+                    <textarea id="plotline-description"></textarea>
+                </main>
+                <div id="plotline-editor-placeholder" class="editor-pane-placeholder">
+                    <p>Оберіть сюжетну лінію або створіть нову.</p>
+                </div>
+            </div>
+
+            <div id="world-tab" class="tab-content">
+                <div class="world-grid">
+                    <div class="world-grid-item">
+                        <label for="premise-textarea">Premise / Logline (Основна ідея):</label>
+                        <textarea id="premise-textarea"></textarea>
+                    </div>
+                    <div class="world-grid-item">
+                        <label for="theme-textarea">Тема:</label>
+                        <textarea id="theme-textarea"></textarea>
+                    </div>
+                    <div class="world-grid-item">
+                        <label for="main-arc-textarea">Головна арка (A-Story):</label>
+                        <textarea id="main-arc-textarea"></textarea>
+                    </div>
+                    <div class="world-grid-item">
+                        <label for="word-goal-input">Мета (кількість слів):</label>
+                        <input type="number" id="word-goal-input" value="50000">
+                    </div>
+                    <div class="world-grid-item">
+                        <label for="notes-textarea">Загальні нотатки:</label>
+                        <textarea id="notes-textarea"></textarea>
+                    </div>
+                    <div class="world-grid-item">
+                        <label for="research-textarea">Дослідження / Референси:</label>
+                        <textarea id="research-textarea"></textarea>
+                    </div>
+                </div>
+            </div>
+
             <div id="chat-tab" class="tab-content">
                 <h3>💬 Чат з Опусом</h3>
-                <p>Опус має доступ до всього, що ви пишете в інших вкладках.</p>
+                
+                <p>Опус має доступ до всього, що ви пишете в інших вкладках. Керуйте контекстом нижче:</p>
+                <div id="chat-context-options">
+                    <label>
+                        <input type="checkbox" id="chat-include-world" checked> Ядро (Ідея, Світ)
+                    </label>
+                    <label>
+                        <input type="checkbox" id="chat-include-chapters" checked> Розділи
+                    </label>
+                    <label>
+                        <input type="checkbox" id="chat-include-characters" checked> Персонажі
+                    </label>
+                    <label>
+                        <input type="checkbox" id="chat-include-locations" checked> Локації
+                    </label>
+                    <label>
+                        <input type="checkbox" id="chat-include-plotlines" checked> Сюжет
+                    </label>
+                </div>
+                
                 <div id="chat-window"> </div>
                 <div class="chat-input-area">
                     <input type="text" id="userInput" placeholder="Напишіть щось...">
@@ -284,7 +272,22 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
-    <script src="client.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script>
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyBl9t1oqvNvID4dHBsj9PWJqULuMWvc3vg",
+        authDomain: "gemini-opusai.firebaseapp.com",
+        projectId: "gemini-opusai",
+        storageBucket: "gemini-opusai.appspot.com",
+        messagingSenderId: "569032470725",
+        appId: "1:569032470725:web:e3a2469d7a22e69818e3c1"
+      };
+    </script>
+    
+    <script src="client.js"></script>
 </body>
 </html>

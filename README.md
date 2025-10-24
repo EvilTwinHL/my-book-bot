@@ -65,3 +65,6 @@
     * **[P24]** "Дошка" (Corkboard / Kanban).
     * **[P25]** Експорт в `.docx` / `.epub`.
     * **[P26]** Кастомні поля.
+
+    ======
+* **The code is entirely written in the LLM model from Google gemini-2.5-pro**    

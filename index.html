@@ -272,10 +272,6 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 
     <script>
@@ -289,8 +285,10 @@
         messagingSenderId: "569032470725",
         appId: "1:569032470725:web:e3a2469d7a22e69818e3c1"
       };
+      // v2.5.0: Робимо config глобальним, оскільки в main.js (колишній client.js) поки що немає імпорту
+      window.firebaseConfig = firebaseConfig; 
     </script>
     
-    <script src="client.js"></script>
+    <script type="module" src="/main.js"></script> 
 </body>
 </html>

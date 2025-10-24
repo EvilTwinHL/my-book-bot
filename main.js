@@ -1,6 +1,6 @@
 // === КОНФІГУРАЦІЯ ДОДАТКУ [v1.4.0 - P11] ===
 const CONFIG = {
-    APP_VERSION: "2.4.1", // ОНОВЛЕНО v2.4.0 (UX/UI: Drag & Drop, Візуал)
+    APP_VERSION: "2.5.0", // ОНОВЛЕНО v2.5.0 (Фаза 2.1: Інтеграція Vite)
     AUTOSAVE_DELAY: 1500, // ms
     DEFAULT_GOAL_WORDS: 50000,
     SNIPPET_LENGTH: 80, // characters

@@ -11,7 +11,7 @@ if (typeof Sortable === 'undefined') {
 
 // === КОНФІГУРАЦІЯ ДОДАТКУ [v1.4.0 - P11] ===
 const CONFIG = {
-    APP_VERSION: "2.5.4", // ОНОВЛЕНО v2.5.4 (Fix: обробка порожніх даних при рендерингу списків)
+    APP_VERSION: "2.5.6", // ОНОВЛЕНО v2.5.6 (Критичний Fix: Покращення логіки кешування)
     AUTOSAVE_DELAY: 1500, // ms
     DEFAULT_GOAL_WORDS: 50000,
     SNIPPET_LENGTH: 80, // characters
@@ -53,6 +53,9 @@ const historyManager = {
 const projectCache = {
     set: (key, data) => {
         try {
+            // v2.5.6: Переконуємось, що data існує перед збереженням
+            if (!data || !data.content) throw new Error("Немає даних для кешування.");
+
             const item = {
                 data: data,
                 timestamp: new Date().getTime()
@@ -64,6 +67,10 @@ const projectCache = {
             sessionStorage.removeItem(key);
         }
     },
+    /**
+     * @param {string} key 
+     * @returns {object | null}
+     */
     get: (key) => {
         try {
             const itemStr = sessionStorage.getItem(key);
@@ -73,15 +80,17 @@ const projectCache = {
             const now = new Date().getTime();
             const expiryTime = CONFIG.CACHE_DURATION_MIN * 60 * 1000;
             
-            if (now - item.timestamp > expiryTime) {
-                console.log("Кеш", key, "прострочено. Видалення...");
+            // v2.5.6 CRITICAL FIX: Перевірка прострочення АБО пошкодження структури
+            if (now - item.timestamp > expiryTime || !item.data || !item.data.content) {
+                console.log("Кеш", key, "прострочено або пошкоджено. Видалення...");
                 sessionStorage.removeItem(key);
                 return null;
             }
             console.log("Проєкт", key, "завантажено з кешу.");
             return item.data;
         } catch (e) {
-            console.warn("Помилка читання з кешу:", e);
+            console.warn("Помилка читання з кешу, кеш очищено:", e);
+            sessionStorage.removeItem(key); // Очистити пошкоджений кеш
             return null;
         }
     },
@@ -636,7 +645,18 @@ async function createProject() {
         const newProject = await response.json();
         
         currentProjectID = newProject.id;
-        currentProjectData = newProject.data; 
+        // v2.5.5: Гарантуємо, що масиви існують при створенні
+        currentProjectData = { 
+            ...newProject.data, 
+            content: { 
+                ...(newProject.data.content || {}), 
+                chapters: newProject.data.content?.chapters || [],
+                characters: newProject.data.content?.characters || [],
+                locations: newProject.data.content?.locations || [],
+                plotlines: newProject.data.content?.plotlines || [],
+            },
+            chatHistory: newProject.data.chatHistory || [],
+        };
         
         projectCache.set(currentProjectID, currentProjectData); 
         
@@ -807,8 +827,9 @@ async function openProject(projectID) {
     showSpinner("Відкриття проєкту...");
     currentProjectID = projectID;
     
-    // v1.5.0: Спробувати завантажити з кешу
-    const cachedData = projectCache.get(projectID);
+    // v2.5.6 FIX: Використовуємо оновлений кеш-метод з додатковою перевіркою
+    const cachedData = projectCache.get(projectID); 
+    
     if (cachedData) {
         console.log("Проєкт завантажено з кешу sessionStorage.");
         currentProjectData = cachedData;
@@ -832,15 +853,20 @@ async function openProject(projectID) {
             throw new Error(errorData.message || `HTTP помилка! Статус: ${response.status}`);
         }
 
-        currentProjectData = await response.json();
+        const freshData = await response.json();
         
-        // v2.2.3: Переконуємось, що структура даних на місці
-        if (!currentProjectData.content) currentProjectData.content = {};
-        if (!currentProjectData.content.chapters) currentProjectData.content.chapters = [];
-        if (!currentProjectData.content.characters) currentProjectData.content.characters = [];
-        if (!currentProjectData.content.locations) currentProjectData.content.locations = [];
-        if (!currentProjectData.content.plotlines) currentProjectData.content.plotlines = [];
-        if (!currentProjectData.chatHistory) currentProjectData.chatHistory = [];
+        // v2.5.6: Гарантуємо, що масиви існують після завантаження з сервера
+        currentProjectData = {
+            ...freshData,
+            content: { 
+                ...(freshData.content || {}),
+                chapters: freshData.content?.chapters || [],
+                characters: freshData.content?.characters || [],
+                locations: freshData.content?.locations || [],
+                plotlines: freshData.content?.plotlines || [],
+            },
+            chatHistory: freshData.chatHistory || [],
+        };
 
         projectCache.set(projectID, currentProjectData); 
         
@@ -878,8 +904,20 @@ async function syncProjectInBackground(projectID) {
             return;
         }
 
-        currentProjectData = freshData;
-        projectCache.set(projectID, freshData);
+        // v2.5.6: Нормалізуємо дані з сервера перед оновленням
+        currentProjectData = {
+            ...freshData,
+            content: { 
+                ...(freshData.content || {}),
+                chapters: freshData.content?.chapters || [],
+                characters: freshData.content?.characters || [],
+                locations: freshData.content?.locations || [],
+                plotlines: freshData.content?.plotlines || [],
+            },
+            chatHistory: freshData.chatHistory || [],
+        };
+
+        projectCache.set(projectID, currentProjectData);
         console.log("[Sync]: Проєкт синхронізовано та кеш оновлено.");
         
         // v1.5.0: Оновлюємо UI, лише якщо користувач нічого не редагує
@@ -1001,7 +1039,8 @@ function scheduleSave(field, value) {
                 throw new Error(errorData.message || `HTTP помилка! Статус: ${response.status}`);
             }
 
-            // v1.7.0: Оновлюємо кеш ТІЛЬКИ після успішного збереження
+            // v2.5.5 CRITICAL FIX: Ми повинні оновити кеш повним об'єктом,
+            // який містить щойно збережені зміни.
             projectCache.set(currentProjectID, currentProjectData);
             
             setSaveStatus('saved');
@@ -1249,6 +1288,7 @@ function addChapter() {
     currentProjectData.content.chapters.push(newChapter);
     const newIndex = currentProjectData.content.chapters.length - 1;
     
+    // v2.5.5: Зберігаємо та оновлюємо
     scheduleSave('content.chapters', currentProjectData.content.chapters);
     
     renderChaptersList();
@@ -2285,7 +2325,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addPlotlineSaveListener(ui.plotlineTitleInput, 'title');
         addPlotlineSaveListener(ui.plotlineDescTextarea, 'description');
 
-        // --- Вкладка: Чат ---
+        // --- Вкладка: Чат ---\r\n
         ui.sendButton?.addEventListener('click', sendChatMessage);
         ui.userInput?.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -2294,11 +2334,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // --- Ініціалізація Firebase ---
+        // --- Ініціалізація Firebase ---\r\n
         initializeFirebase();
         
     } catch (e) {
-        // v2.5.3: Логуємо всі критичні помилки ініціалізації
+        // v2.5.3: Логуємо всі критичні помилки ініціалізації\r\n
         handleError(e, "DOMContentLoaded_init");
         showToast("Критична помилка ініціалізації. Перевірте консоль браузера.", "error");
     }

@@ -4,9 +4,8 @@ const path = require('path');
 require('dotenv').config();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const admin = require('firebase-admin');
-// v1.1.0: Rate Limiter
-const { rateLimit, ipKeyGenerator } = require('express-rate-limit'); // v2.5.1: Додано ipKeyGenerator
-const fetch = require('node-fetch'); // Для використання fetch у маршруті експорту
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit'); // v2.5.1
+const fetch = require('node-fetch'); // Для експорту
 
 // === 2. НАЛАШТУВАННЯ ===
 const app = express();
@@ -17,15 +16,13 @@ app.set('trust proxy', 1);
 
 app.use(express.json({ limit: '50mb' }));
 
-// --- Налаштування Firebase (КРИТИЧНА ЗМІНА: Винесено db) ---
+// --- Налаштування Firebase Admin ---
 let db;
 try {
     let serviceAccount;
-    // Шукаємо ключ сервісного акаунта у змінних середовища Render або у локальному файлі
     if (process.env.SERVICE_ACCOUNT_KEY_JSON) {
         serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY_JSON);
     } else {
-        // Уникаємо require, якщо файл відсутній у продакшені
         serviceAccount = require('./serviceAccountKey.json');
     }
     
@@ -35,12 +32,11 @@ try {
     db = admin.firestore(); // Ініціалізація бази
 } catch (error) {
     console.error("ПОМИЛКА КРИТИЧНОЇ ІНІЦІАЛІЗАЦІЇ FIREBASE ADMIN:", error.message);
-    // Для Production-сервера це критична помилка, але ми залишаємо заглушку для Dev
     db = null; 
 }
 
 
-// --- Налаштування Gemini (КРИТИЧНА ЗМІНА: Винесено model) ---
+// --- Налаштування Gemini ---
 let genAI;
 let model;
 if (process.env.GEMINI_API_KEY) {
@@ -52,31 +48,12 @@ if (process.env.GEMINI_API_KEY) {
 }
 
 
-// === v2.5.0: Обслуговування статичних файлів (Vite Production) ===
-// У продакшені (після 'npm run build') Express обслуговує папку 'dist'.
-if (process.env.NODE_ENV === 'production') {
-    console.log("РЕЖИМ: Production. Обслуговування папки dist.");
-    // Обслуговування статичних файлів з папки dist
-    app.use(express.static(path.join(__dirname, 'dist')));
-    
-    // Всі GET-запити, що не є API, перенаправляємо на index.html
-    // ВИПРАВЛЕННЯ v2.6.2: Використовуємо регулярний вираз /.*/
-    app.get(/.*/, (req, res) => {
-        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-    });
-} else {
-    // У розробці (без NODE_ENV='production') Express обслуговує поточну папку (для dev-режиму)
-    console.log("РЕЖИМ: Development. Фронтенд обслуговується Vite.");
-    app.use(express.static('.'));
-}
-
 // v1.1.0: Rate Limiter Middleware
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 хвилин
     max: 100, // Максимум 100 запитів на IP
     standardHeaders: true,
     legacyHeaders: false,
-    // v2.5.1 FIX: Використовуємо ipKeyGenerator для коректної обробки IPv6
     keyGenerator: ipKeyGenerator, 
     message: async (req, res) => {
         res.status(429).json({
@@ -87,22 +64,24 @@ const apiLimiter = rateLimit({
 });
 
 // Застосовуємо Rate Limiter тільки до API-маршрутів
-app.use(['/chat', '/create-project', '/delete-project', '/save-project-content'], apiLimiter);
+app.use(['/chat', '/create-project', '/delete-project', '/save-project-content', '/get-projects', '/get-project-content', '/update-title', '/export-project', '/migrate-project-data'], apiLimiter);
 
 
-// === 3. API МАРШРУТИ === 
+// === 3. API МАРШРУТИ (ПОВИННІ ЙТИ ПЕРЕД ОБСЛУГОВУВАННЯМ ФРОНТЕНДУ) === 
 
 // v2.0.0: Маршрут для отримання всіх проєктів користувача
 app.get('/get-projects', async (req, res) => {
-    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." }); // Оборонна перевірка
+    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
     
     const userID = req.query.user;
     if (!userID) {
         return res.status(400).json({ error: "Необхідний ідентифікатор користувача (user ID)." });
     }
     try {
-        // v2.0.0: Запит по полю 'owner'
-        const projectsRef = db.collection('projects').where('owner', '==', userID).orderBy('updatedAt', 'desc');
+        // v2.6.5 FIX: Використовуємо поле 'owner' для пошуку за UID
+        const projectsRef = db.collection('projects')
+            .where('owner', '==', userID) 
+            .orderBy('updatedAt', 'desc'); 
         const snapshot = await projectsRef.get();
         
         const projects = [];
@@ -135,7 +114,6 @@ app.get('/get-project-content', async (req, res) => {
     }
     
     try {
-        console.log(`=== ЗАВАНТАЖЕННЯ ПРОЄКТУ ${projectID} ===`);
         const projectRef = db.collection('projects').doc(projectID);
         const dataCollectionRef = projectRef.collection('data');
         
@@ -155,41 +133,26 @@ app.get('/get-project-content', async (req, res) => {
         }
 
         const projectData = projectDoc.data();
-        console.log(`Проєкт знайдено: ${projectData.title}`);
-        
-        // Отримуємо дані з документів
         const worldData = worldDoc.exists ? worldDoc.data() : {};
         const chatHistory = chatDoc.exists ? (chatDoc.data().history || []) : [];
         
-        // Покращена функція для отримання даних з підтримкою старих форматів
         const getDataWithLegacySupport = async (collectionName, doc) => {
-            console.log(`\n--- Обробка ${collectionName} ---`);
-            
-            // Спершу пробуємо новий формат (поле items)
             if (doc.exists) { 
                 const docData = doc.data();
-                console.log(`Документ ${collectionName} існує:`, Object.keys(docData));
-                
                 if (docData.items && Array.isArray(docData.items)) {
-                    console.log(`Знайдено новий формат (items): ${docData.items.length} елементів`);
                     return docData.items; 
                 }
-                
-                console.warn(`Документ ${collectionName} існує, але items відсутній/пошкоджений. Повертаємо пустий масив.`);
                 return []; 
 
-            } else { 
-                console.log(`Документ ${collectionName} не існує. Перевіряємо старий формат...`);
             }
             
-            // Якщо новий документ не існує, перевіряємо старий формат (субколекції)
+            // Перевіряємо старий формат (субколекції)
             const oldCollectionRef = dataCollectionRef.doc(collectionName).collection('items');
             
             try {
                 const oldSnapshot = await oldCollectionRef.get();
                 
                 if (!oldSnapshot.empty) {
-                    console.log(`Знайдено старі дані в субколекції для ${collectionName}: ${oldSnapshot.size} елементів`);
                     const oldItems = [];
                     oldSnapshot.forEach(oldDoc => {
                         oldItems.push({ ...oldDoc.data(), id: oldDoc.id });
@@ -198,36 +161,22 @@ app.get('/get-project-content', async (req, res) => {
                     oldItems.sort((a, b) => (a.index || 0) - (b.index || 0));
                     
                     // Автоматично мігруємо дані в новий формат
-                    console.log(`Мігруємо дані ${collectionName} в новий формат...`);
                     const newDocRef = dataCollectionRef.doc(collectionName);
                     await newDocRef.set({ items: oldItems }); 
-                    console.log(`Міграція ${collectionName} завершена!`);
                     
                     return oldItems;
-                } else {
-                    console.log(`Старі дані для ${collectionName} не знайдено`);
-                }
+                } 
             } catch (error) {
                 console.error(`Помилка при перевірці старих даних для ${collectionName}:`, error);
             }
             
-            // Якщо немає даних в жодному форматі
-            console.log(`Жодних даних не знайдено для ${collectionName}, повертаємо пустий масив`);
             return [];
         };
 
-        // Отримуємо дані з підтримкою обох форматів
-        console.log('\n=== ОТРИМАННЯ ДАНИХ ===');
         const chapters = await getDataWithLegacySupport('chapters', chaptersDoc);
         const characters = await getDataWithLegacySupport('characters', charactersDoc);
         const locations = await getDataWithLegacySupport('locations', locationsDoc);
         const plotlines = await getDataWithLegacySupport('plotlines', plotlinesDoc);
-
-        console.log('\n=== РЕЗУЛЬТАТИ ===');
-        console.log(`Розділи: ${chapters.length}`);
-        console.log(`Персонажі: ${characters.length}`);
-        console.log(`Локації: ${locations.length}`);
-        console.log(`Сюжетні лінії: ${plotlines.length}`);
 
         const responseData = {
             id: projectDoc.id,
@@ -344,20 +293,15 @@ app.post('/migrate-project-data', async (req, res) => {
         let totalMigrated = 0;
 
         for (const collectionName of collectionsToMigrate) {
-            console.log(`\n--- Міграція ${collectionName} ---`);
             
             // Перевіряємо старі дані
             const oldCollectionRef = dataCollectionRef.doc(collectionName).collection('items');
             const oldSnapshot = await oldCollectionRef.get();
             
             if (oldSnapshot.empty) {
-                console.log(`Старі дані для ${collectionName} не знайдені`);
                 continue;
             }
 
-            console.log(`Знайдено ${oldSnapshot.size} старих елементів в ${collectionName}`);
-            
-            // Збираємо старі дані
             const oldItems = [];
             oldSnapshot.forEach(oldDoc => {
                 oldItems.push({ ...oldDoc.data(), id: oldDoc.id });
@@ -370,7 +314,6 @@ app.post('/migrate-project-data', async (req, res) => {
             const newDocRef = dataCollectionRef.doc(collectionName);
             await newDocRef.set({ items: oldItems });
             
-            console.log(`Міграція ${collectionName} завершена: ${oldItems.length} елементів`);
             totalMigrated += oldItems.length;
         }
 
@@ -502,7 +445,6 @@ app.get('/export-project', async (req, res) => {
     }
 
     try {
-        // Завантажуємо контент проєкту
         // Використовуємо http://localhost:${port} для самозвернення
         const projectContentResponse = await fetch(`http://localhost:${port}/get-project-content?projectID=${projectID}`);
         if (!projectContentResponse.ok) {
@@ -620,9 +562,6 @@ app.post('/chat', async (req, res) => {
             if (doc.exists && doc.data().items) {
                 return doc.data().items || [];
             }
-            // Уникаємо перевірки старого формату тут, щоб спростити логіку, 
-            // оскільки 'get-project-content' повинен мігрувати дані. 
-            // Повертаємо []
             return [];
         };
 
@@ -690,13 +629,6 @@ app.post('/chat', async (req, res) => {
         }
         
         // 3. Формуємо історію чату (System + History + New Message)
-        const systemMessage = { role: "system", parts: [{ text: context }] };
-        
-        const fullHistory = [systemMessage, ...currentChatHistory];
-        
-        // 4. Виклик Gemini API
-        // Використовуємо .getGenerativeModel().generateContentStream для додавання нового повідомлення 
-        // та отримання результату, оскільки chats() не є рекомендованим методом для нових версій.
         const chatModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         
         const contents = [...currentChatHistory.map(h => ({ 
@@ -732,47 +664,66 @@ app.post('/chat', async (req, res) => {
 
 // v1.1.0: API для логування клієнтських помилок (без змін)
 app.post('/log-error', (req, res) => {
-    const errorLog = req.body;
-    console.error(`КЛІЄНТСЬКА ПОМИЛКА: ${JSON.stringify(errorLog)}`);
-    res.status(200).send({ status: 'logged' });
+    const errorLog = req.body;
+    console.error(`КЛІЄНТСЬКА ПОМИЛКА: ${JSON.stringify(errorLog)}`);
+    res.status(200).send({ status: 'logged' });
 });
 
-// --- Запуск сервера (без змін) ---
+
+// === 4. ОБСЛУГОВУВАННЯ ФРОНТЕНДУ (КРИТИЧНО: ЦЕ ПОВИННО БУТИ В КІНЦІ) === 
+
+// У Production, цей блок обслуговує index.html для всіх не-API запитів.
+if (process.env.NODE_ENV === 'production') {
+    console.log("РЕЖИМ: Production. Обслуговування папки dist.");
+    
+    // Обслуговування статичних файлів (JS, CSS, IMG)
+    app.use(express.static(path.join(__dirname, 'dist')));
+    
+    // Всі GET-запити, що залишилися (і які не були API), перенаправляємо на index.html
+    // v2.6.2 FIX: Використовуємо регулярний вираз /.*/ для надійного catch-all.
+    app.get(/.*/, (req, res) => { 
+        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    });
+} else {
+    // У розробці Express обслуговує поточну папку 
+    console.log("РЕЖИМ: Development. Фронтенд обслуговується Vite.");
+    app.use(express.static('.'));
+}
+
+// --- Запуск сервера ---
 app.listen(port, () => {
-    console.log(`Сервер запущено на http://localhost:${port}`);
+    console.log(`Сервер запущено на http://localhost:${port}`);
 });
 
 // === ОНОВЛЕНО v2.0.0: Допоміжна функція для видалення субколекцій ===
 async function deleteCollection(db, collectionRef, batchSize) {
-    const query = collectionRef.limit(batchSize);
-    return new Promise((resolve, reject) => {
-        deleteQueryBatch(db, query, resolve, reject);
-    });
+    const query = collectionRef.limit(batchSize);
+    return new Promise((resolve, reject) => {
+        deleteQueryBatch(db, query, resolve, reject);
+    });
 }
 
 async function deleteQueryBatch(db, query, resolve, reject) {
-    try {
-        const snapshot = await query.get();
-        if (snapshot.size === 0) {
-            return resolve();
-        }
+    try {
+        const snapshot = await query.get();
+        if (snapshot.size === 0) {
+            return resolve();
+        }
 
-        const batch = db.batch();
-        snapshot.docs.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-        await batch.commit();
+        const batch = db.batch();
+        snapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
 
-        if (snapshot.size === batchSize) {
-            // Видалено повний batch, плануємо наступний
-            setTimeout(() => {
-                deleteQueryBatch(db, query, resolve, reject);
-            }, 100);
-        } else {
-            // Видалено останній batch
-            resolve();
-        }
-    } catch (error) {
-        reject(error);
-    }
+        if (snapshot.size === batchSize) {
+            setTimeout(() => {
+                deleteQueryBatch(db, query, resolve, reject);
+            }, 100);
+        } else {
+            resolve();
+        }
+    } catch (error) {
+        reject(error);
+    }
 }

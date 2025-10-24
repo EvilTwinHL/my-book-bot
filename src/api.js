@@ -50,7 +50,16 @@ async function fetchBackend(path, method = 'GET', body = null) {
 
 export async function fetchProjects() {
     if (!currentUser) return [];
-    return fetchBackend(`/get-projects?user=${currentUser.uid}`);
+    // !!! КРИТИЧНИЙ FIX v2.6.4: Додаємо 'await' для правильного отримання даних (а не Promise)
+    const projects = await fetchBackend(`/get-projects?user=${currentUser.uid}`);
+    
+    // Додаткова оборонна перевірка (на всякий випадок)
+    if (!Array.isArray(projects)) {
+        console.warn("API /get-projects повернув не-масив. Повертаємо пустий масив.");
+        return []; 
+    }
+    
+    return projects;
 }
 
 export async function fetchProjectContent(projectID) {

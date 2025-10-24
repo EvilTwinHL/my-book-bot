@@ -33,7 +33,6 @@ if (process.env.NODE_ENV === 'production') {
     app.use(express.static('.'));
 }
 
-
 // --- Налаштування Firebase (без змін) ---
 try {
     let serviceAccount;
@@ -50,7 +49,6 @@ try {
     console.log("Переконайтеся, що SERVICE_ACCOUNT_KEY_JSON або serviceAccountKey.json налаштовано.");
 }
 const db = admin.firestore();
-
 
 // --- Налаштування Gemini (без змін) ---
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -73,7 +71,6 @@ const apiLimiter = rateLimit({
 
 // Застосовуємо Rate Limiter тільки до API-маршрутів
 app.use(['/chat', '/create-project', '/delete-project', '/save-project-content'], apiLimiter);
-
 
 // === 3. API МАРШРУТИ === 
 
@@ -105,7 +102,7 @@ app.get('/get-projects', async (req, res) => {
     }
 });
 
-// v2.0.0: Маршрут для отримання повного контенту проєкту
+// v2.0.0: Маршрут для отримання повного контенту проєкту (ПОКРАЩЕНА ВЕРСІЯ З ДЕТАЛЬНОЮ ВІДЛАДКОЮ)
 app.get('/get-project-content', async (req, res) => {
     const { projectID } = req.query;
     if (!projectID) {
@@ -113,69 +110,133 @@ app.get('/get-project-content', async (req, res) => {
     }
     
     try {
+        console.log(`=== ЗАВАНТАЖЕННЯ ПРОЄКТУ ${projectID} ===`);
         const projectRef = db.collection('projects').doc(projectID);
-        const projectDoc = await projectRef.get();
+        const dataCollectionRef = projectRef.collection('data');
         
+        // Отримуємо всі документи одночасно
+        const [projectDoc, worldDoc, chatDoc, chaptersDoc, charactersDoc, locationsDoc, plotlinesDoc] = await Promise.all([
+            projectRef.get(),
+            dataCollectionRef.doc('world').get(),
+            dataCollectionRef.doc('chatHistory').get(),
+            dataCollectionRef.doc('chapters').get(),
+            dataCollectionRef.doc('characters').get(),
+            dataCollectionRef.doc('locations').get(),
+            dataCollectionRef.doc('plotlines').get()
+        ]);
+
         if (!projectDoc.exists) {
             return res.status(404).json({ error: "Проєкт не знайдено." });
         }
-        
-        let projectData = projectDoc.data();
-        
-        // --- v2.0.0: Збираємо дані з субколекцій ---
-        const content = {};
-        const dataCollectionRef = projectRef.collection('data');
 
-        // 1. World (один документ)
-        const worldDoc = await dataCollectionRef.doc('world').get();
-        if (worldDoc.exists) {
-            const worldData = worldDoc.data();
-            content.premise = worldData.premise || '';
-            content.theme = worldData.theme || '';
-            content.mainArc = worldData.mainArc || '';
-            content.wordGoal = worldData.wordGoal || 50000;
-            content.notes = worldData.notes || '';
-            content.research = worldData.research || '';
-        } else {
-            // Ініціалізація, якщо документа немає
-            content.premise = ''; content.theme = ''; content.mainArc = ''; content.wordGoal = 50000; content.notes = ''; content.research = '';
-        }
-
-        // 2. Chat History (один документ, v2.1.0+)
-        const chatDoc = await dataCollectionRef.doc('chatHistory').get();
+        const projectData = projectDoc.data();
+        console.log(`Проєкт знайдено: ${projectData.title}`);
+        
+        // Отримуємо дані з документів
+        const worldData = worldDoc.exists ? worldDoc.data() : {};
         const chatHistory = chatDoc.exists ? (chatDoc.data().history || []) : [];
-
-        // 3. Списки (багато документів)
-        const collectionsToFetch = ['chapters', 'characters', 'locations', 'plotlines'];
-        for (const collectionName of collectionsToFetch) {
-            const snapshot = await dataCollectionRef.doc(collectionName).collection('items').orderBy('index', 'asc').get();
-            // Сортування не працює, якщо index не існує, тому використовуємо ручний обхід
-            content[collectionName] = [];
+        
+        // Покращена функція для отримання даних з підтримкою старих форматів
+        const getDataWithLegacySupport = async (collectionName, doc) => {
+            console.log(`\n--- Обробка ${collectionName} ---`);
             
-            // В v2.2.0 ми зберігаємо масив, тому тут логіка з get() для повної сумісності
-            // Збираємо усі документи і сортуємо їх, якщо вони мають поле 'index'
-            const docsWithIndex = [];
-            snapshot.forEach(doc => {
-                 const item = doc.data();
-                 item.id = doc.id;
-                 docsWithIndex.push(item);
-            });
-            // Якщо є поле 'index', сортуємо, інакше залишаємо як є
-            docsWithIndex.sort((a, b) => (a.index || 0) - (b.index || 0));
+            // Спершу пробуємо новий формат (поле items)
+            if (doc.exists) {
+                const docData = doc.data();
+                console.log(`Документ ${collectionName} існує:`, Object.keys(docData));
+                
+                if (docData.items && Array.isArray(docData.items)) {
+                    console.log(`Знайдено новий формат (items): ${docData.items.length} елементів`);
+                    return docData.items;
+                }
+            } else {
+                console.log(`Документ ${collectionName} не існує`);
+            }
+            
+            // Якщо новий формат пустий або відсутній, перевіряємо старий формат (субколекції)
+            console.log(`Перевіряємо старий формат для ${collectionName}...`);
+            const oldCollectionRef = dataCollectionRef.doc(collectionName).collection('items');
+            
+            try {
+                const oldSnapshot = await oldCollectionRef.get();
+                console.log(`Старі дані ${collectionName}: ${oldSnapshot.size} елементів`);
+                
+                if (!oldSnapshot.empty) {
+                    console.log(`Знайдено старі дані в субколекції для ${collectionName}: ${oldSnapshot.size} елементів`);
+                    const oldItems = [];
+                    
+                    oldSnapshot.forEach(oldDoc => {
+                        const itemData = oldDoc.data();
+                        console.log(`Елемент ${oldDoc.id}:`, { 
+                            title: itemData.title || itemData.name,
+                            hasText: !!itemData.text,
+                            hasDescription: !!itemData.description
+                        });
+                        
+                        oldItems.push({
+                            ...itemData,
+                            id: oldDoc.id
+                        });
+                    });
+                    
+                    // Сортуємо за index
+                    oldItems.sort((a, b) => (a.index || 0) - (b.index || 0));
+                    console.log(`Відсортовано ${oldItems.length} елементів для ${collectionName}`);
+                    
+                    // Автоматично мігруємо дані в новий формат
+                    console.log(`Мігруємо дані ${collectionName} в новий формат...`);
+                    const newDocRef = dataCollectionRef.doc(collectionName);
+                    await newDocRef.set({ items: oldItems }, { merge: true });
+                    console.log(`Міграція ${collectionName} завершена!`);
+                    
+                    return oldItems;
+                } else {
+                    console.log(`Старі дані для ${collectionName} не знайдено`);
+                }
+            } catch (error) {
+                console.error(`Помилка при перевірці старих даних для ${collectionName}:`, error);
+            }
+            
+            // Якщо немає даних в жодному форматі
+            console.log(`Жодних даних не знайдено для ${collectionName}, повертаємо пустий масив`);
+            return [];
+        };
 
-            content[collectionName] = docsWithIndex;
-        }
+        // Отримуємо дані з підтримкою обох форматів
+        console.log('\n=== ОТРИМАННЯ ДАНИХ ===');
+        const chapters = await getDataWithLegacySupport('chapters', chaptersDoc);
+        const characters = await getDataWithLegacySupport('characters', charactersDoc);
+        const locations = await getDataWithLegacySupport('locations', locationsDoc);
+        const plotlines = await getDataWithLegacySupport('plotlines', plotlinesDoc);
 
+        console.log('\n=== РЕЗУЛЬТАТИ ===');
+        console.log(`Розділи: ${chapters.length}`);
+        console.log(`Персонажі: ${characters.length}`);
+        console.log(`Локації: ${locations.length}`);
+        console.log(`Сюжетні лінії: ${plotlines.length}`);
 
-        res.json({
+        const responseData = {
             id: projectDoc.id,
             title: projectData.title,
             owner: projectData.owner,
             totalWordCount: projectData.totalWordCount || 0,
             updatedAt: projectData.updatedAt ? projectData.updatedAt.toDate().toISOString() : new Date().toISOString(),
-            content: content,
+            content: {
+                premise: worldData.premise || '',
+                theme: worldData.theme || '',
+                mainArc: worldData.mainArc || '',
+                wordGoal: worldData.wordGoal || 50000,
+                notes: worldData.notes || '',
+                research: worldData.research || '',
+                chapters: chapters,
+                characters: characters,
+                locations: locations,
+                plotlines: plotlines
+            },
             chatHistory: chatHistory
-        });
+        };
+
+        res.json(responseData);
 
     } catch (error) {
         console.error("Помилка при отриманні контенту проєкту:", error);
@@ -183,8 +244,7 @@ app.get('/get-project-content', async (req, res) => {
     }
 });
 
-
-// v2.0.0: Маршрут для збереження контенту (оновлено для субколекцій)
+// v2.0.0: Маршрут для збереження контенту (ВИПРАВЛЕНО)
 app.post('/save-project-content', async (req, res) => {
     const { projectID, field, value } = req.body;
     if (!projectID || !field) {
@@ -196,70 +256,52 @@ app.post('/save-project-content', async (req, res) => {
         const projectRef = db.collection('projects').doc(projectID);
         const dataCollectionRef = projectRef.collection('data');
 
-        // Оновлюємо основний документ проєкту (для updated/wordCount)
+        // Оновлюємо основний документ проєкту
         batch.update(projectRef, {
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
         
-        // --- Логіка збереження полів ---
-
-        // 1. World (преміса, тема, тощо)
+        // World fields
         if (field.startsWith('content.')) {
             const worldField = field.substring('content.'.length);
-            const worldDocRef = dataCollectionRef.doc('world');
             
-            // Використовуємо set з merge: true для оновлення конкретного поля
-            const update = {};
-            update[worldField] = value;
-            batch.set(worldDocRef, update, { merge: true });
+            // Перевіряємо, чи це поле світу (не список)
+            const worldFields = ['premise', 'theme', 'mainArc', 'wordGoal', 'notes', 'research'];
+            if (worldFields.includes(worldField)) {
+                const worldDocRef = dataCollectionRef.doc('world');
+                const update = {};
+                update[worldField] = value;
+                batch.set(worldDocRef, update, { merge: true });
 
-            // 2. Оновлення загальної кількості слів (якщо змінюється wordGoal)
-            if (worldField === 'wordGoal') {
-                batch.update(projectRef, { wordGoal: value });
+                if (worldField === 'wordGoal') {
+                    batch.update(projectRef, { wordGoal: value });
+                }
             }
         } 
         
-        // 3. Chat History (один документ)
+        // Chat History
         if (field === 'chatHistory') {
             const chatDocRef = dataCollectionRef.doc('chatHistory');
-            // Зберігаємо всю історію (масив) в полі 'history'
             batch.set(chatDocRef, { history: value });
         }
         
-        // 4. Списки (chapters, characters, locations, plotlines)
-        // Тут ми очікуємо, що клієнт надсилає ВЕСЬ оновлений масив
+        // Lists (chapters, characters, locations, plotlines)
         const listFields = ['content.chapters', 'content.characters', 'content.locations', 'content.plotlines'];
-
         if (listFields.includes(field)) {
             const collectionName = field.substring('content.'.length);
-            const collectionRef = dataCollectionRef.doc(collectionName).collection('items');
+            const listDocRef = dataCollectionRef.doc(collectionName);
             
-            // Логіка видалення та перезапису спрощується до перебору масиву
-            // (Клієнт повинен обробляти ID, але для v2.0.0 ми використовуємо індекси)
+            // Зберігаємо весь масив у полі 'items'
+            batch.set(listDocRef, { items: value });
             
-            // NOTE: Оскільки ми перейшли на Array CRUD, ми можемо це спростити:
-            
-            // Якщо це список розділів, ми також оновлюємо загальний лічильник слів у projects/{id}
+            // Оновлюємо загальний лічильник слів для розділів
             if (collectionName === 'chapters') {
                 const totalWordCount = value.reduce((sum, item) => sum + (item.word_count || 0), 0);
                 batch.update(projectRef, { totalWordCount: totalWordCount });
             }
-            
-            // В v2.0.0 ми зберігаємо масив як один документ, але переходимо на субколекції:
-            // В v2.2.0 ми вирішили не використовувати колекцію 'items' (бо це складно),
-            // а зберігати весь масив у документі "chapters" (залишаємо як є)
-            const listDocRef = dataCollectionRef.doc(collectionName);
-            
-            // Оновлюємо документ списку
-            const listUpdate = {};
-            listUpdate[`items`] = value; // В v2.0.0 ми зберігали в content
-            
-            batch.set(listDocRef, { items: value }); // Зберігаємо масив у полі 'items'
-
         }
 
         await batch.commit();
-
         res.status(200).json({ status: 'saved' });
 
     } catch (error) {
@@ -268,6 +310,72 @@ app.post('/save-project-content', async (req, res) => {
     }
 });
 
+// Додатковий маршрут для примусової міграції даних
+app.post('/migrate-project-data', async (req, res) => {
+    const { projectID } = req.body;
+    if (!projectID) {
+        return res.status(400).json({ error: "Необхідний projectID." });
+    }
+
+    try {
+        console.log(`=== ПРИМУСОВА МІГРАЦІЯ ПРОЄКТУ ${projectID} ===`);
+        const projectRef = db.collection('projects').doc(projectID);
+        const dataCollectionRef = projectRef.collection('data');
+
+        const collectionsToMigrate = ['chapters', 'characters', 'locations', 'plotlines'];
+        let totalMigrated = 0;
+
+        for (const collectionName of collectionsToMigrate) {
+            console.log(`\n--- Міграція ${collectionName} ---`);
+            
+            // Перевіряємо старі дані
+            const oldCollectionRef = dataCollectionRef.doc(collectionName).collection('items');
+            const oldSnapshot = await oldCollectionRef.get();
+            
+            if (oldSnapshot.empty) {
+                console.log(`Старі дані для ${collectionName} не знайдені`);
+                continue;
+            }
+
+            console.log(`Знайдено ${oldSnapshot.size} старих елементів в ${collectionName}`);
+            
+            // Збираємо старі дані
+            const oldItems = [];
+            oldSnapshot.forEach(oldDoc => {
+                const itemData = oldDoc.data();
+                console.log(`Елемент ${oldDoc.id}:`, { 
+                    title: itemData.title || itemData.name,
+                    id: oldDoc.id
+                });
+                
+                oldItems.push({
+                    ...itemData,
+                    id: oldDoc.id
+                });
+            });
+
+            // Сортуємо за index
+            oldItems.sort((a, b) => (a.index || 0) - (b.index || 0));
+
+            // Зберігаємо в новому форматі
+            const newDocRef = dataCollectionRef.doc(collectionName);
+            await newDocRef.set({ items: oldItems });
+            
+            console.log(`Міграція ${collectionName} завершена: ${oldItems.length} елементів`);
+            totalMigrated += oldItems.length;
+        }
+
+        res.json({ 
+            status: 'success', 
+            message: `Міграція завершена. Перенесено ${totalMigrated} елементів.`,
+            migrated: totalMigrated
+        });
+
+    } catch (error) {
+        console.error("Помилка при міграції даних:", error);
+        res.status(500).json({ error: "Не вдалося мігрувати дані." });
+    }
+});
 
 // v2.0.0: Маршрут для створення проєкту
 app.post('/create-project', async (req, res) => {
@@ -326,7 +434,6 @@ app.post('/create-project', async (req, res) => {
     }
 });
 
-
 // v2.0.0: Маршрут для видалення проєкту
 app.post('/delete-project', async (req, res) => {
     const { projectID } = req.body;
@@ -354,7 +461,6 @@ app.post('/delete-project', async (req, res) => {
     }
 });
 
-
 // v2.0.0: Маршрут для оновлення назви проєкту
 app.post('/update-title', async (req, res) => {
     const { projectID, newTitle } = req.body;
@@ -374,87 +480,92 @@ app.post('/update-title', async (req, res) => {
     }
 });
 
-
 // v2.0.0: Маршрут для експорту проєкту
 app.get('/export-project', async (req, res) => {
     const { projectID } = req.query;
-    // ... (код експорту залишається без змін)
-    // ... (завантаження контенту)
-    const projectContentResponse = await fetch(`http://localhost:${port}/get-project-content?projectID=${projectID}`);
-    if (!projectContentResponse.ok) {
-        throw new Error("Не вдалося завантажити контент для експорту.");
+    if (!projectID) {
+        return res.status(400).json({ error: "Необхідний projectID." });
     }
-    const { title, content } = await projectContentResponse.json();
 
-    // ... (формування тексту)
+    try {
+        // Завантажуємо контент проєкту
+        const projectContentResponse = await fetch(`http://localhost:${port}/get-project-content?projectID=${projectID}`);
+        if (!projectContentResponse.ok) {
+            throw new Error("Не вдалося завантажити контент для експорту.");
+        }
+        const { title, content } = await projectContentResponse.json();
 
-    let exportText = `Назва: ${title}\n`;
-    exportText += `Слів: ${content.totalWordCount || 0}\n`;
-    exportText += `Мета: ${content.wordGoal || 50000}\n\n`;
-    exportText += `=====================================\n\n`;
-
-    // 1. Світ
-    exportText += `--- СВІТ ТА КОНЦЕПЦІЯ ---\n\n`;
-    exportText += `Преміса (Logline):\n${content.premise || '...'}\n\n`;
-    exportText += `Тема:\n${content.theme || '...'}\n\n`;
-    exportText += `Головна арка:\n${content.mainArc || '...'}\n\n`;
-    exportText += `Нотатки:\n${content.notes || '...'}\n\n`;
-    exportText += `Дослідження:\n${content.research || '...'}\n\n`;
-    exportText += `=====================================\n\n`;
-
-    // 2. Персонажі
-    if (content.characters && content.characters.length > 0) {
-        exportText += `--- ПЕРСОНАЖІ (${content.characters.length}) ---\n\n`;
-        content.characters.forEach(p => {
-            exportText += `ІМ'Я: ${p.name || 'Без імені'}\n`;
-            exportText += `ОПИС: ${p.description || 'Немає опису'}\n`;
-            exportText += `АРКА: ${p.arc || 'Немає арки'}\n\n`;
-            exportText += `-----------\n\n`;
-        });
+        // Формуємо текст для експорту
+        let exportText = `Назва: ${title}\n`;
+        exportText += `Слів: ${content.totalWordCount || 0}\n`;
+        exportText += `Мета: ${content.wordGoal || 50000}\n\n`;
         exportText += `=====================================\n\n`;
-    }
 
-    // 3. Локації
-    if (content.locations && content.locations.length > 0) {
-        exportText += `--- ЛОКАЦІЇ (${content.locations.length}) ---\n\n`;
-        content.locations.forEach(l => {
-            exportText += `НАЗВА: ${l.name || 'Без назви'}\n`;
-            exportText += `ОПИС: ${l.description || 'Немає опису'}\n\n`;
-            exportText += `-----------\n\n`;
-        });
+        // 1. Світ
+        exportText += `--- СВІТ ТА КОНЦЕПЦІЯ ---\n\n`;
+        exportText += `Преміса (Logline):\n${content.premise || '...'}\n\n`;
+        exportText += `Тема:\n${content.theme || '...'}\n\n`;
+        exportText += `Головна арка:\n${content.mainArc || '...'}\n\n`;
+        exportText += `Нотатки:\n${content.notes || '...'}\n\n`;
+        exportText += `Дослідження:\n${content.research || '...'}\n\n`;
         exportText += `=====================================\n\n`;
-    }
 
-    // 4. Сюжетні лінії
-    if (content.plotlines && content.plotlines.length > 0) {
-        exportText += `--- СЮЖЕТНІ ЛІНІЇ (${content.plotlines.length}) ---\n\n`;
-        content.plotlines.forEach(p => {
-            exportText += `НАЗВА: ${p.title || 'Без назви'}\n`;
-            exportText += `ОПИС: ${p.description || 'Немає опису'}\n\n`;
-            exportText += `-----------\n\n`;
-        });
-        exportText += `=====================================\n\n`;
-    }
-
-    // 5. Розділи (ОСНОВНИЙ КОНТЕНТ)
-    if (content.chapters && content.chapters.length > 0) {
-        exportText += `--- РОЗДІЛИ (${content.chapters.length}) ---\n\n`;
-        content.chapters.forEach((chapter, index) => {
-            exportText += `### РОЗДІЛ ${index + 1}: ${chapter.title || 'Без назви'} (Статус: ${chapter.status || 'draft'})\n\n`;
-            if (chapter.synopsis) {
-                exportText += `СИНОПСИС:\n${chapter.synopsis}\n\n`;
-            }
-            exportText += `--- ТЕКСТ РОЗДІЛУ ---\n\n`;
-            exportText += `${chapter.text || '(Немає тексту)'}\n\n`;
+        // 2. Персонажі
+        if (content.characters && content.characters.length > 0) {
+            exportText += `--- ПЕРСОНАЖІ (${content.characters.length}) ---\n\n`;
+            content.characters.forEach(p => {
+                exportText += `ІМ'Я: ${p.name || 'Без імені'}\n`;
+                exportText += `ОПИС: ${p.description || 'Немає опису'}\n`;
+                exportText += `АРКА: ${p.arc || 'Немає арки'}\n\n`;
+                exportText += `-----------\n\n`;
+            });
             exportText += `=====================================\n\n`;
-        });
+        }
+
+        // 3. Локації
+        if (content.locations && content.locations.length > 0) {
+            exportText += `--- ЛОКАЦІЇ (${content.locations.length}) ---\n\n`;
+            content.locations.forEach(l => {
+                exportText += `НАЗВА: ${l.name || 'Без назви'}\n`;
+                exportText += `ОПИС: ${l.description || 'Немає опису'}\n\n`;
+                exportText += `-----------\n\n`;
+            });
+            exportText += `=====================================\n\n`;
+        }
+
+        // 4. Сюжетні лінії
+        if (content.plotlines && content.plotlines.length > 0) {
+            exportText += `--- СЮЖЕТНІ ЛІНІЇ (${content.plotlines.length}) ---\n\n`;
+            content.plotlines.forEach(p => {
+                exportText += `НАЗВА: ${p.title || 'Без назви'}\n`;
+                exportText += `ОПИС: ${p.description || 'Немає опису'}\n\n`;
+                exportText += `-----------\n\n`;
+            });
+            exportText += `=====================================\n\n`;
+        }
+
+        // 5. Розділи (ОСНОВНИЙ КОНТЕНТ)
+        if (content.chapters && content.chapters.length > 0) {
+            exportText += `--- РОЗДІЛИ (${content.chapters.length}) ---\n\n`;
+            content.chapters.forEach((chapter, index) => {
+                exportText += `### РОЗДІЛ ${index + 1}: ${chapter.title || 'Без назви'} (Статус: ${chapter.status || 'draft'})\n\n`;
+                if (chapter.synopsis) {
+                    exportText += `СИНОПСИС:\n${chapter.synopsis}\n\n`;
+                }
+                exportText += `--- ТЕКСТ РОЗДІЛУ ---\n\n`;
+                exportText += `${chapter.text || '(Немає тексту)'}\n\n`;
+                exportText += `=====================================\n\n`;
+            });
+        }
+
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${title || 'export'}_${new Date().toISOString().slice(0, 10)}.txt"`);
+        res.send(exportText);
+    } catch (error) {
+        console.error("Помилка при експорті проєкту:", error);
+        res.status(500).json({ error: "Не вдалося експортувати проєкт." });
     }
-
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${title || 'export'}_${new Date().toISOString().slice(0, 10)}.txt"`);
-    res.send(exportText);
 });
-
 
 // v2.3.0: Маршрут для чату (оновлено для селективного контексту)
 app.post('/chat', async (req, res) => {
@@ -468,10 +579,14 @@ app.post('/chat', async (req, res) => {
         const dataCollectionRef = projectRef.collection('data');
         
         // --- 1. Отримуємо дані для контексту ---
-        const [projectDoc, worldDoc, chatDoc] = await Promise.all([
+        const [projectDoc, worldDoc, chatDoc, chaptersDoc, charactersDoc, locationsDoc, plotlinesDoc] = await Promise.all([
             projectRef.get(),
             dataCollectionRef.doc('world').get(),
-            dataCollectionRef.doc('chatHistory').get()
+            dataCollectionRef.doc('chatHistory').get(),
+            dataCollectionRef.doc('chapters').get(),
+            dataCollectionRef.doc('characters').get(),
+            dataCollectionRef.doc('locations').get(),
+            dataCollectionRef.doc('plotlines').get()
         ]);
 
         if (!projectDoc.exists) {
@@ -481,6 +596,28 @@ app.post('/chat', async (req, res) => {
         const projectTitle = projectDoc.data().title;
         const worldData = worldDoc.exists ? worldDoc.data() : {};
         const currentChatHistory = chatDoc.exists ? (chatDoc.data().history || []) : [];
+
+        // Функція для отримання даних з підтримкою обох форматів
+        const getDataForChat = async (doc, collectionName) => {
+            if (doc.exists && doc.data().items) {
+                return doc.data().items || [];
+            }
+            
+            // Перевіряємо старий формат
+            const oldCollectionRef = dataCollectionRef.doc(collectionName).collection('items');
+            const oldSnapshot = await oldCollectionRef.get();
+            
+            if (!oldSnapshot.empty) {
+                const oldItems = [];
+                oldSnapshot.forEach(oldDoc => {
+                    oldItems.push(oldDoc.data());
+                });
+                oldItems.sort((a, b) => (a.index || 0) - (b.index || 0));
+                return oldItems;
+            }
+            
+            return [];
+        };
 
         // --- 2. Збираємо контекст (Project Content) ---
         let context = `Я - письменник, що працює над книгою: "${projectTitle}". \n`;
@@ -496,8 +633,7 @@ app.post('/chat', async (req, res) => {
         
         // 2.1. Список розділів
         if (includeChapters) {
-            const chaptersSnapshot = await dataCollectionRef.doc('chapters').get();
-            const chapters = chaptersSnapshot.exists ? (chaptersSnapshot.data().items || []) : [];
+            const chapters = await getDataForChat(chaptersDoc, 'chapters');
             
             if (chapters.length > 0) {
                 context += `--- РОЗДІЛИ (${chapters.length}) ---\n\n`;
@@ -510,8 +646,7 @@ app.post('/chat', async (req, res) => {
         
         // 2.2. Персонажі
         if (includeCharacters) {
-            const charactersSnapshot = await dataCollectionRef.doc('characters').get();
-            const characters = charactersSnapshot.exists ? (charactersSnapshot.data().items || []) : [];
+            const characters = await getDataForChat(charactersDoc, 'characters');
             
             if (characters.length > 0) {
                 context += `--- ПЕРСОНАЖІ (${characters.length}) ---\n\n`;
@@ -523,26 +658,24 @@ app.post('/chat', async (req, res) => {
         
         // 2.3. Локації
         if (includeLocations) {
-            const locationsSnapshot = await dataCollectionRef.doc('locations').get();
-            const locations = locationsSnapshot.exists ? (locationsSnapshot.data().items || []) : [];
+            const locations = await getDataForChat(locationsDoc, 'locations');
             
             if (locations.length > 0) {
-                context += `--- ЛОКАЦІЇ (${locations.length}) ---\\n\\n`;
+                context += `--- ЛОКАЦІЇ (${locations.length}) ---\n\n`;
                 locations.forEach(l => {
-                    context += `Назва: ${l.name || '...'}\\nОпис: ${l.description || '...'}\\n\\n`;
+                    context += `Назва: ${l.name || '...'}\nОпис: ${l.description || '...'}\n\n`;
                 });
             }
         }
         
         // 2.4. Сюжетні лінії
         if (includePlotlines) {
-            const plotlinesSnapshot = await dataCollectionRef.doc('plotlines').get();
-            const plotlines = plotlinesSnapshot.exists ? (plotlinesSnapshot.data().items || []) : [];
+            const plotlines = await getDataForChat(plotlinesDoc, 'plotlines');
 
             if (plotlines.length > 0) {
-                context += `--- СЮЖЕТНІ ЛІНІЇ (${plotlines.length}) ---\\n\\n`;
+                context += `--- СЮЖЕТНІ ЛІНІЇ (${plotlines.length}) ---\n\n`;
                 plotlines.forEach(p => {
-                    context += `Назва: ${p.title || '...'}\\nОпис: ${p.description || '...'}\\n\\n`;
+                    context += `Назва: ${p.title || '...'}\nОпис: ${p.description || '...'}\n\n`;
                 });
             }
         }
@@ -550,11 +683,7 @@ app.post('/chat', async (req, res) => {
         // 3. Формуємо історію чату (System + History + New Message)
         const systemMessage = { role: "system", parts: [{ text: context }] };
         
-        // NOTE: Ми не зберігаємо systemMessage в історії, щоб не витрачати ресурси Firestore.
-        // Ми додаємо її лише для надсилання в API.
         const fullHistory = [systemMessage, ...currentChatHistory];
-        
-        // Додаємо нове повідомлення
         fullHistory.push({ role: "user", parts: [{ text: message }] });
         
         // --- 4. Виклик Gemini API ---
@@ -585,7 +714,6 @@ app.post('/chat', async (req, res) => {
     }
 });
 
-
 // v1.1.0: API для логування клієнтських помилок (без змін)
 app.post('/log-error', (req, res) => {
     const errorLog = req.body;
@@ -593,23 +721,14 @@ app.post('/log-error', (req, res) => {
     res.status(200).send({ status: 'logged' });
 });
 
-
 // --- Запуск сервера (без змін) ---
 app.listen(port, () => {
     console.log(`Сервер запущено на http://localhost:${port}`);
 });
 
-
 // === ОНОВЛЕНО v2.0.0: Допоміжна функція для видалення субколекцій ===
-/**
- * Рекурсивно видаляє колекцію в Firestore.
- * @param {admin.firestore.Firestore} db - Екземпляр Firestore.
- * @param {admin.firestore.CollectionReference} collectionRef - Посилання на колекцію.
- * @param {number} batchSize - Розмір пачки.
- */
 async function deleteCollection(db, collectionRef, batchSize) {
     const query = collectionRef.limit(batchSize);
-
     return new Promise((resolve, reject) => {
         deleteQueryBatch(db, query, resolve, reject);
     });
@@ -618,22 +737,17 @@ async function deleteCollection(db, collectionRef, batchSize) {
 async function deleteQueryBatch(db, query, resolve, reject) {
     try {
         const snapshot = await query.get();
-
         if (snapshot.size === 0) {
-            // Якщо документів немає, завершуємо
             return resolve();
         }
 
-        // Створюємо пачку для видалення
         const batch = db.batch();
         snapshot.docs.forEach(doc => {
             batch.delete(doc.ref);
         });
         await batch.commit();
 
-        // Рекурсивно викликаємо функцію для наступної пачки
         if (snapshot.size === batchSize) {
-            // Невеликий таймаут, щоб уникнути лімітів Firestore
             setTimeout(() => {
                 deleteQueryBatch(db, query, resolve, reject);
             }, 100);

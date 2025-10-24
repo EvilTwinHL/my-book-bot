@@ -1,10 +1,10 @@
 // src/core/config.js
 
 /**
- * CONFIGURATION SETTINGS (v2.6.0)
+ * CONFIGURATION SETTINGS (v2.6.1)
  */
 export const CONFIG = {
-    APP_VERSION: "2.6.0", // ОНОВЛЕНО v2.6.0 (Frontend Refactoring to ES Modules)
+    APP_VERSION: "2.6.1", // ОНОВЛЕНО v2.6.1 (fix(deploy): Resolve Express PathError on Render)
     AUTOSAVE_DELAY: 1500, // ms
     DEFAULT_GOAL_WORDS: 50000,
     SNIPPET_LENGTH: 80, // characters

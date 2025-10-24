@@ -10,6 +10,10 @@ const rateLimit = require('express-rate-limit');
 // === 2. НАЛАШТУВАННЯ ===
 const app = express();
 const port = process.env.PORT || 3000;
+
+// v2.3.4: Дозволяємо Express довіряти проксі (Render) для rate-limiter
+app.set('trust proxy', 1);
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static('.'));
 

@@ -1,6 +1,6 @@
 // === КОНФІГУРАЦІЯ ДОДАТКУ [v1.4.0 - P11] ===
 const CONFIG = {
-    APP_VERSION: "2.4.1", // ОНОВЛЕНО v2.4.1 (UX/UI: Впровадження дизайн-системи CSS-змінних)
+    APP_VERSION: "2.4.1", // ОНОВЛЕНО v2.4.0 (UX/UI: Drag & Drop, Візуал)
     AUTOSAVE_DELAY: 1500, // ms
     DEFAULT_GOAL_WORDS: 50000,
     SNIPPET_LENGTH: 80, // characters
@@ -38,7 +38,7 @@ const historyManager = {
     debounceTimer: null
 };
 
-// === v1.5.0: Керування кешем === (Без змін v2.0.0)
+// === v1.5.0: Керування кешем ===
 const projectCache = {
     set: (key, data) => {
         try {
@@ -232,7 +232,7 @@ function bindUIElements() {
     console.log("Елементи UI зв'язані.");
 }
 
-// === v1.1.0: Обробка помилок === (Без змін v2.0.0)
+// === v1.1.0: Обробка помилок ===
 /**
  * @param {Error | string} error
  * @param {string} [context]
@@ -284,7 +284,7 @@ function showToast(message, type = 'info') {
     }, CONFIG.TOAST_DURATION);
 }
 
-// === v1.1.0: Управління станом UI === (Оновлено v2.0.0)
+// === v1.1.0: Управління станом UI ===
 
 function showSpinner(message = "Завантаження...") {
     console.log(message); // v1.2.0
@@ -454,7 +454,7 @@ function setSaveStatus(status) {
     }
 }
 
-// === v1.1.0: Ініціалізація Firebase === (Без змін v2.0.0)
+// === v1.1.0: Ініціалізація Firebase ===
 let auth, provider, firestore;
 
 function initializeFirebase() {
@@ -473,7 +473,7 @@ function initializeFirebase() {
     }
 }
 
-// === v1.1.0: Логіка Автентифікації === (Без змін v2.0.0)
+// === v1.1.0: Логіка Автентифікації ===
 
 function setupAuthObserver() {
     auth.onAuthStateChanged(user => {
@@ -499,36 +499,17 @@ function setupAuthObserver() {
 }
 
 function signIn() {
-    // v2.3.3: Ми більше не показуємо спінер тут.
-    // 'onAuthStateChanged' та 'loadUserProjects' покажуть свої спінери
-    // showSpinner("Вхід через Google..."); 
-    
-    // v2.3.3: Замінюємо 'signInWithRedirect' на 'signInWithPopup'
-    
-    // СТАРИЙ КОД:
-    // auth.signInWithRedirect(provider).catch(error => {
-    //     handleError(error, "sign-in");
-    //     hideSpinner();
-    // });
-    
-    // НОВИЙ КОД:
+    // v2.3.3: Використовуємо 'signInWithPopup'
     auth.signInWithPopup(provider)
         .then(result => {
-            // Успішний вхід.
-            // Наш слухач 'onAuthStateChanged' зараз автоматично спрацює,
-            // завантажить проєкти і покаже 'showView('projects')'.
+            // Успішний вхід. Слухач 'onAuthStateChanged' автоматично спрацює
             console.log("Успішний вхід (Popup):", result.user.displayName);
         })
         .catch(error => {
             // Обробка помилок
-            
-            // Користувач міг просто закрити спливаюче вікно,
-            // це не є справжньою помилкою.
             if (error.code !== 'auth/popup-closed-by-user') {
                  handleError(error, "sign-in-popup");
             }
-            
-            // На випадок, якщо якийсь спінер залишився, ховаємо його
             hideSpinner();
         });
 }
@@ -541,11 +522,10 @@ function signOut() {
     });
 }
 
-// === v1.1.0: Логіка Проєктів (Головна) === (Оновлено v2.2.3)
+// === v1.1.0: Логіка Проєктів (Головна) === 
 
 /**
  * v2.0.0: Логіка завантаження проєктів повністю переписана для Firestore
- * Вона більше НЕ завантажує весь контент, лише список.
  */
 async function loadUserProjects() {
     if (!currentUser) return;
@@ -606,11 +586,10 @@ async function createProject() {
 
     showSpinner("Створення проєкту...");
     try {
-        // v2.0.0: Новий ендпоінт, що відповідає v2.0.0 server.js
         const response = await fetch('/create-project', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: title, user: currentUser.uid }) // v2.2.3: Передаємо user
+            body: JSON.stringify({ title: title, user: currentUser.uid }) 
         });
 
         if (!response.ok) {
@@ -620,17 +599,15 @@ async function createProject() {
 
         const newProject = await response.json();
         
-        // v2.0.0: Сервер повертає ID та *весь* об'єкт даних (v2.0.0 структура)
         currentProjectID = newProject.id;
         currentProjectData = newProject.data; 
         
-        projectCache.set(currentProjectID, currentProjectData); // v1.5.0: Кешуємо
+        projectCache.set(currentProjectID, currentProjectData); 
         
         loadWorkspace();
         showView('workspace');
         showToast(`Проєкт "${title}" створено!`, 'success');
         
-        // Оновлюємо список проєктів у фоні
         loadUserProjects();
 
     } catch (error) {
@@ -653,7 +630,6 @@ async function deleteProject(projectID, projectTitle) {
 
     showSpinner(`Видалення "${projectTitle}"...`);
     try {
-        // v2.0.0: Новий ендпоінт, що відповідає v2.0.0 server.js
         const response = await fetch('/delete-project', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -666,8 +642,8 @@ async function deleteProject(projectID, projectTitle) {
         }
 
         showToast(`Проєкт "${projectTitle}" видалено.`, 'success');
-        projectCache.clear(projectID); // v1.5.0
-        loadUserProjects(); // Оновити список
+        projectCache.clear(projectID); 
+        loadUserProjects(); 
         
     } catch (error) {
         handleError(error, "delete-project");
@@ -686,7 +662,6 @@ async function editProjectTitle(projectID, oldTitle) {
 
     showSpinner("Оновлення назви...");
     try {
-        // v2.0.0: Новий ендпоінт
         const response = await fetch('/update-title', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -699,9 +674,8 @@ async function editProjectTitle(projectID, oldTitle) {
         }
         
         showToast("Назву оновлено.", 'success');
-        loadUserProjects(); // Оновити список
+        loadUserProjects(); 
         
-        // v1.5.0: Оновити кеш, якщо проєкт закешовано
         const cachedData = projectCache.get(projectID);
         if (cachedData) {
             cachedData.title = newTitle;
@@ -721,7 +695,6 @@ async function editProjectTitle(projectID, oldTitle) {
 async function exportProject(projectID, projectTitle) {
     showSpinner(`Експорт "${projectTitle}"...`);
     try {
-        // v2.0.0: Новий ендпоінт
         const response = await fetch(`/export-project?projectID=${projectID}`, {
             method: 'GET'
         });
@@ -734,7 +707,6 @@ async function exportProject(projectID, projectTitle) {
         const textContent = await response.text();
         const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
         
-        // Отримуємо назву файлу з заголовка (якщо є) або генеруємо
         const contentDisposition = response.headers.get('content-disposition');
         let filename = `${projectTitle || 'export'}.txt`;
         if (contentDisposition) {
@@ -744,7 +716,6 @@ async function exportProject(projectID, projectTitle) {
             }
         }
         
-        // Створюємо посилання для завантаження
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = filename;
@@ -762,7 +733,7 @@ async function exportProject(projectID, projectTitle) {
 }
 
 
-// === v1.1.0: Контекстне меню проєкту === (Оновлено v2.0.0)
+// === v1.1.0: Контекстне меню проєкту ===
 let contextMenuProjectID = null;
 let contextMenuProjectTitle = null;
 
@@ -789,7 +760,7 @@ function showProjectContextMenu(e, projectID, projectTitle) {
     document.addEventListener('click', closeMenuHandler);
 }
 
-// === v1.1.0: Завантаження робочої області === (Оновлено v2.2.3)
+// === v1.1.0: Завантаження робочої області ===
 
 /**
  * v2.0.0: Логіка відкриття проєкту повністю переписана
@@ -813,7 +784,6 @@ async function openProject(projectID) {
 
     // Якщо в кеші немає
     try {
-        // v2.0.0: Новий ендпоінт
         const response = await fetch(`/get-project-content?projectID=${projectID}`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
@@ -827,7 +797,6 @@ async function openProject(projectID) {
         currentProjectData = await response.json();
         
         // v2.2.3: Переконуємось, що структура даних на місці
-        // (Сервер v2.2.3 вже має це робити, але це про всяк випадок)
         if (!currentProjectData.content) currentProjectData.content = {};
         if (!currentProjectData.content.chapters) currentProjectData.content.chapters = [];
         if (!currentProjectData.content.characters) currentProjectData.content.characters = [];
@@ -835,7 +804,7 @@ async function openProject(projectID) {
         if (!currentProjectData.content.plotlines) currentProjectData.content.plotlines = [];
         if (!currentProjectData.chatHistory) currentProjectData.chatHistory = [];
 
-        projectCache.set(projectID, currentProjectData); // v1.5.0: Кешуємо
+        projectCache.set(projectID, currentProjectData); 
         
         loadWorkspace();
         showView('workspace');
@@ -843,18 +812,18 @@ async function openProject(projectID) {
     } catch (error) {
         handleError(error, "open-project");
         currentProjectID = null;
-        showView('projects'); // Повернути до списку проєктів
+        showView('projects'); 
     } finally {
         hideSpinner();
     }
 }
 
 /**
- * v1.5.0: Фонова синхронізація (Без змін v2.0.0)
+ * v1.5.0: Фонова синхронізація 
  */
 async function syncProjectInBackground(projectID) {
     if (projectID !== currentProjectID) {
-        return; // Користувач вже на іншому проєкті
+        return; 
     }
     
     console.log(`[Sync]: Починаю фонову синхронізацію для ${projectID}...`);
@@ -894,8 +863,7 @@ async function syncProjectInBackground(projectID) {
 }
 
 /**
- * v2.0.0: Перероблено для нової структури даних
- * Заповнює робочу область даними з `currentProjectData`
+ * v2.0.0: Заповнює робочу область даними з `currentProjectData`
  */
 function loadWorkspace() {
     if (!currentProjectData) {
@@ -953,9 +921,13 @@ function loadWorkspace() {
     
     // v1.6.0: Очистити пошук
     ui.globalSearchInput.value = '';
+
+    // v2.4.0: Ініціалізація Drag & Drop
+    initializeSortableLists(); 
 }
 
-// === v1.1.0: Логіка Автозбереження === (Оновлено v2.0.0)
+
+// === v1.1.0: Логіка Автозбереження ===
 
 /**
  * v2.0.0: Повністю переписано для нової структури
@@ -976,7 +948,6 @@ function scheduleSave(field, value) {
         setSaveStatus('saving');
         
         try {
-            // v2.0.0: Новий ендпоінт
             const response = await fetch('/save-project-content', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -993,7 +964,6 @@ function scheduleSave(field, value) {
             }
 
             // v1.7.0: Оновлюємо кеш ТІЛЬКИ після успішного збереження
-            // (Клієнтський `currentProjectData` вже оновлено раніше)
             projectCache.set(currentProjectID, currentProjectData);
             
             setSaveStatus('saved');
@@ -1020,9 +990,9 @@ function scheduleSave(field, value) {
     pendingSave.timer = setTimeout(saveFunction, CONFIG.AUTOSAVE_DELAY);
 }
 
-// === v1.1.0: Логіка Вкладок (CRUD) === (Оновлено v2.0.0)
+// === v1.1.0: Логіка Вкладок (CRUD) ===
 
-// --- Утиліти (Без змін v2.0.0) ---
+// --- Утиліти ---
 
 /**
  * @param {string} html
@@ -1046,30 +1016,27 @@ function getSnippet(text, length = CONFIG.SNIPPET_LENGTH) {
 }
 
 /**
+ * v2.4.0: Функція переміщення тепер використовується ТІЛЬКИ логікою Drag & Drop
  * @param {number} index
  * @param {'chapters' | 'characters' | 'locations' | 'plotlines'} type
+ * @param {number} direction
  */
 function moveItemInArray(index, type, direction) {
     const list = currentProjectData.content[type];
     const newIndex = index + direction;
 
     if (newIndex < 0 || newIndex >= list.length) {
-        return; // Неможливо перемістити
+        return; 
     }
-    
-    // [a, b, c] -> index 1 (b), direction -1 -> [b, a, c]
-    // [a, b, c] -> index 1 (b), direction +1 -> [a, c, b]
     
     const [item] = list.splice(index, 1);
     list.splice(newIndex, 0, item);
     
-    // v2.0.0: Зберігаємо весь масив
     scheduleSave(`content.${type}`, list);
     
     // Перемальовуємо список
     if (type === 'chapters') {
         renderChaptersList();
-        // Відкриваємо редактор для переміщеного елемента
         selectChapter(newIndex);
     } else if (type === 'characters') {
         renderCharactersList();
@@ -1081,6 +1048,73 @@ function moveItemInArray(index, type, direction) {
         renderPlotlinesList();
         selectPlotline(newIndex);
     }
+}
+
+// === v2.4.0: ЛОГІКА DRAG & DROP (Sortable.js) ===
+/**
+ * Ініціалізує Drag & Drop для всіх списків за допомогою SortableJS.
+ */
+function initializeSortableLists() {
+    // Перевіряємо, чи підключено бібліотеку
+    if (typeof Sortable === 'undefined') {
+        console.warn("Sortable.js не знайдено. Drag & Drop вимкнено.");
+        return;
+    }
+
+    // Централізована функція, яка оновлює модель даних після перетягування
+    const onSortHandler = (event, type) => {
+        const oldIndex = event.oldIndex;
+        const newIndex = event.newIndex;
+        
+        if (oldIndex === newIndex) return;
+
+        const list = currentProjectData.content[type];
+        
+        // Sortable.js вже перемістив елемент в DOM,
+        // нам потрібно лише синхронізувати JS-масив:
+        const [movedItem] = list.splice(oldIndex, 1);
+        list.splice(newIndex, 0, movedItem);
+        
+        scheduleSave(`content.${type}`, list);
+
+        // Невеликий таймаут, щоб дати Sortable.js завершити DOM-операції
+        // та оновити підсвічування активного елемента (якщо потрібно)
+        setTimeout(() => {
+            if (type === 'chapters') renderChaptersList();
+            if (type === 'characters') renderCharactersList();
+            if (type === 'locations') renderLocationsList();
+            if (type === 'plotlines') renderPlotlinesList();
+        }, 50);
+    };
+
+
+    // Налаштування для кожного списку
+    new Sortable(ui.chaptersList, {
+        group: 'shared',
+        animation: 150,
+        handle: '.drag-handle',
+        onEnd: (event) => onSortHandler(event, 'chapters')
+    });
+    new Sortable(ui.charactersList, {
+        group: 'shared',
+        animation: 150,
+        handle: '.drag-handle',
+        onEnd: (event) => onSortHandler(event, 'characters')
+    });
+    new Sortable(ui.locationsList, {
+        group: 'shared',
+        animation: 150,
+        handle: '.drag-handle',
+        onEnd: (event) => onSortHandler(event, 'locations')
+    });
+    new Sortable(ui.plotlinesList, {
+        group: 'shared',
+        animation: 150,
+        handle: '.drag-handle',
+        onEnd: (event) => onSortHandler(event, 'plotlines')
+    });
+
+    console.log("Drag & Drop ініціалізовано.");
 }
 
 // --- РОЗДІЛИ (Chapters) ---
@@ -1101,7 +1135,7 @@ function renderChaptersList() {
             item.classList.add('active');
         }
         
-        // v1.4.0: Оновлено HTML для drag-n-drop та статусу
+        // v2.4.0: Додано drag-handle та індикатор статусу
         item.innerHTML = `
             <div class="drag-handle">::</div>
             <div class="list-item-content">
@@ -1109,25 +1143,11 @@ function renderChaptersList() {
                 <h4 class="list-item-title">${escapeHTML(chapter.title) || '<i>Розділ без назви</i>'}</h4>
                 <p class="list-item-snippet">${getSnippet(chapter.synopsis || chapter.text)}</p>
             </div>
-            <div class="list-item-controls">
-                <button class="btn-icon" data-action="move-up" title="Перемістити вгору">&uarr;</button>
-                <button class="btn-icon" data-action="move-down" title="Перемістити вниз">&darr;</button>
-            </div>
         `;
         
         // v1.4.0: Обробник для кліку (тільки на контент)
         item.querySelector('.list-item-content').addEventListener('click', () => {
             selectChapter(index);
-        });
-        
-        // v1.4.0: Обробники для кнопок
-        item.querySelector('button[data-action="move-up"]').addEventListener('click', (e) => {
-            e.stopPropagation();
-            moveItemInArray(index, 'chapters', -1);
-        });
-        item.querySelector('button[data-action="move-down"]').addEventListener('click', (e) => {
-            e.stopPropagation();
-            moveItemInArray(index, 'chapters', +1);
         });
         
         ui.chaptersList.appendChild(item);
@@ -1243,28 +1263,17 @@ function renderCharactersList() {
             item.classList.add('active');
         }
         
+        // v2.4.0: Додано drag-handle
         item.innerHTML = `
             <div class="drag-handle">::</div>
             <div class="list-item-content">
                 <h4 class="list-item-title">${escapeHTML(char.name) || '<i>Персонаж без імені</i>'}</h4>
                 <p class="list-item-snippet">${getSnippet(char.description)}</p>
             </div>
-            <div class="list-item-controls">
-                <button class="btn-icon" data-action="move-up" title="Перемістити вгору">&uarr;</button>
-                <button class="btn-icon" data-action="move-down" title="Перемістити вниз">&darr;</button>
-            </div>
         `;
         
         item.querySelector('.list-item-content').addEventListener('click', () => {
             selectCharacter(index);
-        });
-        item.querySelector('button[data-action="move-up"]').addEventListener('click', (e) => {
-            e.stopPropagation();
-            moveItemInArray(index, 'characters', -1);
-        });
-        item.querySelector('button[data-action="move-down"]').addEventListener('click', (e) => {
-            e.stopPropagation();
-            moveItemInArray(index, 'characters', +1);
         });
         
         ui.charactersList.appendChild(item);
@@ -1349,28 +1358,17 @@ function renderLocationsList() {
             item.classList.add('active');
         }
         
+        // v2.4.0: Додано drag-handle
         item.innerHTML = `
             <div class="drag-handle">::</div>
             <div class="list-item-content">
                 <h4 class="list-item-title">${escapeHTML(loc.name) || '<i>Локація без назви</i>'}</h4>
                 <p class="list-item-snippet">${getSnippet(loc.description)}</p>
             </div>
-            <div class="list-item-controls">
-                <button class="btn-icon" data-action="move-up" title="Перемістити вгору">&uarr;</button>
-                <button class="btn-icon" data-action="move-down" title="Перемістити вниз">&darr;</button>
-            </div>
         `;
         
         item.querySelector('.list-item-content').addEventListener('click', () => {
             selectLocation(index);
-        });
-        item.querySelector('button[data-action="move-up"]').addEventListener('click', (e) => {
-            e.stopPropagation();
-            moveItemInArray(index, 'locations', -1);
-        });
-        item.querySelector('button[data-action="move-down"]').addEventListener('click', (e) => {
-            e.stopPropagation();
-            moveItemInArray(index, 'locations', +1);
         });
         
         ui.locationsList.appendChild(item);
@@ -1453,28 +1451,17 @@ function renderPlotlinesList() {
             item.classList.add('active');
         }
         
+        // v2.4.0: Додано drag-handle
         item.innerHTML = `
             <div class="drag-handle">::</div>
             <div class="list-item-content">
                 <h4 class="list-item-title">${escapeHTML(plot.title) || '<i>Сюжет без назви</i>'}</h4>
                 <p class="list-item-snippet">${getSnippet(plot.description)}</p>
             </div>
-            <div class="list-item-controls">
-                <button class="btn-icon" data-action="move-up" title="Перемістити вгору">&uarr;</button>
-                <button class="btn-icon" data-action="move-down" title="Перемістити вниз">&darr;</button>
-            </div>
         `;
         
         item.querySelector('.list-item-content').addEventListener('click', () => {
             selectPlotline(index);
-        });
-        item.querySelector('button[data-action="move-up"]').addEventListener('click', (e) => {
-            e.stopPropagation();
-            moveItemInArray(index, 'plotlines', -1);
-        });
-        item.querySelector('button[data-action="move-down"]').addEventListener('click', (e) => {
-            e.stopPropagation();
-            moveItemInArray(index, 'plotlines', +1);
         });
         
         ui.plotlinesList.appendChild(item);
@@ -1540,10 +1527,10 @@ async function deletePlotline() {
 }
 
 
-// === v1.1.0: Логіка ЧАТУ === (Оновлено v2.3.0)
+// === v1.1.0: Логіка ЧАТУ === 
 
 /**
- * v2.0.0: Логіка рендеру чату (без змін)
+ * v2.0.0: Логіка рендеру чату 
  * @param {Array<object>} history
  */
 function renderChatHistory(history) {
@@ -1584,7 +1571,7 @@ async function sendChatMessage() {
             body: JSON.stringify({
                 projectID: currentProjectID,
                 message: messageText,
-                contextOptions: contextOptions // <-- ДОДАНО
+                contextOptions: contextOptions 
             })
         });
 
@@ -1663,7 +1650,7 @@ function updateLastChatMessage(text) {
     }
 }
 
-// === v1.6.0: Глобальний Пошук === (Без змін v2.0.0)
+// === v1.6.0: Глобальний Пошук === 
 
 function performGlobalSearch(query) {
     if (!query || query.length < 3) {
@@ -1806,7 +1793,7 @@ function navigateToSearchResult(result) {
     }
 }
 
-// === v1.6.0: Історія (Undo/Redo) === (Без змін v2.0.0)
+// === v1.6.0: Історія (Undo/Redo) === 
 
 /**
  * @param {HTMLInputElement | HTMLTextAreaElement} [field]
@@ -1844,7 +1831,6 @@ function recordHistory(e) {
         
         historyManager.stack.push(value);
         historyManager.pointer = historyManager.stack.length - 1;
-        // console.log("History recorded", historyManager.pointer, value.substring(0, 10));
         
         historyManager.debounceTimer = null;
     }, CONFIG.HISTORY_DEBOUNCE);
@@ -1873,7 +1859,7 @@ function redo() {
 }
 
 
-// === v1.7.0: ФУНКЦІЯ ПРИМУСОВОГО ЗБЕРЕЖЕННЯ === (Без змін v2.0.0)
+// === v1.7.0: ФУНКЦІЯ ПРИМУСОВОГО ЗБЕРЕЖЕННЯ ===
 function triggerManualSave() {
     if (!hasUnsavedChanges && !pendingSave.timer) {
         showToast("Все збережено", "info");
@@ -1899,7 +1885,7 @@ function triggerManualSave() {
 }
 
 
-// === v1.1.0: Ініціалізація та Обробники Подій === (Оновлено v2.3.2)
+// === v1.1.0: Ініціалізація та Обробники Подій === 
 
 document.addEventListener('DOMContentLoaded', () => {
     bindUIElements();
@@ -1976,7 +1962,6 @@ document.addEventListener('DOMContentLoaded', () => {
         currentProjectData.title = newTitle;
         
         // v1.7.0: Це не автозбереження, це окремий ендпоінт
-        // Ми не використовуємо scheduleSave
         (async () => {
             setSaveStatus('saving');
             try {
@@ -2032,9 +2017,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- Обробники автозбереження ---
     
-    // *** ВИПРАВЛЕНО v2.3.2 ***
-    // Ця функція тепер перевіряє 'currentProjectData' під час *виконання*,
-    // а не під час *реєстрації* слухача.
     const addWorldSaveListener = (element, fieldName, property) => {
         // v1.6.0: Історія
         element.addEventListener('focus', () => resetHistory(element));
@@ -2043,7 +2025,7 @@ document.addEventListener('DOMContentLoaded', () => {
         element.addEventListener('change', (e) => {
             if (historyManager.isRestoring) return; // v1.6.0
             
-            // *** FIX: *** Перевіряємо, чи проєкт завантажено
+            // v2.3.2 FIX: Перевіряємо, чи проєкт завантажено
             if (!currentProjectData || !currentProjectData.content) return;
             
             const value = (element.type === 'number') ? parseFloat(e.target.value) : e.target.value;
@@ -2057,7 +2039,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
     
-    // --- Вкладка: Світ (ВИПРАВЛЕНО v2.3.2) ---
+    // --- Вкладка: Світ ---
     addWorldSaveListener(ui.premiseTextarea, 'content.premise', 'premise');
     addWorldSaveListener(ui.themeTextarea, 'content.theme', 'theme');
     addWorldSaveListener(ui.mainArcTextarea, 'content.mainArc', 'mainArc');
@@ -2082,8 +2064,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentProjectData.content.chapters[selectedChapterIndex][property] = value;
             scheduleSave('content.chapters', currentProjectData.content.chapters);
             
-            if (property === 'title') {
-                renderChaptersList(); // Оновити назву у списку
+            if (property === 'title' || property === 'status') {
+                renderChaptersList(); // Оновити назву/статус у списку
             }
         });
     };

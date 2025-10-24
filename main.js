@@ -11,7 +11,7 @@ if (typeof Sortable === 'undefined') {
 
 // === КОНФІГУРАЦІЯ ДОДАТКУ [v1.4.0 - P11] ===
 const CONFIG = {
-    APP_VERSION: "2.5.3", // ОНОВЛЕНО v2.5.3 (Fix: Проблеми ініціалізації)
+    APP_VERSION: "2.5.4", // ОНОВЛЕНО v2.5.4 (Fix: обробка порожніх даних при рендерингу списків)
     AUTOSAVE_DELAY: 1500, // ms
     DEFAULT_GOAL_WORDS: 50000,
     SNIPPET_LENGTH: 80, // characters
@@ -1060,7 +1060,9 @@ function getSnippet(text, length = CONFIG.SNIPPET_LENGTH) {
  * @param {number} direction
  */
 function moveItemInArray(index, type, direction) {
-    const list = currentProjectData.content[type];
+    const list = currentProjectData?.content?.[type];
+    if (!list) return;
+    
     const newIndex = index + direction;
 
     if (newIndex < 0 || newIndex >= list.length) {
@@ -1105,7 +1107,8 @@ function initializeSortableLists() {
         
         if (oldIndex === newIndex) return;
 
-        const list = currentProjectData.content[type];
+        const list = currentProjectData?.content?.[type];
+        if (!list) return;
         
         // Sortable.js вже перемістив елемент в DOM,
         // нам потрібно лише синхронізувати JS-масив:
@@ -1157,6 +1160,7 @@ function initializeSortableLists() {
 // --- РОЗДІЛИ (Chapters) ---
 
 function renderChaptersList() {
+    // v2.5.4 FIX: Використання опціонального чейнінгу та || [] для гарантії масиву
     const chapters = currentProjectData?.content?.chapters || [];
     if (!ui.chaptersList) return;
     
@@ -1227,8 +1231,13 @@ function hideChapterEditor() {
 }
 
 function addChapter() {
-    if (!currentProjectData?.content?.chapters || !ui.chapterTitleInput) return;
+    if (!currentProjectData) return;
     
+    // v2.5.4 FIX: Ініціалізуємо масив, якщо він null/undefined
+    if (!currentProjectData.content.chapters) {
+        currentProjectData.content.chapters = [];
+    }
+
     const newChapter = {
         title: "Новий розділ",
         status: "draft",
@@ -1244,8 +1253,10 @@ function addChapter() {
     
     renderChaptersList();
     selectChapter(newIndex);
-    ui.chapterTitleInput.focus();
-    ui.chapterTitleInput.select();
+    if (ui.chapterTitleInput) {
+        ui.chapterTitleInput.focus();
+        ui.chapterTitleInput.select();
+    }
 }
 
 async function deleteChapter() {
@@ -1290,6 +1301,7 @@ function updateTotalWordCount() {
 // --- ПЕРСОНАЖІ (Characters) ---
 
 function renderCharactersList() {
+    // v2.5.4 FIX: Використання опціонального чейнінгу та || [] для гарантії масиву
     const characters = currentProjectData?.content?.characters || [];
     if (!ui.charactersList) return;
     
@@ -1354,7 +1366,12 @@ function hideCharacterEditor() {
 }
 
 function addCharacter() {
-    if (!currentProjectData?.content?.characters || !ui.characterNameInput) return;
+    if (!currentProjectData) return;
+    
+    // v2.5.4 FIX: Ініціалізуємо масив, якщо він null/undefined
+    if (!currentProjectData.content.characters) {
+        currentProjectData.content.characters = [];
+    }
     
     const newChar = {
         name: "Новий персонаж",
@@ -1369,8 +1386,10 @@ function addCharacter() {
     
     renderCharactersList();
     selectCharacter(newIndex);
-    ui.characterNameInput.focus();
-    ui.characterNameInput.select();
+    if (ui.characterNameInput) {
+        ui.characterNameInput.focus();
+        ui.characterNameInput.select();
+    }
 }
 
 async function deleteCharacter() {
@@ -1390,6 +1409,7 @@ async function deleteCharacter() {
 // --- ЛОКАЦІЇ (Locations) ---
 
 function renderLocationsList() {
+    // v2.5.4 FIX: Використання опціонального чейнінгу та || [] для гарантії масиву
     const locations = currentProjectData?.content?.locations || [];
     if (!ui.locationsList) return;
 
@@ -1453,7 +1473,12 @@ function hideLocationEditor() {
 }
 
 function addLocation() {
-    if (!currentProjectData?.content?.locations || !ui.locationNameInput) return;
+    if (!currentProjectData) return;
+
+    // v2.5.4 FIX: Ініціалізуємо масив, якщо він null/undefined
+    if (!currentProjectData.content.locations) {
+        currentProjectData.content.locations = [];
+    }
     
     const newLoc = {
         name: "Нова локація",
@@ -1467,8 +1492,10 @@ function addLocation() {
     
     renderLocationsList();
     selectLocation(newIndex);
-    ui.locationNameInput.focus();
-    ui.locationNameInput.select();
+    if (ui.locationNameInput) {
+        ui.locationNameInput.focus();
+        ui.locationNameInput.select();
+    }
 }
 
 async function deleteLocation() {
@@ -1488,6 +1515,7 @@ async function deleteLocation() {
 // --- СЮЖЕТНІ ЛІНІЇ (Plotlines) ---
 
 function renderPlotlinesList() {
+    // v2.5.4 FIX: Використання опціонального чейнінгу та || [] для гарантії масиву
     const plotlines = currentProjectData?.content?.plotlines || [];
     if (!ui.plotlinesList) return;
 
@@ -1551,7 +1579,12 @@ function hidePlotlineEditor() {
 }
 
 function addPlotline() {
-    if (!currentProjectData?.content?.plotlines || !ui.plotlineTitleInput) return;
+    if (!currentProjectData) return;
+
+    // v2.5.4 FIX: Ініціалізуємо масив, якщо він null/undefined
+    if (!currentProjectData.content.plotlines) {
+        currentProjectData.content.plotlines = [];
+    }
     
     const newPlot = {
         title: "Нова сюжетна лінія",
@@ -1565,8 +1598,10 @@ function addPlotline() {
     
     renderPlotlinesList();
     selectPlotline(newIndex);
-    ui.plotlineTitleInput.focus();
-    ui.plotlineTitleInput.select();
+    if (ui.plotlineTitleInput) {
+        ui.plotlineTitleInput.focus();
+        ui.plotlineTitleInput.select();
+    }
 }
 
 async function deletePlotline() {

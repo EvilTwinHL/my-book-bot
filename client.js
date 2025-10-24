@@ -1,6 +1,6 @@
 // === КОНФІГУРАЦІЯ ДОДАТКУ [v1.4.0 - P11] ===
 const CONFIG = {
-    APP_VERSION: "2.3.5", // ОНОВЛЕНО v2.3.5 (Fix: bugs)
+    APP_VERSION: "2.4.1", // ОНОВЛЕНО v2.4.1 (UX/UI: Впровадження дизайн-системи CSS-змінних)
     AUTOSAVE_DELAY: 1500, // ms
     DEFAULT_GOAL_WORDS: 50000,
     SNIPPET_LENGTH: 80, // characters

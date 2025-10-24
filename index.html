@@ -382,9 +382,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 
     <script>
-      // Your web app's Firebase configuration
-      const firebaseConfig = {
-        // !!! ВАЖЛИВО: Переконайтеся, що тут ваші актуальні ключі !!!
+      // Your web app's Firebase configuration (залишаємо для доступу в src/modules/auth.js)
+      window.firebaseConfig = {
         apiKey: "AIzaSyBl9t1oqvNvID4dHBsj9PWJqULuMWvc3vg", 
         authDomain: "gemini-opusai.firebaseapp.com",
         projectId: "gemini-opusai",
@@ -392,11 +391,9 @@
         messagingSenderId: "569032470725",
         appId: "1:569032470725:web:e3a2469d7a22e69818e3c1"
       };
-      // v2.5.0: Робимо config глобальним, оскільки в main.js (колишній client.js) поки що немає імпорту
-      window.firebaseConfig = firebaseConfig; 
     </script>
     
-    <script type="module" src="/main.js"></script> 
+    <script src="src/main.js" type="module"></script> 
 
     </body>
 </html>

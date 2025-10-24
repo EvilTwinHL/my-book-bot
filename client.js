@@ -1,6 +1,6 @@
 // === КОНФІГУРАЦІЯ ДОДАТКУ [v1.4.0 - P11] ===
 const CONFIG = {
-    APP_VERSION: "2.3.2", // ОНОВЛЕНО v2.3.2 (Fix: Фатальна помилка 'null.content' в DOMContentLoaded)
+    APP_VERSION: "2.3.5", // ОНОВЛЕНО v2.3.5 (Fix: bugs)
     AUTOSAVE_DELAY: 1500, // ms
     DEFAULT_GOAL_WORDS: 50000,
     SNIPPET_LENGTH: 80, // characters
@@ -499,11 +499,38 @@ function setupAuthObserver() {
 }
 
 function signIn() {
-    showSpinner("Вхід через Google...");
-    auth.signInWithRedirect(provider).catch(error => {
-        handleError(error, "sign-in");
-        hideSpinner();
-    });
+    // v2.3.3: Ми більше не показуємо спінер тут.
+    // 'onAuthStateChanged' та 'loadUserProjects' покажуть свої спінери
+    // showSpinner("Вхід через Google..."); 
+    
+    // v2.3.3: Замінюємо 'signInWithRedirect' на 'signInWithPopup'
+    
+    // СТАРИЙ КОД:
+    // auth.signInWithRedirect(provider).catch(error => {
+    //     handleError(error, "sign-in");
+    //     hideSpinner();
+    // });
+    
+    // НОВИЙ КОД:
+    auth.signInWithPopup(provider)
+        .then(result => {
+            // Успішний вхід.
+            // Наш слухач 'onAuthStateChanged' зараз автоматично спрацює,
+            // завантажить проєкти і покаже 'showView('projects')'.
+            console.log("Успішний вхід (Popup):", result.user.displayName);
+        })
+        .catch(error => {
+            // Обробка помилок
+            
+            // Користувач міг просто закрити спливаюче вікно,
+            // це не є справжньою помилкою.
+            if (error.code !== 'auth/popup-closed-by-user') {
+                 handleError(error, "sign-in-popup");
+            }
+            
+            // На випадок, якщо якийсь спінер залишився, ховаємо його
+            hideSpinner();
+        });
 }
 
 function signOut() {

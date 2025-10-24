@@ -141,19 +141,26 @@ app.get('/get-project-content', async (req, res) => {
             console.log(`\n--- Обробка ${collectionName} ---`);
             
             // Спершу пробуємо новий формат (поле items)
-            if (doc.exists) {
+            if (doc.exists) { // (A)
                 const docData = doc.data();
                 console.log(`Документ ${collectionName} існує:`, Object.keys(docData));
                 
                 if (docData.items && Array.isArray(docData.items)) {
                     console.log(`Знайдено новий формат (items): ${docData.items.length} елементів`);
-                    return docData.items;
+                    return docData.items; // (B) New format success
                 }
-            } else {
+                
+                // v2.5.6 CRITICAL FIX: Якщо документ існує, але поле items відсутнє/пошкоджене,
+                // це означає, що міграція відбулася або був некоректний запис. 
+                // Ми виходимо, щоб уникнути перевірки legacy, яка може повернути [].
+                console.warn(`Документ ${collectionName} існує, але items відсутній/пошкоджений. Повертаємо пустий масив, вважаючи, що міграція відбулася.`);
+                return []; // Вихід, щоб не перевіряти старий формат
+
+            } else { // (C) New document does NOT exist (first load/no saves)
                 console.log(`Документ ${collectionName} не існує`);
             }
             
-            // Якщо новий формат пустий або відсутній, перевіряємо старий формат (субколекції)
+            // Якщо новий документ не існує, перевіряємо старий формат (субколекції)
             console.log(`Перевіряємо старий формат для ${collectionName}...`);
             const oldCollectionRef = dataCollectionRef.doc(collectionName).collection('items');
             
@@ -186,7 +193,8 @@ app.get('/get-project-content', async (req, res) => {
                     // Автоматично мігруємо дані в новий формат
                     console.log(`Мігруємо дані ${collectionName} в новий формат...`);
                     const newDocRef = dataCollectionRef.doc(collectionName);
-                    await newDocRef.set({ items: oldItems }, { merge: true });
+                    // Використовуємо set без merge, щоб замінити старий документ
+                    await newDocRef.set({ items: oldItems }); 
                     console.log(`Міграція ${collectionName} завершена!`);
                     
                     return oldItems;

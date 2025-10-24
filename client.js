@@ -1,6 +1,6 @@
 // === КОНФІГУРАЦІЯ ДОДАТКУ [v1.4.0 - P11] ===
 const CONFIG = {
-    APP_VERSION: "2.4.0", // ОНОВЛЕНО v2.4.0 (UX/UI: Drag & Drop, Візуал)
+    APP_VERSION: "2.4.1", // ОНОВЛЕНО v2.4.0 (UX/UI: Drag & Drop, Візуал)
     AUTOSAVE_DELAY: 1500, // ms
     DEFAULT_GOAL_WORDS: 50000,
     SNIPPET_LENGTH: 80, // characters
@@ -1055,6 +1055,7 @@ function moveItemInArray(index, type, direction) {
  * Ініціалізує Drag & Drop для всіх списків за допомогою SortableJS.
  */
 function initializeSortableLists() {
+    // Перевіряємо, чи підключено бібліотеку
     if (typeof Sortable === 'undefined') {
         console.warn("Sortable.js не знайдено. Drag & Drop вимкнено.");
         return;
@@ -1077,6 +1078,7 @@ function initializeSortableLists() {
         scheduleSave(`content.${type}`, list);
 
         // Невеликий таймаут, щоб дати Sortable.js завершити DOM-операції
+        // та оновити підсвічування активного елемента (якщо потрібно)
         setTimeout(() => {
             if (type === 'chapters') renderChaptersList();
             if (type === 'characters') renderCharactersList();
@@ -1133,7 +1135,7 @@ function renderChaptersList() {
             item.classList.add('active');
         }
         
-        // v2.4.0: Видалено list-item-controls
+        // v2.4.0: Додано drag-handle та індикатор статусу
         item.innerHTML = `
             <div class="drag-handle">::</div>
             <div class="list-item-content">
@@ -1261,7 +1263,7 @@ function renderCharactersList() {
             item.classList.add('active');
         }
         
-        // v2.4.0: Видалено list-item-controls
+        // v2.4.0: Додано drag-handle
         item.innerHTML = `
             <div class="drag-handle">::</div>
             <div class="list-item-content">
@@ -1356,7 +1358,7 @@ function renderLocationsList() {
             item.classList.add('active');
         }
         
-        // v2.4.0: Видалено list-item-controls
+        // v2.4.0: Додано drag-handle
         item.innerHTML = `
             <div class="drag-handle">::</div>
             <div class="list-item-content">
@@ -1449,7 +1451,7 @@ function renderPlotlinesList() {
             item.classList.add('active');
         }
         
-        // v2.4.0: Видалено list-item-controls
+        // v2.4.0: Додано drag-handle
         item.innerHTML = `
             <div class="drag-handle">::</div>
             <div class="list-item-content">

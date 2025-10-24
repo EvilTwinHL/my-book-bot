@@ -41,6 +41,9 @@ let contextMenuProjectTitle = null;
  */
 function renderProjectsList(projects) {
     if (!ui.projectsList) return;
+
+    // [ CRITICAL FIX v2.6.3 ] Захист: Переконайтеся, що ми маємо масив.
+    const projectList = Array.isArray(projects) ? projects : [];
     
     if (projects.length === 0) {
         ui.projectsList.innerHTML = '<p class="empty-list-info">У вас ще немає проєктів. Натисніть "Створити проєкт", щоб почати.</p>';

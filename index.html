@@ -71,9 +71,48 @@
                 </div>
             </div>
             <div class="header-right">
-                <input type="text" id="global-search-input" placeholder="Пошук по проєкту (Enter)">
+                <div class="search-container">
+                    <div class="search-icon">🔍</div>
+                    <input type="text" id="global-search-input" placeholder="Пошук по проєкту...">
+                    <div class="search-shortcut">⌘K</div>
+                </div>
             </div>
         </header>
+
+        <!-- Нова навігація: Хлібні крихти -->
+        <div class="breadcrumbs hidden" id="breadcrumbs">
+            <div class="breadcrumb-item">
+                <a href="#" id="breadcrumb-projects">Проєкти</a>
+            </div>
+            <div class="breadcrumb-item" id="breadcrumb-current"></div>
+        </div>
+
+        <!-- Нова навігація: Швидкий доступ -->
+        <div class="quick-access-bar hidden" id="quick-access">
+            <div class="quick-action" data-action="new-chapter">
+                <div class="quick-action-icon">📝</div>
+                <div class="quick-action-text">Новий розділ</div>
+            </div>
+            <div class="quick-action" data-action="new-character">
+                <div class="quick-action-icon">👤</div>
+                <div class="quick-action-text">Персонаж</div>
+            </div>
+            <div class="quick-action" data-action="save-project">
+                <div class="quick-action-icon">💾</div>
+                <div class="quick-action-text">Зберегти</div>
+            </div>
+            <div class="quick-action" data-action="export-project">
+                <div class="quick-action-icon">📤</div>
+                <div class="quick-action-text">Експорт</div>
+            </div>
+            <div class="quick-action" data-action="quick-chat">
+                <div class="quick-action-icon">💬</div>
+                <div class="quick-action-text">Чат з Опусом</div>
+            </div>
+        </div>
+
+        <!-- Нова навігація: Індикатор прогресу -->
+        <div class="nav-progress hidden" id="nav-progress"></div>
 
         <nav id="workspace-nav">
             <button class="tab-btn active" data-tab="chapters-tab">Розділи</button>
@@ -117,6 +156,23 @@
                     <label for="chapter-text">Текст розділу:</label>
                     <textarea id="chapter-text"></textarea>
                     <p id="chapter-stats">Слів у розділі: 0</p>
+                    
+                    <!-- Контекстна навігація для розділів -->
+                    <div class="context-navigation hidden" id="chapter-navigation">
+                        <div class="nav-section">
+                            <button class="nav-btn" id="prev-chapter-btn" title="Попередній розділ">
+                                ← Попередній
+                            </button>
+                        </div>
+                        <div class="nav-section">
+                            <span class="text-caption" id="chapter-counter">Розділ 1 з 10</span>
+                        </div>
+                        <div class="nav-section">
+                            <button class="nav-btn" id="next-chapter-btn" title="Наступний розділ">
+                                Наступний →
+                            </button>
+                        </div>
+                    </div>
                 </main>
                 <div id="chapter-editor-placeholder" class="editor-pane-placeholder">
                     <p>Оберіть розділ зі списку або створіть новий.</p>
@@ -140,6 +196,23 @@
                     <textarea id="character-description"></textarea>
                     <label for="character-arc">Арка / Мотивація:</label>
                     <textarea id="character-arc"></textarea>
+                    
+                    <!-- Контекстна навігація для персонажів -->
+                    <div class="context-navigation hidden" id="character-navigation">
+                        <div class="nav-section">
+                            <button class="nav-btn" id="prev-character-btn" title="Попередній персонаж">
+                                ← Попередній
+                            </button>
+                        </div>
+                        <div class="nav-section">
+                            <span class="text-caption" id="character-counter">Персонаж 1 з 10</span>
+                        </div>
+                        <div class="nav-section">
+                            <button class="nav-btn" id="next-character-btn" title="Наступний персонаж">
+                                Наступний →
+                            </button>
+                        </div>
+                    </div>
                 </main>
                 <div id="character-editor-placeholder" class="editor-pane-placeholder">
                     <p>Оберіть персонажа зі списку або створіть нового.</p>
@@ -161,6 +234,23 @@
                     </div>
                     <label for="location-description">Опис локації:</label>
                     <textarea id="location-description"></textarea>
+                    
+                    <!-- Контекстна навігація для локацій -->
+                    <div class="context-navigation hidden" id="location-navigation">
+                        <div class="nav-section">
+                            <button class="nav-btn" id="prev-location-btn" title="Попередня локація">
+                                ← Попередня
+                            </button>
+                        </div>
+                        <div class="nav-section">
+                            <span class="text-caption" id="location-counter">Локація 1 з 10</span>
+                        </div>
+                        <div class="nav-section">
+                            <button class="nav-btn" id="next-location-btn" title="Наступна локація">
+                                Наступна →
+                            </button>
+                        </div>
+                    </div>
                 </main>
                 <div id="location-editor-placeholder" class="editor-pane-placeholder">
                     <p>Оберіть локацію зі списку або створіть нову.</p>
@@ -182,6 +272,23 @@
                     </div>
                     <label for="plotline-description">Опис / Ключові події:</label>
                     <textarea id="plotline-description"></textarea>
+                    
+                    <!-- Контекстна навігація для сюжетних ліній -->
+                    <div class="context-navigation hidden" id="plotline-navigation">
+                        <div class="nav-section">
+                            <button class="nav-btn" id="prev-plotline-btn" title="Попередня сюжетна лінія">
+                                ← Попередня
+                            </button>
+                        </div>
+                        <div class="nav-section">
+                            <span class="text-caption" id="plotline-counter">Сюжет 1 з 10</span>
+                        </div>
+                        <div class="nav-section">
+                            <button class="nav-btn" id="next-plotline-btn" title="Наступна сюжетна лінія">
+                                Наступна →
+                            </button>
+                        </div>
+                    </div>
                 </main>
                 <div id="plotline-editor-placeholder" class="editor-pane-placeholder">
                     <p>Оберіть сюжетну лінію або створіть нову.</p>
@@ -272,10 +379,6 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 
     <script>
@@ -289,8 +392,11 @@
         messagingSenderId: "569032470725",
         appId: "1:569032470725:web:e3a2469d7a22e69818e3c1"
       };
+      // v2.5.0: Робимо config глобальним, оскільки в main.js (колишній client.js) поки що немає імпорту
+      window.firebaseConfig = firebaseConfig; 
     </script>
     
-    <script src="client.js"></script>
-</body>
+    <script type="module" src="/main.js"></script> 
+
+    </body>
 </html>

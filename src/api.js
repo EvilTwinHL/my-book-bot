@@ -175,3 +175,4 @@ export function logError(error, context = "Невідома помилка") {
         })
     }).catch(err => console.error("Не вдалося залогувати помилку на сервер:", err));
 }
+// --oo--

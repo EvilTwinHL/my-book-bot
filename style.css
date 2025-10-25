@@ -405,7 +405,7 @@ button, .btn {
 }
 
 .btn-warning {
-    background-color: var(--color-warning);
+    background-color: #e0ac01;
     color: #212121; 
     box-shadow: var(--shadow-md);
 }
@@ -835,7 +835,7 @@ button, .btn {
 .project-card:hover {
     transform: translateY(-5px); /* <--- Ефект "підняття" */
     box-shadow: var(--shadow-lg); /* <--- Більша тінь */
-    border-color: var(--color-primary-hover);
+    /*border-color: var(--color-primary-hover); */
 }
 
 /* --- Внутрішні елементи картки --- */
@@ -868,7 +868,8 @@ button, .btn {
 
 /* "Оновлено" */
 .project-card-updated {
-    font-size: 0.8em;
+    transform: translateY(55px);
+    font-size: 0.7em;
     color: var(--color-text-tertiary);
     margin-bottom: var(--space-md);
 }

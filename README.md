@@ -1,4 +1,4 @@
-[![Версія](https://img.shields.io/badge/Version-2.8.4-blue.svg)](./package.json)
+[![Версія](https://img.shields.io/badge/Version-2.8.4-blue.svg)](./src/core/config.js)
 
 
 # 📖 Опус: Бот-Співавтор (v2.8.4)

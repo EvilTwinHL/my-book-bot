@@ -1,10 +1,10 @@
 // src/core/config.js
 
 /**
- * CONFIGURATION SETTINGS (v2.8.3)
+ * CONFIGURATION SETTINGS (v2.8.4)
  */
 export const CONFIG = {
-    APP_VERSION: "2.8.3", // ОНОВЛЕНО v2.8.3 (feat(ui): Add hover effects to header usernam))
+    APP_VERSION: "2.8.4", // ОНОВЛЕНО v2.8. (feat(ui): fix bugs))
     AUTOSAVE_DELAY: 1500, // ms
     DEFAULT_GOAL_WORDS: 50000,
     SNIPPET_LENGTH: 80, // characters

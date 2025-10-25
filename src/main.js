@@ -179,7 +179,8 @@ function setupGlobalListeners() {
 
     // --- v2.7.0 / v2.8.0: Хедер ---
     ui.headerLogoutBtn?.addEventListener('click', signOut); // (Переміщено)
-    ui.headerUsername?.addEventListener('click', handleChangeDisplayName); // (НОВЕ)
+    // src/main.js (НОВА ВЕРСІЯ)
+    ui.usernameContainer?.addEventListener('click', handleChangeDisplayName); // (Перенесено з headerUsername)
 
     // --- Проєкти та Контекстне меню ---
     ui.createProjectBtn?.addEventListener('click', handleCreateProject);

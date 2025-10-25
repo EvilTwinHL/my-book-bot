@@ -35,9 +35,12 @@ export function bindUIElements() {
 
         // --- v2.7.0: Глобальний Хедер ---
         globalHeader: document.getElementById('global-header'),
+        usernameContainer: document.getElementById('username-container'),// <-- ДОДАНО
         headerUsername: document.getElementById('header-username'),
+        editUsernameIcon: document.getElementById('edit-username-icon'), // <-- ДОДАНО
         headerLogoutBtn: document.getElementById('header-logout-btn'),
-        globalSearchInput: document.getElementById('global-search-input'), 
+        globalSearchInput: document.getElementById('global-search-input'),
+
         // globalSearchBtn: (видалено у v2.7.1)
 
         // --- Головний контейнер ---

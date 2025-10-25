@@ -179,7 +179,7 @@ body {
 }
 
 /* style.css (НОВА ВЕРСІЯ) */
-#header-username {
+/*#header-username {
     color: var(--color-text-secondary);
     font-weight: 500;
     white-space: nowrap;
@@ -187,35 +187,86 @@ body {
     /* ▼▼▼ ДОДАНО v2.8.1: Ефекти наведення ▼▼▼ */
     
     /* 1. Курсор-рука */
-    cursor: pointer; 
+    /*cursor: pointer; 
     
     /* 2. Плавна зміна кольору */
-    position: relative; 
+    /*position: relative; 
     transition: color 0.2s ease;
-}
+}*/
 
 /* 3. Підсвічування при наведенні */
-#header-username:hover {
+/*#header-username:hover {
     color: var(--color-primary); 
     text-decoration: underline; 
 }
 
 /* 4. Іконка олівця, що з'являється */
-#header-username::after {
+/*#header-username::after {
     content: '✏️';
     font-size: 0.9em; /* Трохи менший олівець */
-    margin-left: var(--space-xs); /* Відступ від тексту */
+    /*margin-left: var(--space-xs); /* Відступ від тексту */
     
     /* Анімація появи */
-    display: inline-block;
+    /*display: inline-block;
     opacity: 0; /* Сховано за замовчуванням */
-    transform: translateX(-5px); /* Початкова позиція (трохи ліворуч) */
-    transition: all 0.2s ease;
+    /*transform: translateX(-5px); /* Початкова позиція (трохи ліворуч) */
+    /*transition: all 0.2s ease;
+}*/
+
+/*#header-username:hover::after {
+    opacity: 1; /* Показати */
+    /*transform: translateX(0); /* Зсунути на місце */
+/*}*/
+
+/* ▼▼▼ ОНОВЛЕНО v2.8.2: Ефекти наведення для імені користувача ▼▼▼ */
+
+/* Контейнер, що містить ім'я та іконку */
+#username-container {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs); /* Відстань між іменем та іконкою */
+    cursor: pointer;
+    position: relative; 
+    padding: var(--space-xs) var(--space-sm); /* Збільшити клікабельну зону */
+    border-radius: var(--radius-md);
+    transition: background-color 0.2s ease;
 }
 
-#header-username:hover::after {
-    opacity: 1; /* Показати */
-    transform: translateX(0); /* Зсунути на місце */
+/* Сам текст імені */
+#header-username {
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    white-space: nowrap;
+    transition: all 0.2s ease; /* Для плавного 'scale' */
+}
+
+/* Нова іконка (SVG) */
+#edit-username-icon {
+    width: 14px;  /* Трохи менша за пошук */
+    height: 14px;
+    filter: invert(60%); /* Світло-сіра, як іконка пошуку */
+    transition: all 0.2s ease;
+    opacity: 0; /* Прихована за замовчуванням */
+    transform: translateX(-5px); /* Початкова позиція для анімації */
+}
+
+/* --- Ефекти при наведенні --- */
+
+/* 1. Поява тіні/фону на контейнері */
+#username-container:hover {
+    background-color: var(--color-bg-tertiary);
+}
+
+/* 2. Збільшення тексту (замість зміни кольору) */
+#username-container:hover #header-username {
+    /*transform: scale(1.03); /* Легке збільшення */
+     text-shadow: 0 0 5px rgba(255, 255, 255, 0.29); /* (Можете розкоментувати для тіні) */
+}
+
+/* 3. Поява іконки (SVG) */
+#username-container:hover #edit-username-icon {
+    opacity: 1;
+    transform: translateX(0);
 }
 
 /* ===================================== */

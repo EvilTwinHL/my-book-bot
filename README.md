@@ -137,4 +137,4 @@
 
     =================================================================
 
-## The code is entirely written in the LLM Google's model gemini-2.5-pro**      
+## The code is entirely written in the LLM Google's model gemini-2.5-pro    

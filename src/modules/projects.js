@@ -42,25 +42,58 @@ let contextMenuProjectTitle = null;
 function renderProjectsList(projects) {
     if (!ui.projectsList) return;
 
-    // [ CRITICAL FIX v2.6.3 ] Захист: Переконайтеся, що ми маємо масив.
     const projectList = Array.isArray(projects) ? projects : [];
     
-    if (projects.length === 0) {
+    if (projectList.length === 0) {
         ui.projectsList.innerHTML = '<p class="empty-list-info">У вас ще немає проєктів. Натисніть "Створити проєкт", щоб почати.</p>';
         return;
     }
     
     ui.projectsList.innerHTML = ''; 
-    projects.forEach(project => {
+    projectList.forEach(project => {
         const item = document.createElement('div');
-        item.className = 'project-item';
+        item.className = 'project-card'; // <--- НОВИЙ КЛАС
         item.dataset.id = project.id;
         
+        // Дані для рендерингу
+        const title = escapeHTML(project.title);
+        // (v2.9.0) Додаємо 'genre' (жанр). Якщо його немає, використовуємо 'Не вказано'
+        const genre = escapeHTML(project.genre || 'Не вказано'); 
+        const wordCount = project.totalWordCount || 0;
+        const updatedAt = new Date(project.updatedAt).toLocaleString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
+        
+        // (v2.9.0) Розрахунок прогрес-бару
+        // Використовуємо 'wordGoal' з 'content' або 0
+        const goal = project.content?.wordGoal || 0; 
+        let progressPercent = 0;
+        if (goal > 0 && wordCount > 0) {
+            progressPercent = Math.min(100, (wordCount / goal) * 100);
+        }
+
+        // <--- НОВА HTML-СТРУКТУРА
         item.innerHTML = `
-            <h3>${escapeHTML(project.title)}</h3>
-            <p>Слів: ${project.totalWordCount || 0}</p>
-            <p>Оновлено: ${new Date(project.updatedAt).toLocaleString('uk-UA')}</p>
+            <div class="project-card-header">
+                <h3>${title}</h3>
+                <span class="project-card-genre">${genre}</span>
+            </div>
+
+            <div class="project-card-body">
+                <p class="project-card-updated">Оновлено: ${updatedAt}</p>
+            </div>
+
+            <div class="project-card-footer">
+                <div class="project-card-stats">
+                    <div>Слів: <span>${wordCount.toLocaleString('uk-UA')}</span></div>
+                    ${goal > 0 ? `<div>Ціль: <span>${goal.toLocaleString('uk-UA')}</span></div>` : ''}
+                </div>
+                ${goal > 0 ? `
+                <div class="project-card-progress" title="${progressPercent.toFixed(0)}% виконано">
+                    <div class="project-card-progress-bar" style="width: ${progressPercent}%;"></div>
+                </div>
+                ` : ''}
+            </div>
         `;
+        
         item.addEventListener('click', () => openProject(project.id));
         item.addEventListener('contextmenu', (e) => showProjectContextMenu(e, project.id, project.title));
         ui.projectsList.appendChild(item);

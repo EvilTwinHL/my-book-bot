@@ -1,10 +1,10 @@
 // src/core/config.js
 
 /**
- * CONFIGURATION SETTINGS (v2.8.4)
+ * CONFIGURATION SETTINGS (v2.9.0)
  */
 export const CONFIG = {
-    APP_VERSION: "2.8.4", // ОНОВЛЕНО v2.8. (feat(ui): fix bugs))
+    APP_VERSION: "2.9.0", // ОНОВЛЕНО v2.9.0 (feat(ui): Implement Stage 2 'Collection' Screen (v2.9.0))
     AUTOSAVE_DELAY: 1500, // ms
     DEFAULT_GOAL_WORDS: 50000,
     SNIPPET_LENGTH: 80, // characters

@@ -383,7 +383,7 @@ button, .btn {
 }
 
 .btn-primary:active {
-    transform: translateY(0);
+    transform: translateY();
     box-shadow: var(--shadow-sm);
 }
 
@@ -800,115 +800,113 @@ button, .btn {
     margin-bottom: var(--space-xxl);
 }
 
-/* ===================================== */
-/* --- v1.1.0: СПИСОК ПРОЄКТІВ --- */
-/* ===================================== */
-
+/* === ОНОВЛЕНО v2.9.0: СТИЛІ ДЛЯ КОЛЕКЦІЇ ПРОЄКТІВ === */
 #projects-container {
-    max-width: 900px;
-    margin: 0 auto;
+    max-width: 1200px; /* <--- Збільшено ширину */
+    margin: 40px auto;
 }
 
-.projects-header {
+/* 1. Створюємо сітку карток */
+#projects-list {
+    display: grid;
+    /* Адаптивна сітка: 
+       - Намагаємося розмістити колонки шириною 280px.
+       - 'auto-fill' додасть стільки колонок, скільки влізе.
+       - '1fr' змусить колонки розтягнутися, щоб заповнити весь простір.
+    */
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-lg); /* <--- Збільшено відступ */
+}
+
+/* 2. Стиль самої картки (колишній .project-item) */
+.project-card {
+    background-color: var(--color-bg-secondary);
+    border-radius: var(--radius-lg); /* <--- Більший радіус */
+    border: 1px solid var(--color-bg-tertiary);
+    box-shadow: var(--shadow-sm);
+    padding: var(--space-md);
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    display: flex; /* <--- Flex-колонка для внутрішнього контенту */
+    flex-direction: column;
+    min-height: 200px; /* <--- Мінімальна висота */
+}
+
+.project-card:hover {
+    transform: translateY(-5px); /* <--- Ефект "підняття" */
+    box-shadow: var(--shadow-lg); /* <--- Більша тінь */
+    border-color: var(--color-primary-hover);
+}
+
+/* --- Внутрішні елементи картки --- */
+
+.project-card-header {
+    flex-shrink: 0;
+}
+
+.project-card-header h3 {
+    margin-top: 0;
+    margin-bottom: var(--space-xs);
+    color: var(--color-text-primary);
+    font-size: 1.25em; /* <--- Більший заголовок */
+}
+
+/* "Жанр" - ми додамо це в HTML */
+.project-card-genre {
+    font-size: 0.9em;
+    color: var(--color-accent); /* <--- Акцентний колір */
+    font-weight: 500;
+    margin-bottom: var(--space-md);
+    display: block;
+    min-height: 1.2em; /* Резервуємо місце, навіть якщо жанру немає */
+}
+
+/* Блок, що "розтягується", щоб притиснути статистику до низу */
+.project-card-body {
+    flex-grow: 1; 
+}
+
+/* "Оновлено" */
+.project-card-updated {
+    font-size: 0.8em;
+    color: var(--color-text-tertiary);
+    margin-bottom: var(--space-md);
+}
+
+/* Блок зі статистикою внизу картки */
+.project-card-stats {
+    flex-shrink: 0;
+    border-top: 1px solid var(--color-bg-tertiary);
+    padding-top: var(--space-sm);
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-lg);
-}
-
-.projects-header h2 {
-    margin: 0;
-}
-
-.skeleton-item {
-    background-color: var(--color-bg-tertiary);
-    border-radius: var(--radius-lg);
-    height: 100px;
-    margin-bottom: var(--space-md);
-    opacity: 0.5;
-    animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 0.5; }
-    50% { opacity: 1; }
-}
-
-.project-item {
-    background-color: var(--color-bg-tertiary);
-    padding: var(--space-lg);
-    border-radius: var(--radius-lg);
-    margin-bottom: var(--space-md);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: 1px solid transparent;
-    box-shadow: var(--shadow-sm);
-}
-
-.project-item:hover {
-    background-color: var(--color-bg-elevated);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-    border-color: var(--color-primary);
-}
-
-.project-item h3 {
-    margin: 0 0 var(--space-sm) 0;
-    color: var(--color-text-primary);
-}
-
-.project-item p {
-    margin: 0;
-    font-size: var(--font-size-sm);
+    font-size: 0.9em;
     color: var(--color-text-secondary);
 }
 
-.project-item p:last-child {
-    margin-top: var(--space-sm);
-    font-style: italic;
-}
-
-.empty-list-info {
-    text-align: center;
-    color: var(--color-text-tertiary);
-    font-size: var(--font-size-lg);
-    padding: var(--space-xxl);
-}
-
-.error-info { color: var(--color-danger); }
-
-.context-menu {
-    position: fixed;
-    background-color: var(--color-bg-elevated);
-    border: 1px solid var(--color-bg-tertiary);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-lg);
-    z-index: 100;
-    display: flex;
-    flex-direction: column;
-}
-
-.context-menu button {
-    background: none;
-    border: none;
+.project-card-stats span {
+    font-weight: 600;
     color: var(--color-text-primary);
-    padding: var(--space-sm) var(--space-md);
-    text-align: left;
+}
+
+/* Прогрес-бар (ми додамо це в HTML) */
+.project-card-progress {
     width: 100%;
-    font-weight: var(--font-weight-normal);
-    border-radius: 0;
-    box-shadow: none;
+    background-color: var(--color-bg-tertiary);
+    height: 6px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-top: var(--space-sm);
 }
 
-.context-menu button:hover {
+.project-card-progress-bar {
+    height: 100%;
+    width: 0; /* Буде встановлено через style="" */
     background-color: var(--color-primary);
-    color: white;
+    border-radius: var(--radius-sm);
+    transition: width 0.5s ease;
 }
 
-#context-delete-btn:hover {
-    background-color: var(--color-danger);
-    color: white;
-}
 
 /* ===================================== */
 /* --- v1.1.0: РОБОЧА ОБЛАСТЬ (WORKSPACE) --- */

@@ -1,4 +1,4 @@
-// src/main.js - Головна точка входу (v2.6.0)
+// src/main.js - Головна точка входу (Оновлено для v2.7.0 з виправленням завантаження)
 
 import { CONFIG } from './core/config.js';
 import { 
@@ -17,7 +17,7 @@ import { bindUIElements } from './ui/dom.js';
 import { handleError, showToast } from './ui/global.js';
 import { initializeFirebase, signIn, signOut } from './modules/auth.js';
 import { handleCreateProject, handleContextEdit, handleContextDelete, handleContextExport } from './modules/projects.js';
-import { handleBackToProjects, handleQuickAccessAction, handleTitleUpdate, handleGlobalSearch, switchTab } from './modules/workspace.js';
+import { handleBackToProjects, handleQuickAccessAction, handleTitleUpdate, switchTab } from './modules/workspace.js';
 import { triggerManualSave } from './modules/save.js';
 import { scheduleSave } from './api.js';
 import { updateChapterWordCount } from './utils/stats.js';
@@ -36,6 +36,7 @@ import {
     selectPlotline
 } from './modules/lists.js';
 import { sendChatMessage } from './modules/chat.js';
+import { openSearchModal } from './modules/search.js'; 
 import { closeSearchResultsModal } from './ui/modal.js';
 
 
@@ -95,6 +96,9 @@ function addSaveListener(element, fieldName, property, isNumber = false) {
     });
 }
 
+/**
+ * Прив'язує слухачі до елементів UI
+ */
 function setupGlobalListeners() {
     // --- Глобальні обробники ---
     window.addEventListener('beforeunload', (e) => {
@@ -109,7 +113,10 @@ function setupGlobalListeners() {
             if (e.key === 'z') { e.preventDefault(); undo(); } 
             else if (e.key === 'y') { e.preventDefault(); redo(); }
             else if (e.key === 's') { e.preventDefault(); triggerManualSave(); }
-            else if (e.key === 'k') { e.preventDefault(); handleQuickAccessAction({ target: { closest: () => ({ dataset: { action: 'global-search' } }) } }) }
+            else if (e.key === 'k') { 
+                e.preventDefault(); 
+                ui.globalSearchInput?.focus();
+            }
         }
         if (e.key === 'Escape' && ui.searchResultsModal && !ui.searchResultsModal.classList.contains('hidden')) {
             closeSearchResultsModal();
@@ -118,7 +125,7 @@ function setupGlobalListeners() {
 
     // --- Автентифікація ---
     ui.signInBtn?.addEventListener('click', signIn);
-    ui.signOutBtn?.addEventListener('click', signOut);
+    ui.headerLogoutBtn?.addEventListener('click', signOut); // <-- v2.7.0
 
     // --- Проєкти та Контекстне меню ---
     ui.createProjectBtn?.addEventListener('click', handleCreateProject);
@@ -136,8 +143,15 @@ function setupGlobalListeners() {
     ui.quickAccessBar?.addEventListener('click', handleQuickAccessAction);
     ui.saveStatusIndicator?.addEventListener('click', triggerManualSave);
     ui.workspaceTitleInput?.addEventListener('change', handleTitleUpdate);
-    ui.globalSearchInput?.addEventListener('keydown', handleGlobalSearch);
+    
+    // --- Пошук (v2.7.0 - Перенесено в хедер) ---
     ui.searchResultsCloseBtn?.addEventListener('click', closeSearchResultsModal);
+    ui.globalSearchBtn?.addEventListener('click', openSearchModal);
+    ui.globalSearchInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            openSearchModal();
+        }
+    });
 
     // Toggle title edit mode
     ui.workspaceTitle?.addEventListener('click', () => {
@@ -226,22 +240,31 @@ function setupGlobalListeners() {
 }
 
 
+// ▼▼▼ ОНОВЛЕНИЙ БЛОК ЗАВАНТАЖЕННЯ v2.7.0 ▼▼▼
 document.addEventListener('DOMContentLoaded', () => {
     try {
-        console.log(`Ініціалізація Opus: Бот-Співавтор v${CONFIG.APP_VERSION}`);
-        
+        // 1. Зв'язуємо UI елементи В ПЕРШУ ЧЕРГУ.
+        // Це критично, щоб `catch` міг показати помилку.
         bindUIElements();
+        
+        // 2. Тепер, коли UI зв'язаний, ми можемо логувати та оновлювати UI.
+        console.log(`Ініціалізація Opus: Бот-Співавтор v${CONFIG.APP_VERSION}`);
         
         if (ui.versionNumber) { 
             ui.versionNumber.textContent = CONFIG.APP_VERSION;
         }
 
+        // 3. Встановлюємо слухачі
         setupGlobalListeners();
 
+        // 4. Ініціалізуємо Firebase
         initializeFirebase();
         
     } catch (e) {
+        // Якщо щось пішло не так, `bindUIElements` вже мав спрацювати,
+        // тому ми можемо безпечно викликати handleError.
+        console.error("Критична помилка під час DOMContentLoaded:", e);
         handleError(e, "DOMContentLoaded_init");
-        showToast("Критична помилка ініціалізації. Перевірте консоль браузера.", "error");
+        showToast("Критична помилка ініціалізації. Перевірте консоль.", "error");
     }
 });

@@ -2,7 +2,7 @@
 
 import { 
     currentProjectData, 
-    ui 
+    ui // <-- ДОДАНО ui до імпортів
 } from '../state.js';
 import { 
     switchTab 
@@ -18,6 +18,19 @@ import {
     getSnippet 
 } from '../utils/utils.js';
 import { closeSearchResultsModal } from '../ui/modal.js';
+
+// ▼▼▼ НОВА ФУНКЦІЯ v2.7.0 ▼▼▼
+/**
+ * Отримує запит з глобального пошуку в хедері та запускає модальне вікно.
+ */
+export function openSearchModal() {
+    if (!ui.globalSearchInput) {
+        console.error("Елемент пошуку #global-search-input не знайдено.");
+        return;
+    }
+    const query = ui.globalSearchInput.value;
+    performGlobalSearch(query);
+}
 
 export function performGlobalSearch(query) {
     if (!currentProjectData || !ui.searchResultsList || !ui.searchResultsModal) return;
@@ -108,11 +121,16 @@ function renderSearchResults(results, query) {
         const item = document.createElement('div');
         item.className = 'search-result-item';
         
-        const title = (res.title || '...').replace(new RegExp(query, 'gi'), (match) => `<mark>${match}</mark>`);
-        const text = res.text.replace(new RegExp(query, 'gi'), (match) => `<mark>${match}</mark>`);
+        // Використовуємо escapeHTML для безпечного відображення, а потім замінюємо
+        const safeTitle = escapeHTML(res.title || '...');
+        const safeText = escapeHTML(res.text);
+        const safeQuery = escapeHTML(query);
+
+        const title = safeTitle.replace(new RegExp(safeQuery, 'gi'), (match) => `<mark>${match}</mark>`);
+        const text = safeText.replace(new RegExp(safeQuery, 'gi'), (match) => `<mark>${match}</mark>`);
         
         item.innerHTML = `
-            <strong>${res.type}:</strong> ${title}
+            <strong>${escapeHTML(res.type)}:</strong> ${title}
             <p>${text}</p>
         `;
         

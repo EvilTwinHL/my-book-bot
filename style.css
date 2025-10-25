@@ -59,7 +59,9 @@
 
 body { 
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-    padding: var(--space-sm);
+    /* ▼▼▼ ВИДАЛЕНО PADDING З BODY ▼▼▼ */
+    padding: 0; 
+    margin: 0;
     background-color: var(--color-bg-primary);
     color: var(--color-text-primary);
     line-height: 1.6;
@@ -77,6 +79,89 @@ body {
 }
 
 .hidden { display: none !important; }
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ===================================== */
+/* --- v2.7.0: Глобальний Хедер --- */
+/* ===================================== */
+#global-header {
+    background-color: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-bg-tertiary);
+    padding: 0 var(--space-md);
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 100;
+    height: 60px;
+    box-sizing: border-box; /* Важливо для 100% ширини */
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    max-width: 1600px; /* Або ваша макс. ширина */
+    margin: 0 auto;
+}
+
+.header-left {
+    flex: 1 0 150px;
+}
+
+#header-logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--color-text-primary);
+}
+
+.header-center {
+    flex: 1 1 40%;
+    display: flex;
+    justify-content: center;
+}
+
+#global-search-container {
+    display: flex;
+    width: 100%;
+    max-width: 400px;
+}
+
+#global-search-container #global-search-input {
+    margin-bottom: 0;
+    flex-grow: 1;
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+#global-search-container #global-search-btn {
+    margin-bottom: 0;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+
+.header-right {
+    flex: 1 0 150px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-md);
+}
+
+#header-username {
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    white-space: nowrap;
+}
 
 /* ===================================== */
 /* --- ТИПОГРАФІЯ ТА ВІЗУАЛЬНА ІЄРАРХІЯ --- */
@@ -138,7 +223,10 @@ h4 {
 /* ===================================== */
 
 input[type="text"], input[type="number"], textarea, select {
-    width: calc(100% - 22px);
+    /* ▼▼▼ ВИПРАВЛЕНО ШИРИНУ v2.7.0 ▼▼▼ */
+    width: 100%;
+    box-sizing: border-box; 
+    /* ▲▲▲ */
     padding: var(--space-sm);
     margin-bottom: var(--space-md);
     border: 1px solid var(--color-bg-tertiary);
@@ -299,41 +387,12 @@ button, .btn {
 }
 
 /* Іконки для вкладок */
-.tab-btn[data-tab="chapters-tab"]::after {
-    content: '📖';
-    margin-left: var(--space-sm);
-    font-size: var(--font-size-sm);
-}
-
-.tab-btn[data-tab="characters-tab"]::after {
-    content: '👤';
-    margin-left: var(--space-sm);
-    font-size: var(--font-size-sm);
-}
-
-.tab-btn[data-tab="locations-tab"]::after {
-    content: '🏛️';
-    margin-left: var(--space-sm);
-    font-size: var(--font-size-sm);
-}
-
-.tab-btn[data-tab="plotlines-tab"]::after {
-    content: '📊';
-    margin-left: var(--space-sm);
-    font-size: var(--font-size-sm);
-}
-
-.tab-btn[data-tab="world-tab"]::after {
-    content: '🌍';
-    margin-left: var(--space-sm);
-    font-size: var(--font-size-sm);
-}
-
-.tab-btn[data-tab="chat-tab"]::after {
-    content: '💬';
-    margin-left: var(--space-sm);
-    font-size: var(--font-size-sm);
-}
+.tab-btn[data-tab="chapters-tab"]::after { content: '📖'; margin-left: var(--space-sm); font-size: var(--font-size-sm); }
+.tab-btn[data-tab="characters-tab"]::after { content: '👤'; margin-left: var(--space-sm); font-size: var(--font-size-sm); }
+.tab-btn[data-tab="locations-tab"]::after { content: '🏛️'; margin-left: var(--space-sm); font-size: var(--font-size-sm); }
+.tab-btn[data-tab="plotlines-tab"]::after { content: '📊'; margin-left: var(--space-sm); font-size: var(--font-size-sm); }
+.tab-btn[data-tab="world-tab"]::after { content: '🌍'; margin-left: var(--space-sm); font-size: var(--font-size-sm); }
+.tab-btn[data-tab="chat-tab"]::after { content: '💬'; margin-left: var(--space-sm); font-size: var(--font-size-sm); }
 
 /* --- Хлібні крихти --- */
 .breadcrumbs {
@@ -470,53 +529,12 @@ button, .btn {
     box-shadow: none;
 }
 
-/* --- Покращена панель пошуку --- */
-.search-container {
-    position: relative;
-    top: -6px;
-    left: -42px;
-    flex-grow: 1;
-    max-width: 400px;
-}
+/* --- v2.7.0: ВИДАЛЕНО СТИЛІ СТАРОГО ПОШУКУ --- */
+/* .search-container { ... } */
+/* #global-search-input { ... } */
+/* .search-icon { ... } */
+/* .search-shortcut { ... } */
 
-#global-search-input {
-    width: 100%;
-    padding: var(--space-sm) var(--space-md) var(--space-sm) var(--space-xl);
-    margin-bottom: 0;
-    background: var(--color-bg-primary);
-    border: 1px solid var(--color-bg-tertiary);
-    transition: all 0.3s ease;
-}
-
-#global-search-input:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
-}
-
-.search-icon {
-    position: absolute;
-    left: var(--space-sm);
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--color-text-tertiary);
-    pointer-events: none;
-}
-
-.search-shortcut {
-    position: absolute;
-    right: var(--space-sm);
-    top: 50%;
-    transform: translate(-400px,-19px);
-    border: 2px solid var(--color-bg-tertiary);
-    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.15);
-    background: var(rgb(42, 42, 42));
-    color: var(--color-text-secondary);
-    padding: 8px 10px;
-    border-radius: var(--radius-sm);
-    font-size: var(--font-size-xs);
-    font-weight: var(--font-weight-medium);
-    
-}
 
 /* --- Індикатор прогресу навігації --- */
 .nav-progress {
@@ -813,14 +831,15 @@ button, .btn {
     margin-bottom: var(--space-md);
 }
 
-.header-left, .header-right {
+#workspace-header .header-left, 
+#workspace-header .header-right {
     display: flex;
     align-items: center;
     gap: var(--space-md);
 }
 
 /* v1.6.0: Пошук */
-.header-right {
+#workspace-header .header-right {
     flex-grow: 1;
     justify-content: flex-end;
 }
@@ -845,27 +864,26 @@ button, .btn {
 #workspace-title-input.hidden { display: none; }
 #workspace-title.hidden { display: none; }
 
-/* v1.7.0: Індикатор збереження */
+/* ▼▼▼ ВИПРАВЛЕНО v2.7.0: Індикатор збереження ▼▼▼ */
 #save-status-indicator {
     position: relative;
-        top: 70px;
-        left: 1150px;
+    /* top: 70px; */ /* ВИДАЛЕНО */
+    /* left: 1150px; */ /* ВИДАЛЕНО */
+    display: flex; /* ДОДАНО */
     align-items: center;
     gap: var(--space-sm);
     padding: var(--space-xs) var(--space-sm);
     border-radius: var(--radius-md);
-     cursor: pointer;
+    cursor: pointer;
     user-select: none;
-    /*transition: background-color 0.1s;*/
 }
+/* ▲▲▲ */
 
 #save-status-text {
     font-size: var(--font-size-sm);
     font-weight: bold;
     position: relative;
-        top: -3px;
-        
-    
+    /* top: -3px; */ /* ВИДАЛЕНО */
 }
 
 .status-saved { color: var(--color-success); }
@@ -874,7 +892,7 @@ button, .btn {
 .status-error { color: var(--color-danger); }
 
 .status-saved:hover, .status-unsaved:hover, .status-error:hover {
-    background-color: #c6c6c6;
+    background-color: var(--color-bg-tertiary); /* Змінено для темної теми */
 }
 
 /* Спінер для збереження (менший) */
@@ -967,6 +985,10 @@ button, .btn {
     color: white;
     border-color: var(--color-primary-hover);
     box-shadow: var(--shadow-md);
+}
+
+.list-item.active .list-item-snippet {
+    color: var(--color-text-primary);
 }
 
 .list-item-title {
@@ -1062,7 +1084,19 @@ button, .btn {
     justify-content: space-between;
     align-items: center;
     margin-bottom: var(--space-md);
+    gap: var(--space-sm);
 }
+
+.editor-pane-header input[type="text"] {
+    flex-grow: 1;
+    margin-bottom: 0;
+}
+.editor-pane-header select,
+.editor-pane-header button {
+    margin-bottom: 0;
+    width: auto;
+}
+
 
 /* v1.2.0: Статистика розділу */
 #chapter-stats {
@@ -1125,10 +1159,21 @@ button, .btn {
     margin-bottom: 0;
 }
 
+.chapter-stats-summary {
+    padding: var(--space-sm);
+    background-color: var(--color-bg-tertiary);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+}
+.chapter-stats-summary p {
+    margin: 0 0 var(--space-xs) 0;
+    font-size: var(--font-size-sm);
+}
+
 .word-goal-progress-bar {
     flex-grow: 1;
     height: 10px;
-    background-color: var(--color-bg-tertiary);
+    background-color: var(--color-bg-secondary);
     border-radius: var(--radius-sm);
     overflow: hidden;
 }
@@ -1230,6 +1275,7 @@ button, .btn {
 #app-footer {
     text-align: center;
     margin-top: var(--space-xxl);
+    padding: var(--space-md);
     font-size: var(--font-size-xs);
     color: var(--color-text-tertiary);
 }
@@ -1244,19 +1290,37 @@ button, .btn {
         margin: var(--space-sm) auto;
     }
     
-    .header-left {
-        flex-basis: 100%;
-        margin-bottom: var(--space-md);
+    /* v2.7.0: Оновлення для мобільного хедера */
+    #global-header {
+        height: auto;
+        padding: var(--space-sm);
     }
-    
+    .header-content {
+        flex-direction: column;
+        gap: var(--space-sm);
+    }
+    .header-left, .header-center, .header-right {
+        flex-basis: auto;
+        width: 100%;
+        justify-content: center;
+    }
     .header-right {
-        flex-basis: 100%;
         justify-content: space-between;
     }
+    #global-search-container {
+        max-width: 100%;
+    }
+    /* --- */
+
+    #workspace-header .header-left {
+        flex-basis: 100%;
+        margin-bottom: var(--space-md);
+        flex-wrap: wrap; /* Дозволяє переносити */
+    }
     
-    #global-search-input {
-        width: 100%;
-        flex-grow: 1;
+    #workspace-header .header-right {
+        flex-basis: 100%;
+        justify-content: space-between;
     }
     
     .world-grid {
@@ -1269,11 +1333,13 @@ button, .btn {
     
     #workspace-nav {
         margin: var(--space-md) 0;
+        overflow-x: auto; /* Дозволяє прокрутку вкладок */
     }
 
     .tab-btn {
         font-size: var(--font-size-sm);
         padding: var(--space-sm) var(--space-sm);
+        white-space: nowrap; /* Заборона переносу тексту */
     }
 
     .tab-btn::after {
@@ -1299,11 +1365,6 @@ button, .btn {
         justify-content: space-between;
     }
     
-    .search-container {
-        max-width: 100%;
-        margin-bottom: var(--space-sm);
-    }
-
     /* 3-колонний макет -> 1-колонний */
     .list-editor-layout {
         flex-direction: column;

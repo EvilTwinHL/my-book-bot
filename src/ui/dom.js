@@ -9,7 +9,14 @@ export function bindUIElements() {
     const ui = {
         spinner: document.getElementById('spinner-overlay'),
         toastContainer: document.getElementById('toast-container'),
-        
+
+        // --- v2.7.0: Глобальний Хедер ---
+        globalHeader: document.getElementById('global-header'),
+        headerUsername: document.getElementById('header-username'),
+        headerLogoutBtn: document.getElementById('header-logout-btn'),
+        globalSearchInput: document.getElementById('global-search-input'), // Переміщено з робочої області
+        globalSearchBtn: document.getElementById('global-search-btn'),     // Новий елемент
+
         // --- Модальні вікна ---
         createEditModal: document.getElementById('create-edit-modal'),
         createEditModalTitle: document.getElementById('create-edit-modal-title'),
@@ -30,8 +37,8 @@ export function bindUIElements() {
         // --- Автентифікація ---
         authContainer: document.getElementById('auth-container'),
         signInBtn: document.getElementById('sign-in-btn'),
-        signOutBtn: document.getElementById('sign-out-btn'),
-        userDisplay: document.getElementById('user-display'),
+        // signOutBtn: document.getElementById('sign-out-btn'), // <-- ЗАМІНЕНО на headerLogoutBtn
+        // userDisplay: document.getElementById('user-display'), // <-- ЗАМІНЕНО на headerUsername
 
         // --- Головний контейнер ---
         workspaceContainer: document.getElementById('workspace-container'),
@@ -55,7 +62,7 @@ export function bindUIElements() {
         saveStatusText: document.getElementById('save-status-text'),
         saveStatusSpinner: document.getElementById('save-status-spinner'),
         backToProjectsBtn: document.getElementById('back-to-projects-btn'),
-        globalSearchInput: document.getElementById('global-search-input'),
+        // globalSearchInput: document.getElementById('global-search-input'), // <-- ПЕРЕМІЩЕНО у хедер
         
         breadcrumbs: document.getElementById('breadcrumbs'), 
         breadcrumbProjects: document.getElementById('breadcrumb-projects'), 

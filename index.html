@@ -10,6 +10,25 @@
 </head>
 <body>
 
+    <header id="global-header" class="hidden">
+        <div class="header-content">
+            <div class="header-left">
+                <span id="header-logo">Gemini OpusAI</span>
+            </div>
+
+            <div class="header-center">
+                <div id="global-search-container">
+                    <input type="text" id="global-search-input" placeholder="Пошук...">
+                    <button id="global-search-btn">🔎</button>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <span id="header-username"></span>
+                <button id="header-logout-btn" class="btn-secondary">Вихід</button>
+            </div>
+        </div>
+    </header>
     <div id="spinner-overlay" class="hidden">
         <div class="spinner"></div>
     </div>
@@ -38,6 +57,24 @@
         </div>
     </div>
 
+    <div id="search-results-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Результати пошуку</h3>
+            <div id="search-results-list">
+            </div>
+            <div class="modal-buttons">
+                <button id="search-results-close-btn" class="btn-secondary">Закрити</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="project-context-menu" class="context-menu hidden">
+        <button id="context-edit-btn">Змінити назву</button>
+        <button id="context-export-btn">Експортувати (.txt)</button>
+        <button id="context-delete-btn">Видалити проєкт</button>
+    </div>
+
+
     <div id="auth-container" class="container hidden">
         <h2>Опус: Бот-Співавтор</h2>
         <p>Ваш персональний помічник для написання книг на базі Gemini.</p>
@@ -47,11 +84,7 @@
     <div id="projects-container" class="container hidden">
         <div class="projects-header">
             <h2>Мої проєкти</h2>
-            <div>
-                <span id="user-display"></span>
-                <button id="sign-out-btn" class="btn-secondary hidden">Вийти</button>
             </div>
-        </div>
         <button id="create-project-btn" class="btn-primary">Створити проєкт</button>
         <div id="projects-list">
             </div>
@@ -70,16 +103,8 @@
                     <span id="save-status-text">Збережено</span>
                 </div>
             </div>
-            <div class="header-right">
-                <div class="search-container">
-                    <!--<div class="search-icon">.</div>-->
-                    <input type="text" id="global-search-input" placeholder="Пошук по проєкту...">
-                    <div class="search-shortcut">🔍Пошук</div>
-                </div>
-            </div>
-        </header>
+            </header>
 
-        <!-- Нова навігація: Хлібні крихти -->
         <div class="breadcrumbs hidden" id="breadcrumbs">
             <div class="breadcrumb-item">
                 <a href="#" id="breadcrumb-projects">Проєкти</a>
@@ -87,7 +112,6 @@
             <div class="breadcrumb-item" id="breadcrumb-current"></div>
         </div>
 
-        <!-- Нова навігація: Швидкий доступ -->
         <div class="quick-access-bar hidden" id="quick-access">
             <div class="quick-action" data-action="new-chapter">
                 <div class="quick-action-icon">📝</div>
@@ -111,7 +135,6 @@
             </div>
         </div>
 
-        <!-- Нова навігація: Індикатор прогресу -->
         <div class="nav-progress hidden" id="nav-progress"></div>
 
         <nav id="workspace-nav">
@@ -157,7 +180,6 @@
                     <textarea id="chapter-text"></textarea>
                     <p id="chapter-stats">Слів у розділі: 0</p>
                     
-                    <!-- Контекстна навігація для розділів -->
                     <div class="context-navigation hidden" id="chapter-navigation">
                         <div class="nav-section">
                             <button class="nav-btn" id="prev-chapter-btn" title="Попередній розділ">
@@ -197,7 +219,6 @@
                     <label for="character-arc">Арка / Мотивація:</label>
                     <textarea id="character-arc"></textarea>
                     
-                    <!-- Контекстна навігація для персонажів -->
                     <div class="context-navigation hidden" id="character-navigation">
                         <div class="nav-section">
                             <button class="nav-btn" id="prev-character-btn" title="Попередній персонаж">
@@ -235,7 +256,6 @@
                     <label for="location-description">Опис локації:</label>
                     <textarea id="location-description"></textarea>
                     
-                    <!-- Контекстна навігація для локацій -->
                     <div class="context-navigation hidden" id="location-navigation">
                         <div class="nav-section">
                             <button class="nav-btn" id="prev-location-btn" title="Попередня локація">
@@ -273,7 +293,6 @@
                     <label for="plotline-description">Опис / Ключові події:</label>
                     <textarea id="plotline-description"></textarea>
                     
-                    <!-- Контекстна навігація для сюжетних ліній -->
                     <div class="context-navigation hidden" id="plotline-navigation">
                         <div class="nav-section">
                             <button class="nav-btn" id="prev-plotline-btn" title="Попередня сюжетна лінія">
@@ -362,27 +381,11 @@
         </p>
     </footer>
 
-    <div id="project-context-menu" class="context-menu hidden">
-        <button id="context-edit-btn">Змінити назву</button>
-        <button id="context-export-btn">Експортувати (.txt)</button>
-        <button id="context-delete-btn">Видалити проєкт</button>
-    </div>
-
-    <div id="search-results-modal" class="modal hidden">
-        <div class="modal-content">
-            <h3>Результати пошуку</h3>
-            <div id="search-results-list">
-                </div>
-            <div class="modal-buttons">
-                <button id="search-results-close-btn" class="btn-secondary">Закрити</button>
-            </div>
-        </div>
-    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 
     <script>
-      // Your web app's Firebase configuration (залишаємо для доступу в src/modules/auth.js)
+      // Your web app's Firebase configuration
       window.firebaseConfig = {
         apiKey: "AIzaSyBl9t1oqvNvID4dHBsj9PWJqULuMWvc3vg", 
         authDomain: "gemini-opusai.firebaseapp.com",
@@ -395,5 +398,5 @@
     
     <script src="src/main.js" type="module"></script> 
 
-    </body>
+</body>
 </html>

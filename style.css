@@ -1346,8 +1346,8 @@ button, .btn {
     top: 50%;
     transform: translateY(-50%);
     color: var(--color-text-tertiary);
-    pointer-events: none; /* Дозволяє клікати "крізь" іконку */
-    
+    pointer-events: none; 
+    z-index: 1; /* <-- ДОДАЙТЕ ЦЕЙ РЯДОК */
 }
     }
     /* --- */

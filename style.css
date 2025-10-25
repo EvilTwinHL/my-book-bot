@@ -146,9 +146,16 @@ body {
     left: var(--space-sm);
     top: 50%;
     transform: translateY(-50%);
-    color: var(--color-text-tertiary);
     pointer-events: none; 
     z-index: 1; 
+    
+    /* Нові стилі для SVG/IMG */
+    width: 16px;  /* Фіксований розмір іконки */
+    height: 16px;
+    
+    /* Перефарбовуємо SVG у колір нашого тексту.
+       Якщо ви використаєте .png, цей рядок може не спрацювати. */
+    filter: invert(60%); 
 }
 
 /* Оновлений input пошуку */

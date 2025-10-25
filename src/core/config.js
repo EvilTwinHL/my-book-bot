@@ -1,10 +1,10 @@
 // src/core/config.js
 
 /**
- * CONFIGURATION SETTINGS (v2.7.3)
+ * CONFIGURATION SETTINGS (v2.7.4
  */
 export const CONFIG = {
-    APP_VERSION: "2.7.3", // ОНОВЛЕНО v2.7.3 (refactor(ui): Improve global header appearance (v2.7.2))
+    APP_VERSION: "2.7.4", // ОНОВЛЕНО v2.7.4 (refactor(ui): Replace text emoji icon with SVG image))
     AUTOSAVE_DELAY: 1500, // ms
     DEFAULT_GOAL_WORDS: 50000,
     SNIPPET_LENGTH: 80, // characters

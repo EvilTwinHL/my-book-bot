@@ -59,7 +59,6 @@
 
 body { 
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-    /* ▼▼▼ ВИДАЛЕНО PADDING З BODY ▼▼▼ */
     padding: 0; 
     margin: 0;
     background-color: var(--color-bg-primary);
@@ -104,7 +103,8 @@ body {
     width: 100%;
     z-index: 100;
     height: 60px;
-    box-sizing: border-box; /* Важливо для 100% ширини */
+    box-sizing: border-box; 
+    box-shadow: var(--shadow-md); /* Тінь */
 }
 
 .header-content {
@@ -112,7 +112,7 @@ body {
     align-items: center;
     justify-content: space-between;
     height: 100%;
-    max-width: 1600px; /* Або ваша макс. ширина */
+    max-width: 1600px; 
     margin: 0 auto;
 }
 
@@ -132,27 +132,35 @@ body {
     justify-content: center;
 }
 
+/* ▼▼▼ ВИПРАВЛЕНО v2.7.2 ▼▼▼ */
 #global-search-container {
     display: flex;
     width: 100%;
     max-width: 400px;
+    position: relative; /* 1. Додано position: relative до контейнера */
+}
+
+/* 2. Додано десктопний стиль для іконки */
+.search-icon-inside {
+    position: absolute;
+    left: var(--space-sm);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-tertiary);
+    pointer-events: none; 
+    z-index: 1; 
 }
 
 /* Оновлений input пошуку */
 #global-search-container #global-search-input {
     margin-bottom: 0;
     flex-grow: 1;
-    /* Додаємо відступ зліва, щоб текст не залазив на іконку */
     padding-left: calc(var(--space-sm) + 24px); 
-    /* Оскільки кнопки більше немає, робимо повний радіус */
     border-radius: var(--radius-md);
-    position: relative;
+    /* 3. Видалено position: relative з input */
 }
-#global-search-container #global-search-btn {
-    margin-bottom: 0;
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-}
-
+/* 4. Видалено старий стиль для #global-search-btn */
+/* ▲▲▲ Kінець v2.7.2 ▲▲▲ */
 
 
 .header-right {
@@ -173,7 +181,6 @@ body {
 /* --- ТИПОГРАФІЯ ТА ВІЗУАЛЬНА ІЄРАРХІЯ --- */
 /* ===================================== */
 
-/* Заголовки */
 h1 {
     font-size: var(--font-size-xxxl);
     font-weight: var(--font-weight-bold);
@@ -202,7 +209,6 @@ h4 {
     color: var(--color-text-primary);
 }
 
-/* Текст різних рівнів */
 .text-lead {
     font-size: var(--font-size-lg);
     font-weight: var(--font-weight-medium);
@@ -229,10 +235,8 @@ h4 {
 /* ===================================== */
 
 input[type="text"], input[type="number"], textarea, select {
-    /* ▼▼▼ ВИПРАВЛЕНО ШИРИНУ v2.7.0 ▼▼▼ */
     width: 100%;
     box-sizing: border-box; 
-    /* ▲▲▲ */
     padding: var(--space-sm);
     margin-bottom: var(--space-md);
     border: 1px solid var(--color-bg-tertiary);
@@ -310,12 +314,12 @@ button, .btn {
 
 .btn-warning {
     background-color: var(--color-warning);
-    color: #212121; /* Білий текст краще виглядає на помаранчевому */
+    color: #212121; 
     box-shadow: var(--shadow-md);
 }
 
 .btn-warning:hover {
-    background-color: #facf41; /* Трохи світліший помаранчевий */
+    background-color: #facf41; 
     transform: translateY(-1px);
     box-shadow: var(--shadow-lg);
 }
@@ -326,7 +330,6 @@ button, .btn {
     box-shadow: var(--shadow-lg);
 }
 
-/* v1.4.0: Кнопки-іконки (для списків) */
 .btn-icon {
     background: none;
     border: none;
@@ -347,7 +350,6 @@ button, .btn {
 /* --- v2.5.0: ПОКРАЩЕНА НАВІГАЦІЯ --- */
 /* ===================================== */
 
-/* --- Покращені вкладки з індикаторами --- */
 #workspace-nav {
     display: flex;
     gap: var(--space-xs);
@@ -404,7 +406,6 @@ button, .btn {
     width: 100%;
 }
 
-/* Іконки для вкладок */
 .tab-btn[data-tab="chapters-tab"]::after { content: '📖'; margin-left: var(--space-sm); font-size: var(--font-size-sm); }
 .tab-btn[data-tab="characters-tab"]::after { content: '👤'; margin-left: var(--space-sm); font-size: var(--font-size-sm); }
 .tab-btn[data-tab="locations-tab"]::after { content: '🏛️'; margin-left: var(--space-sm); font-size: var(--font-size-sm); }
@@ -412,7 +413,6 @@ button, .btn {
 .tab-btn[data-tab="world-tab"]::after { content: '🌍'; margin-left: var(--space-sm); font-size: var(--font-size-sm); }
 .tab-btn[data-tab="chat-tab"]::after { content: '💬'; margin-left: var(--space-sm); font-size: var(--font-size-sm); }
 
-/* --- Хлібні крихти --- */
 .breadcrumbs {
     display: flex;
     align-items: center;
@@ -452,7 +452,6 @@ button, .btn {
     color: var(--color-primary);
 }
 
-/* --- Швидкий доступ --- */
 .quick-access-bar {
     display: flex;
     gap: var(--space-sm);
@@ -497,7 +496,6 @@ button, .btn {
     font-weight: var(--font-weight-medium);
 }
 
-/* --- Покращена контекстна навігація --- */
 .context-navigation {
     display: flex;
     justify-content: space-between;
@@ -547,14 +545,6 @@ button, .btn {
     box-shadow: none;
 }
 
-/* --- v2.7.0: ВИДАЛЕНО СТИЛІ СТАРОГО ПОШУКУ --- */
-/* .search-container { ... } */
-/* #global-search-input { ... } */
-/* .search-icon { ... } */
-/* .search-shortcut { ... } */
-
-
-/* --- Індикатор прогресу навігації --- */
 .nav-progress {
     height: 3px;
     background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
@@ -567,7 +557,6 @@ button, .btn {
 /* --- v1.1.0: СПІНЕР, ТОСТИ, МОДАЛКИ --- */
 /* ===================================== */
 
-/* --- v1.1.0: Спінер завантаження --- */
 #spinner-overlay {
     position: fixed;
     top: 0;
@@ -596,7 +585,6 @@ button, .btn {
     100% { transform: rotate(360deg); }
 }
 
-/* --- v1.1.0: Тости (повідомлення) --- */
 #toast-container {
     position: fixed;
     bottom: 20px;
@@ -629,7 +617,6 @@ button, .btn {
 .toast-error { background-color: var(--color-danger); color: white; }
 .toast-info { background-color: var(--color-primary); color: white; }
 
-/* --- v1.1.0: Модальні вікна --- */
 .modal {
     position: fixed;
     top: 0;
@@ -665,7 +652,6 @@ button, .btn {
     gap: var(--space-sm);
 }
 
-/* v1.6.0: Стилі для модалки пошуку */
 #search-results-list {
     max-height: 60vh;
     overflow-y: auto;
@@ -742,7 +728,6 @@ button, .btn {
     margin: 0;
 }
 
-/* v1.5.0: Скелетон */
 .skeleton-item {
     background-color: var(--color-bg-tertiary);
     border-radius: var(--radius-lg);
@@ -800,7 +785,6 @@ button, .btn {
 
 .error-info { color: var(--color-danger); }
 
-/* --- v1.1.0: Контекстне меню --- */
 .context-menu {
     position: fixed;
     background-color: var(--color-bg-elevated);
@@ -838,7 +822,6 @@ button, .btn {
 /* --- v1.1.0: РОБОЧА ОБЛАСТЬ (WORKSPACE) --- */
 /* ===================================== */
 
-/* --- v1.1.0: Заголовок --- */
 #workspace-header {
     display: flex;
     flex-wrap: wrap;
@@ -856,7 +839,6 @@ button, .btn {
     gap: var(--space-md);
 }
 
-/* v1.6.0: Пошук */
 #workspace-header .header-right {
     flex-grow: 1;
     justify-content: flex-end;
@@ -869,7 +851,6 @@ button, .btn {
     cursor: pointer;
 }
 
-/* v1.4.0: Вбудований input */
 #workspace-title-input {
     font-size: var(--font-size-xxl);
     font-weight: var(--font-weight-semibold);
@@ -882,12 +863,9 @@ button, .btn {
 #workspace-title-input.hidden { display: none; }
 #workspace-title.hidden { display: none; }
 
-/* ▼▼▼ ВИПРАВЛЕНО v2.7.0: Індикатор збереження ▼▼▼ */
 #save-status-indicator {
     position: relative;
-    /* top: 70px; */ /* ВИДАЛЕНО */
-    /* left: 1150px; */ /* ВИДАЛЕНО */
-    display: flex; /* ДОДАНО */
+    display: flex; 
     align-items: center;
     gap: var(--space-sm);
     padding: var(--space-xs) var(--space-sm);
@@ -895,13 +873,11 @@ button, .btn {
     cursor: pointer;
     user-select: none;
 }
-/* ▲▲▲ */
 
 #save-status-text {
     font-size: var(--font-size-sm);
     font-weight: bold;
     position: relative;
-    /* top: -3px; */ /* ВИДАЛЕНО */
 }
 
 .status-saved { color: var(--color-success); }
@@ -910,10 +886,9 @@ button, .btn {
 .status-error { color: var(--color-danger); }
 
 .status-saved:hover, .status-unsaved:hover, .status-error:hover {
-    background-color: var(--color-bg-tertiary); /* Змінено для темної теми */
+    background-color: var(--color-bg-tertiary); 
 }
 
-/* Спінер для збереження (менший) */
 #save-status-spinner {
     border: 2px solid var(--color-primary);
     border-top: 2px solid transparent;
@@ -923,7 +898,6 @@ button, .btn {
     animation: spin 0.8s linear infinite;
 }
 
-/* --- v1.1.0: Контент вкладок --- */
 .tab-content {
     display: none;
     animation: fadeIn 0.3s ease;
@@ -944,7 +918,6 @@ button, .btn {
     }
 }
 
-/* --- v1.1.0: 3-колонний макет (Список + Редактор) --- */
 .list-editor-layout {
     display: flex;
     border: 1px solid var(--color-bg-tertiary);
@@ -954,7 +927,6 @@ button, .btn {
     box-shadow: var(--shadow-sm);
 }
 
-/* v1.1.0: Панель зі списком */
 .list-pane {
     flex: 0 0 300px;
     border-right: 1px solid var(--color-bg-tertiary);
@@ -976,7 +948,6 @@ button, .btn {
     font-size: var(--font-size-lg);
 }
 
-/* v1.1.0: Елементи списку */
 .list-item {
     padding: var(--space-sm);
     border-radius: var(--radius-md);
@@ -1028,7 +999,6 @@ button, .btn {
     color: var(--color-text-tertiary);
 }
 
-/* v1.4.0: Drag handle & Статус */
 .drag-handle {
     cursor: grab;
     color: var(--color-text-tertiary);
@@ -1054,7 +1024,6 @@ button, .btn {
 .status-edited { background-color: var(--color-success); }
 .status-final { background-color: var(--color-accent); }
 
-/* v1.1.0: Панель редактора */
 .editor-pane {
     flex-grow: 1;
     padding: var(--space-lg);
@@ -1063,7 +1032,6 @@ button, .btn {
     flex-direction: column;
 }
 
-/* v1.1.0: Заглушка, коли нічого не обрано */
 .editor-pane-placeholder {
     display: flex;
     flex-grow: 1;
@@ -1073,7 +1041,6 @@ button, .btn {
     color: var(--color-text-tertiary);
 }
 
-/* v1.2.0: Ховаємо, коли редактор активний */
 .editor-pane.hidden {
     display: none;
 }
@@ -1082,7 +1049,6 @@ button, .btn {
     display: none;
 }
 
-/* v1.2.0: Поля редактора */
 .editor-pane label {
     display: block;
     font-size: var(--font-size-sm);
@@ -1115,14 +1081,11 @@ button, .btn {
     width: auto;
 }
 
-
-/* v1.2.0: Статистика розділу */
 #chapter-stats {
     font-size: var(--font-size-sm);
     color: var(--color-text-tertiary);
 }
 
-/* v1.2.0: Головне текстове поле (для розділу) */
 #chapter-text {
     flex-grow: 1;
     min-height: 400px;
@@ -1131,7 +1094,6 @@ button, .btn {
     line-height: 1.6;
 }
 
-/* v1.2.0: Інші великі поля */
 #chapter-synopsis, 
 #character-description, 
 #character-arc, 
@@ -1140,7 +1102,6 @@ button, .btn {
     min-height: 150px;
 }
 
-/* --- v1.2.0: Вкладка "Світ" --- */
 .world-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1165,7 +1126,6 @@ button, .btn {
     min-height: 120px;
 }
 
-/* v1.4.0: Налаштування Мети */
 .word-goal-container {
     display: flex;
     align-items: center;
@@ -1203,7 +1163,6 @@ button, .btn {
     transition: width 0.3s;
 }
 
-/* --- v1.1.0: Вкладка "Чат" --- */
 #chat-window {
     height: 60vh;
     border: 1px solid var(--color-bg-tertiary);
@@ -1249,7 +1208,6 @@ button, .btn {
     box-shadow: var(--shadow-sm);
 }
 
-/* v1.3.0: Markdown в чаті */
 .model-message strong { color: var(--color-text-primary); }
 .model-message pre {
     background-color: var(--color-bg-primary);
@@ -1266,7 +1224,6 @@ button, .btn {
     font-family: monospace;
 }
 
-/* v1.1.0: Індикатор завантаження */
 .typing-indicator {
     display: flex;
     padding: var(--space-sm) 0;
@@ -1289,7 +1246,6 @@ button, .btn {
     30% { transform: translateY(-6px); }
 }
 
-/* --- v1.1.0: Підвал --- */
 #app-footer {
     text-align: center;
     margin-top: var(--space-xxl);
@@ -1308,19 +1264,19 @@ button, .btn {
         margin: var(--space-sm) auto;
     }
     
-    /* v2.7.0: Оновлення для мобільного хедера */
     #global-header {
-    background-color: var(--color-bg-secondary);
-    border-bottom: 1px solid var(--color-bg-tertiary);
-    padding: 0 var(--space-md);
-    position: sticky;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 100;
-    height: 60px;
-    box-sizing: border-box; 
-    box-shadow: var(--shadow-md); /* <-- ДОДАНО ТІНЬ v2.7.1 */
+    /* (Стилі з вашого файлу, вони коректні) */
+        background-color: var(--color-bg-secondary);
+        border-bottom: 1px solid var(--color-bg-tertiary);
+        padding: 0 var(--space-md);
+        position: sticky;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 100;
+        height: 60px;
+        box-sizing: border-box; 
+        box-shadow: var(--shadow-md); 
     }
     .header-content {
         flex-direction: column;
@@ -1334,31 +1290,31 @@ button, .btn {
     .header-right {
         justify-content: space-between;
     }
-    /* ▼▼▼ ОНОВЛЕНО v2.7.1: Пошук з іконкою всередині ▼▼▼ */
+    
+    /* ▼▼▼ ВИПРАВЛЕНО v2.7.2: Стилі для іконки залишаються тут, але також додані в десктопну версію ▼▼▼ */
     #global-search-container {
         display: flex;
         width: 100%;
         max-width: 400px;
-        position: relative; /* Потрібно для позиціонування іконки */
-}
-/* Нова іконка всередині поля */
-.search-icon-inside {
-    position: absolute;
-    z-index: 1;
-    left: var(--space-sm);
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--color-text-tertiary);
-    pointer-events: none; 
-     
-}
+        position: relative; 
     }
-   
+
+    .search-icon-inside {
+        position: absolute;
+        z-index: 1;
+        left: var(--space-sm);
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--color-text-tertiary);
+        pointer-events: none; 
+    }
+    /* ▲▲▲ Kінець v2.7.2 ▲▲▲ */
+    
 
     #workspace-header .header-left {
         flex-basis: 100%;
         margin-bottom: var(--space-md);
-        flex-wrap: wrap; /* Дозволяє переносити */
+        flex-wrap: wrap; 
     }
     
     #workspace-header .header-right {
@@ -1376,17 +1332,17 @@ button, .btn {
     
     #workspace-nav {
         margin: var(--space-md) 0;
-        overflow-x: auto; /* Дозволяє прокрутку вкладок */
+        overflow-x: auto; 
     }
 
     .tab-btn {
         font-size: var(--font-size-sm);
         padding: var(--space-sm) var(--space-sm);
-        white-space: nowrap; /* Заборона переносу тексту */
+        white-space: nowrap; 
     }
 
     .tab-btn::after {
-        display: none; /* Ховаємо іконки на мобільних */
+        display: none; 
     }
     
     .quick-access-bar {
@@ -1408,7 +1364,6 @@ button, .btn {
         justify-content: space-between;
     }
     
-    /* 3-колонний макет -> 1-колонний */
     .list-editor-layout {
         flex-direction: column;
         height: auto;
@@ -1435,11 +1390,10 @@ button, .btn {
         display: none;
     }
     
-    /* Ховаємо редактор, якщо нічого не обрано (тільки на мобілках) */
     .editor-pane.hidden {
         display: none;
     }
-
+}
 
 /* === v2.3.0: Стилі для опцій чату === */
 #chat-context-options {

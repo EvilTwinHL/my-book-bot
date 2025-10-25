@@ -1,10 +1,10 @@
 // src/core/config.js
 
 /**
- * CONFIGURATION SETTINGS (v2.8.0)
+ * CONFIGURATION SETTINGS (v2.8.1)
  */
 export const CONFIG = {
-    APP_VERSION: "2.8.0", // ОНОВЛЕНО v2.8.0 (feat(auth): Implement custom user profiles and display name editing)
+    APP_VERSION: "2.8.1", // ОНОВЛЕНО v2.8.1 (feat(ui): Add hover effects to header usernam))
     AUTOSAVE_DELAY: 1500, // ms
     DEFAULT_GOAL_WORDS: 50000,
     SNIPPET_LENGTH: 80, // characters

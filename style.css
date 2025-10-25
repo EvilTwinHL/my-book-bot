@@ -178,10 +178,44 @@ body {
     gap: var(--space-md);
 }
 
+/* style.css (НОВА ВЕРСІЯ) */
 #header-username {
     color: var(--color-text-secondary);
     font-weight: 500;
     white-space: nowrap;
+    
+    /* ▼▼▼ ДОДАНО v2.8.1: Ефекти наведення ▼▼▼ */
+    
+    /* 1. Курсор-рука */
+    cursor: pointer; 
+    
+    /* 2. Плавна зміна кольору */
+    position: relative; 
+    transition: color 0.2s ease;
+}
+
+/* 3. Підсвічування при наведенні */
+#header-username:hover {
+    color: var(--color-primary); 
+    text-decoration: underline; 
+}
+
+/* 4. Іконка олівця, що з'являється */
+#header-username::after {
+    content: '✏️';
+    font-size: 0.9em; /* Трохи менший олівець */
+    margin-left: var(--space-xs); /* Відступ від тексту */
+    
+    /* Анімація появи */
+    display: inline-block;
+    opacity: 0; /* Сховано за замовчуванням */
+    transform: translateX(-5px); /* Початкова позиція (трохи ліворуч) */
+    transition: all 0.2s ease;
+}
+
+#header-username:hover::after {
+    opacity: 1; /* Показати */
+    transform: translateX(0); /* Зсунути на місце */
 }
 
 /* ===================================== */

@@ -15,7 +15,7 @@
     --color-primary: #007aff;
     --color-primary-hover: #0056b3;
     --color-success: #28a745;
-    --color-warning: #fd7e14;
+    --color-warning: #e0ac01;
     --color-danger: #dc3545;
     --color-accent: #6f42c1;
     
@@ -138,10 +138,14 @@ body {
     max-width: 400px;
 }
 
+/* Оновлений input пошуку */
 #global-search-container #global-search-input {
     margin-bottom: 0;
     flex-grow: 1;
-    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+    /* Додаємо відступ зліва, щоб текст не залазив на іконку */
+    padding-left: calc(var(--space-sm) + 24px); 
+    /* Оскільки кнопки більше немає, робимо повний радіус */
+    border-radius: var(--radius-md);
 }
 #global-search-container #global-search-btn {
     margin-bottom: 0;
@@ -300,6 +304,18 @@ button, .btn {
     background-color: var(--color-danger);
     color: white;
     box-shadow: var(--shadow-md);
+}
+
+.btn-warning {
+    background-color: var(--color-warning);
+    color: #212121; /* Білий текст краще виглядає на помаранчевому */
+    box-shadow: var(--shadow-md);
+}
+
+.btn-warning:hover {
+    background-color: #facf41; /* Трохи світліший помаранчевий */
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
 }
 
 .btn-danger:hover {
@@ -1292,8 +1308,17 @@ button, .btn {
     
     /* v2.7.0: Оновлення для мобільного хедера */
     #global-header {
-        height: auto;
-        padding: var(--space-sm);
+    background-color: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-bg-tertiary);
+    padding: 0 var(--space-md);
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 100;
+    height: 60px;
+    box-sizing: border-box; 
+    box-shadow: var(--shadow-md); /* <-- ДОДАНО ТІНЬ v2.7.1 */
     }
     .header-content {
         flex-direction: column;
@@ -1307,8 +1332,23 @@ button, .btn {
     .header-right {
         justify-content: space-between;
     }
+    /* ▼▼▼ ОНОВЛЕНО v2.7.1: Пошук з іконкою всередині ▼▼▼ */
     #global-search-container {
-        max-width: 100%;
+        display: flex;
+        width: 100%;
+        max-width: 400px;
+        position: relative; /* Потрібно для позиціонування іконки */
+}
+/* Нова іконка всередині поля */
+.search-icon-inside {
+    position: absolute;
+    left: var(--space-sm);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-tertiary);
+    pointer-events: none; /* Дозволяє клікати "крізь" іконку */
+    
+}
     }
     /* --- */
 
@@ -1396,7 +1436,7 @@ button, .btn {
     .editor-pane.hidden {
         display: none;
     }
-}
+
 
 /* === v2.3.0: Стилі для опцій чату === */
 #chat-context-options {

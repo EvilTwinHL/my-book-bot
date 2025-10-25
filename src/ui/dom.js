@@ -15,7 +15,7 @@ export function bindUIElements() {
         headerUsername: document.getElementById('header-username'),
         headerLogoutBtn: document.getElementById('header-logout-btn'),
         globalSearchInput: document.getElementById('global-search-input'), // Переміщено з робочої області
-        globalSearchBtn: document.getElementById('global-search-btn'),     // Новий елемент
+        // -- видалили в 2.7.2  globalSearchBtn: document.getElementById('global-search-btn'),     // Новий елемент
 
         // --- Модальні вікна ---
         createEditModal: document.getElementById('create-edit-modal'),

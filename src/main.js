@@ -146,7 +146,7 @@ function setupGlobalListeners() {
     
     // --- Пошук (v2.7.0 - Перенесено в хедер) ---
     ui.searchResultsCloseBtn?.addEventListener('click', closeSearchResultsModal);
-    ui.globalSearchBtn?.addEventListener('click', openSearchModal);
+    // -- видавлиои в v2.7.2 ui.globalSearchBtn?.addEventListener('click', openSearchModal);
     ui.globalSearchInput?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             openSearchModal();

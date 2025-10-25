@@ -1,10 +1,10 @@
 // src/core/config.js
 
 /**
- * CONFIGURATION SETTINGS (v2.7.1)
+ * CONFIGURATION SETTINGS (v2.7.2)
  */
 export const CONFIG = {
-    APP_VERSION: "2.7.1", // ОНОВЛЕНО v2.7.1 (feat(ui): Implement v2.7.0 Global Header))
+    APP_VERSION: "2.7.2", // ОНОВЛЕНО v2.7.2 (refactor(ui): Improve global header appearance (v2.7.2))
     AUTOSAVE_DELAY: 1500, // ms
     DEFAULT_GOAL_WORDS: 50000,
     SNIPPET_LENGTH: 80, // characters

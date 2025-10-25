@@ -1,4 +1,4 @@
-// src/modules/auth.js
+// src/modules/auth.js - (Оновлено для v2.8.0)
 
 import firebase from 'firebase/app';
 import 'firebase/auth';
@@ -7,14 +7,16 @@ import 'firebase/firestore';
 import { 
     auth, 
     provider, 
+    firestore, // <-- Додано firestore
     setFirebaseRefs, 
     setCurrentUser, 
+    setCurrentUserProfile, // <-- НОВЕ
     setCurrentProjectID, 
-    setCurrentProjectData 
+    setCurrentProjectData,
+    ui // <-- Додано ui
 } from '../state.js';
-import { handleError, showView, hideSpinner } from '../ui/global.js';
+import { handleError, showView, hideSpinner, showToast } from '../ui/global.js';
 import { projectCache } from '../core/cache.js';
-import { ui } from '../state.js'; // Отримуємо ui зі state
 import { loadUserProjects } from './projects.js';
 
 // --- Ініціалізація Firebase ---
@@ -40,82 +42,124 @@ export function initializeFirebase() {
 }
 
 /**
- * ▼▼▼ НОВА ФУНКЦІЯ v2.7.0 ▼▼▼
- * Отримує або створює displayName для користувача.
- * @param {firebase.User} user - Об'єкт користувача Firebase
+ * Отримує або створює профіль користувача в колекції 'users'
+ * @param {firebase.User} user - Об'єкт користувача з Firebase Auth
+ * @returns {Promise<object>} - Профіль користувача з нашої БД
  */
-async function getOrCreateDisplayName(user) {
-    if (user.displayName) {
-        return user.displayName;
-    }
-
-    // Якщо displayName немає, створюємо його за замовчуванням
-    // TODO: Замінити це модальним вікном, що питає ім'я при першому вході
-    let newName = user.email ? user.email.split('@')[0] : "Користувач";
+async function getOrCreateUserProfile(user) {
+    if (!firestore) throw new Error("Firestore не ініціалізовано.");
     
-    try {
-        await user.updateProfile({
-            displayName: newName
+    const userRef = firestore.collection('users').doc(user.uid);
+    const doc = await userRef.get();
+
+    if (doc.exists) {
+        // --- Користувач існує ---
+        return doc.data();
+    } else {
+        // --- Новий користувач ---
+        console.log("Створення нового профілю користувача...");
+        showToast("Ласкаво просимо! Оберіть ваше ім'я.", "info");
+
+        // Використовуємо ім'я Google як початкове
+        const defaultName = user.displayName || "Автор";
+        
+        // Використовуємо нашу існуючу модалку для запиту імені
+        return new Promise((resolve) => {
+            if (!ui.createEditModal || !ui.createEditModalTitle || !ui.createEditInput || !ui.createEditConfirmBtn || !ui.createEditCancelBtn) {
+                console.error("Елементи модального вікна не знайдені!");
+                resolve(null); // Помилка
+                return;
+            }
+
+            ui.createEditModalTitle.textContent = "Як вас називати?";
+            ui.createEditInput.value = defaultName;
+            ui.createEditInput.placeholder = "Введіть ваше ім'я";
+            ui.createEditCancelBtn.classList.add('hidden'); // Не можна скасувати
+            ui.createEditModal.classList.remove('hidden');
+
+            const onConfirm = async () => {
+                const newName = ui.createEditInput.value.trim() || defaultName;
+                const userProfile = {
+                    displayName: newName,
+                    email: user.email,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                try {
+                    await userRef.set(userProfile);
+                    console.log("Профіль створено:", userProfile);
+                    
+                    // Очистка
+                    ui.createEditModal.classList.add('hidden');
+                    ui.createEditCancelBtn.classList.remove('hidden');
+                    ui.createEditConfirmBtn.removeEventListener('click', onConfirm);
+                    
+                    resolve(userProfile);
+
+                } catch (e) {
+                    handleError(e, "create-user-profile");
+                    resolve(null); // Помилка
+                }
+            };
+
+            ui.createEditConfirmBtn.addEventListener('click', onConfirm);
         });
-        return newName;
-    } catch (error) {
-        console.error("Помилка оновлення профілю:", error);
-        return "Користувач"; // Повертаємо запасний варіант
     }
 }
 
+
 /**
- * ▼▼▼ ОНОВЛЕНА ФУНКЦІЯ v2.7.0 ▼▼▼
- * Cтежить за станом автентифікації та оновлює UI.
+ * Оновлений спостерігач Auth
  */
-function setupAuthObserver() {
+async function setupAuthObserver() {
     if (!auth) {
         handleError("Auth не ініціалізовано.", "setupAuthObserver");
         return;
     }
     
-    // Робимо колбек асинхронним, щоб чекати getOrCreateDisplayName
-    auth.onAuthStateChanged(async (user) => { 
+    auth.onAuthStateChanged(async (user) => {
         if (user) {
             // --- Користувач увійшов ---
-            setCurrentUser(user);
-            
-            // Отримуємо ім'я та оновлюємо новий хедер
-            const displayName = await getOrCreateDisplayName(user);
-            if (ui.headerUsername) ui.headerUsername.textContent = displayName;
-            if (ui.globalHeader) ui.globalHeader.classList.remove('hidden'); // Показываємо хедер
+            try {
+                setCurrentUser(user);
+                
+                // Отримуємо або створюємо наш профіль
+                const userProfile = await getOrCreateUserProfile(user);
+                if (!userProfile) throw new Error("Не вдалося отримати профіль користувача.");
+                
+                setCurrentUserProfile(userProfile);
+                
+                // Оновлюємо новий хедер
+                if (ui.headerUsername) ui.headerUsername.textContent = userProfile.displayName;
+                if (ui.globalHeader) ui.globalHeader.classList.remove('hidden');
 
-            // Завантажуємо проєкти та показуємо view
-            loadUserProjects();
-            showView('projects'); 
-            
-            // --- Старий код (видалено) ---
-            // if (ui.userDisplay) ui.userDisplay.textContent = `Вітаємо, ${user.displayName || user.email}`;
-            // if (ui.signOutBtn) ui.signOutBtn.classList.remove('hidden');
+                loadUserProjects();
+                showView('projects');
+
+            } catch (error) {
+                handleError(error, "auth-observer-login");
+                hideSpinner();
+                showView('auth');
+            }
 
         } else {
             // --- Користувач вийшов ---
             setCurrentUser(null);
+            setCurrentUserProfile(null); // <-- Очистка
             setCurrentProjectID(null);
             setCurrentProjectData(null);
             
-            // Ховаємо новий хедер
-            if (ui.globalHeader) ui.globalHeader.classList.add('hidden');
+            if (ui.globalHeader) ui.globalHeader.classList.add('hidden'); // Ховаємо хедер
             
             hideSpinner();
             showView('auth');
             projectCache.clearAll();
-
-            // --- Старий код (видалено) ---
-            // if (ui.userDisplay) ui.userDisplay.textContent = '';
-            // if (ui.signOutBtn) ui.signOutBtn.classList.add('hidden');
         }
     }, error => {
         handleError(error, "auth-check");
     });
 }
 
-// --- Функція входу (без змін) ---
 export function signIn() {
     if (!auth || !provider) {
         handleError("Firebase Auth не ініціалізовано.", "sign-in");
@@ -134,8 +178,6 @@ export function signIn() {
         });
 }
 
-// --- Функція виходу (без змін) ---
-// onAuthStateChanged автоматично обробить вихід
 export function signOut() {
     if (!auth) return;
     auth.signOut().then(() => {

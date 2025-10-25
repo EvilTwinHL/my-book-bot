@@ -1,11 +1,12 @@
-// src/state.js
+// src/state.js - (Оновлено для v2.8.0)
 
 import { CONFIG } from './core/config.js';
 
 // === ГЛОБАЛЬНІ ЗМІННІ ===
 export let ui = {}; // DOM elements placeholder
 export let auth, provider, firestore; // Firebase references
-export let currentUser = null;
+export let currentUser = null; // <-- Об'єкт користувача Firebase
+export let currentUserProfile = null; // <-- Об'єкт профілю з нашої 'users'
 export let currentProjectID = null;
 export let currentTab = 'chapters';
 
@@ -42,6 +43,7 @@ export function setFirebaseRefs(newAuth, newProvider, newFirestore) {
     firestore = newFirestore;
 }
 export function setCurrentUser(user) { currentUser = user; }
+export function setCurrentUserProfile(profile) { currentUserProfile = profile; } // <-- НОВЕ
 export function setCurrentProjectID(id) { currentProjectID = id; }
 export function setCurrentProjectData(data) { currentProjectData = data; }
 export function setCurrentTab(tab) { currentTab = tab; }

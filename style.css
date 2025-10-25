@@ -146,6 +146,7 @@ body {
     padding-left: calc(var(--space-sm) + 24px); 
     /* Оскільки кнопки більше немає, робимо повний радіус */
     border-radius: var(--radius-md);
+    position: relative;
 }
 #global-search-container #global-search-btn {
     margin-bottom: 0;
@@ -1342,15 +1343,16 @@ button, .btn {
 /* Нова іконка всередині поля */
 .search-icon-inside {
     position: absolute;
+    z-index: 1;
     left: var(--space-sm);
     top: 50%;
     transform: translateY(-50%);
     color: var(--color-text-tertiary);
     pointer-events: none; 
-    z-index: 1; /* <-- ДОДАЙТЕ ЦЕЙ РЯДОК */
+     
 }
     }
-    /* --- */
+   
 
     #workspace-header .header-left {
         flex-basis: 100%;

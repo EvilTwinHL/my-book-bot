@@ -670,24 +670,27 @@ app.post('/log-error', (req, res) => {
 });
 
 
-// === 4. ОБСЛУГОВУВАННЯ ФРОНТЕНДУ (КРИТИЧНО: ЦЕ ПОВИННО БУТИ В КІНЦІ) === 
+// === 4. ОБСЛУГОВУВАННЯ ФРОНТЕНДУ (УМОВНО) === 
 
-// У Production, цей блок обслуговує index.html для всіх не-API запитів.
 if (process.env.NODE_ENV === 'production') {
-    console.log("РЕЖИМ: Production. Обслуговування папки dist.");
-    
-    // Обслуговування статичних файлів (JS, CSS, IMG)
-    app.use(express.static(path.join(__dirname, 'dist')));
-    
-    // Всі GET-запити, що залишилися (і які не були API), перенаправляємо на index.html
-    // v2.6.2 FIX: Використовуємо регулярний вираз /.*/ для надійного catch-all.
-    app.get(/.*/, (req, res) => { 
-        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-    });
+    console.log("РЕЖИМ: Production. Обслуговування папки dist.");
+    
+    // 1. Обслуговування статичних файлів (JS, CSS, IMG)
+    // Express шукає тут усі файли, крім API.
+    app.use(express.static(path.join(__dirname, 'dist')));
+    
+    // 2. Catch-all: якщо Express не знайшов ні статичного файлу, ні API-маршруту, 
+    // повертаємо index.html (для клієнтського роутингу, наприклад, /projects/123).
+    app.get(/.*/, (req, res) => { 
+        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    });
 } else {
-    // У розробці Express обслуговує поточну папку 
+    // У розробці, Express не обслуговує фронтенд, це робить Vite.
+    // Ви можете видалити цей else-блок, якщо використовуєте Vite Dev Server.
+    // Якщо залишаєте, то `app.use(express.static('.'));` може бути тут, 
+    // але не в Production. 
     console.log("РЕЖИМ: Development. Фронтенд обслуговується Vite.");
-    app.use(express.static('.'));
+    // app.use(express.static('.')); // Можна видалити, якщо Vite робить все.
 }
 
 // --- Запуск сервера ---

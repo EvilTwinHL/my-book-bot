@@ -383,15 +383,15 @@ button, .btn {
     /* Прибираємо контейнерні стилі, щоб він не був у боксі */
     background: transparent; 
     padding: 5px 0; 
-    max-width: 1200px;
+    max-width: 1500px;
     margin: var(--space-md) auto;
     box-shadow: none;
 }
 /* Старий projects-container більше не потрібен, але ми його використовуємо як загальний контейнер */
 #projects-container {
-    max-width: 1200px; /* Обмеження ширини */
-    margin: 40px auto;
-    padding: 0 var(--space-md); /* Відступ по краях */
+    max-width: 1500px; /* Обмеження ширини */
+    margin: 25px auto;
+    padding: 0 11px; /* Відступ по краях */
 }
 
 /* 2. Заголовок і кнопка "Створити" */
@@ -464,18 +464,24 @@ button, .btn {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
+    padding-top: 10px;
+    
 }
 
 .project-card-header h3 {
     margin-top: 0;
     margin-bottom: var(--space-xs);
     font-size: 1.25em; 
+    padding-bottom: 100px;
+    flex-direction: column;
+    display: flex;
 }
 
 /* 7. Footer та Прогрес-бар */
 .project-card-footer {
     margin-top: auto; /* Притискає футер до низу картки */
     padding-top: var(--space-sm);
+    display: flex;
 }
 
 .project-card-stats {
@@ -504,6 +510,21 @@ button, .btn {
     transition: width 0.5s ease;
 }
 
+.project-card-body {
+    
+
+    margin-top: auto;
+    margin-bottom: -10px
+}
+
+.project-card-updated {
+    font-size: 10px;
+    transform: translate(0,0);
+    color: rgba(255, 255, 255, 0.553);
+    margin-top: auto;
+    margin-bottom: 10px;
+}
+
 /* === Стилі Скелетону для завантаження === */
 .skeleton-item {
     background-color: var(--color-bg-tertiary);
@@ -517,11 +538,9 @@ button, .btn {
     50% { opacity: 0.5; }
 }
 
-.project-card-updated {
-    font-size: 10px;
-    transform: translateY(12px);
-    color: rgba(255, 255, 255, 0.553);
-}
+
+
+
 /* ===================================== */
 /* --- v2.5.0: ПОКРАЩЕНА НАВІГАЦІЯ --- */
 /* ===================================== */

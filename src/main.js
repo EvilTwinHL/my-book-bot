@@ -1,13 +1,13 @@
-// src/main.js - (Оновлено для v2.8.0)
+// src/main.js - (Виправлено v2.9.15: Усунення require(), додавання showView та фолбека)
 
 import { CONFIG } from './core/config.js';
 import { 
     ui, 
     currentProjectData, 
-    currentUser, // <-- НОВЕ
-    currentUserProfile, // <-- НОВЕ
-    setCurrentUserProfile, // <-- НОВЕ
-    firestore, // <-- НОВЕ
+    currentUser, 
+    currentUserProfile, 
+    setCurrentUserProfile, 
+    firestore, 
     selectedChapterIndex, 
     selectedCharacterIndex, 
     selectedLocationIndex, 
@@ -18,9 +18,10 @@ import {
     redo 
 } from './state.js';
 import { bindUIElements } from './ui/dom.js';
-import { handleError, showToast } from './ui/global.js';
+// !!! КРИТИЧНЕ ВИПРАВЛЕННЯ: showView має бути імпортований тут !!!
+import { handleError, showToast, showView } from './ui/global.js'; 
 import { initializeFirebase, signIn, signOut } from './modules/auth.js';
-import { handleCreateProject, handleContextEdit, handleContextDelete, handleContextExport } from './modules/projects.js';
+import { createNewProjectAction, handleContextEdit, handleContextDelete, exportProjectAction } from './modules/projects.js';
 import { handleBackToProjects, handleQuickAccessAction, handleTitleUpdate, switchTab } from './modules/workspace.js';
 import { triggerManualSave } from './modules/save.js';
 import { scheduleSave } from './api.js';
@@ -37,10 +38,15 @@ import {
     selectChapter,
     selectCharacter,
     selectLocation,
-    selectPlotline
+    selectPlotline,
+    // !!! КРИТИЧНЕ ВИПРАВЛЕННЯ: Додано необхідні рендер-функції до імпорту
+    renderChaptersList, 
+    renderCharactersList, 
+    renderLocationsList, 
+    renderPlotlinesList
 } from './modules/lists.js';
 import { sendChatMessage } from './modules/chat.js';
-import { openSearchModal } from './modules/search.js'; // <-- Імпорт з v2.7.0
+import { openSearchModal } from './modules/search.js';
 import { closeSearchResultsModal } from './ui/modal.js';
 
 
@@ -84,7 +90,7 @@ function addSaveListener(element, fieldName, property, isNumber = false) {
         }
 
         if (property === 'title' || property === 'status' || property === 'name') {
-            const { renderChaptersList, renderCharactersList, renderLocationsList, renderPlotlinesList } = require('./modules/lists.js');
+            // !!! КРИТИЧНЕ ВИПРАВЛЕННЯ: ВИДАЛЕНО НЕПРАВИЛЬНИЙ require() !!!
             if (fieldName === 'content.chapters') renderChaptersList();
             if (fieldName === 'content.characters') renderCharactersList();
             if (fieldName === 'content.locations') renderLocationsList();
@@ -93,10 +99,8 @@ function addSaveListener(element, fieldName, property, isNumber = false) {
     });
 }
 
-// --- v2.8.0: Функція зміни імені ---
-/**
- * Відкриває модальне вікно для зміни імені користувача
- */
+// ... (Функція handleChangeDisplayName без змін)
+
 function handleChangeDisplayName() {
     if (!currentUser || !currentUserProfile || !firestore) return;
     
@@ -116,7 +120,6 @@ function handleChangeDisplayName() {
                 const userRef = firestore.collection('users').doc(currentUser.uid);
                 await userRef.update({ displayName: newName });
 
-                // Оновлюємо локальний стан та UI
                 const updatedProfile = { ...currentUserProfile, displayName: newName };
                 setCurrentUserProfile(updatedProfile);
                 if (ui.headerUsername) ui.headerUsername.textContent = newName;
@@ -150,7 +153,7 @@ function handleChangeDisplayName() {
  * Прив'язує слухачі до елементів UI
  */
 function setupGlobalListeners() {
-    // --- Глобальні обробники ---
+    // ... (Глобальні обробники без змін)
     window.addEventListener('beforeunload', (e) => {
         if (currentProjectData && currentProjectData.hasUnsavedChanges) {
             e.preventDefault();
@@ -173,23 +176,21 @@ function setupGlobalListeners() {
         }
     });
 
-    // --- Автентифікація ---
+    // --- Автентифікація (ПРИВ'ЯЗКА ЗАЛИШАЄТЬСЯ ТУТ) ---
     ui.signInBtn?.addEventListener('click', signIn);
-    // ui.signOutBtn?.addEventListener('click', signOut); // (Видалено v2.7.0)
+    ui.headerLogoutBtn?.addEventListener('click', signOut); 
 
-    // --- v2.7.0 / v2.8.0: Хедер ---
-    ui.headerLogoutBtn?.addEventListener('click', signOut); // (Переміщено)
-    // src/main.js (НОВА ВЕРСІЯ)
-    ui.usernameContainer?.addEventListener('click', handleChangeDisplayName); // (Перенесено з headerUsername)
+    // --- Хедер ---
+    ui.usernameContainer?.addEventListener('click', handleChangeDisplayName); 
 
     // --- Проєкти та Контекстне меню ---
-    ui.createProjectBtn?.addEventListener('click', handleCreateProject);
+    ui.createProjectBtn?.addEventListener('click', createNewProjectAction);
     ui.projectContextMenu?.addEventListener('click', (e) => {
         e.stopPropagation();
         const action = e.target.id;
         if (action === 'context-edit-btn') handleContextEdit();
         else if (action === 'context-delete-btn') handleContextDelete();
-        else if (action === 'context-export-btn') handleContextExport();
+        else if (action === 'context-export-btn') exportProjectAction();
     });
 
     // --- Робоча область (Загальне) ---
@@ -294,7 +295,7 @@ function setupGlobalListeners() {
 }
 
 
-// ▼▼▼ ОНОВЛЕНИЙ БЛОК ЗАВАНТАЖЕННЯ (з v2.7.0) ▼▼▼
+// ▼▼▼ ОНОВЛЕНИЙ БЛОК ЗАВАНТАЖЕННЯ ▼▼▼
 document.addEventListener('DOMContentLoaded', () => {
     try {
         // 1. Зв'язуємо UI елементи В ПЕРШУ ЧЕРГУ.
@@ -317,5 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("Критична помилка під час DOMContentLoaded:", e);
         handleError(e, "DOMContentLoaded_init");
         showToast("Критична помилка ініціалізації. Перевірте консоль.", "error");
+        // !!! ФОЛБЕК, якщо Firebase не ініціалізувався !!!
+        showView('auth-container'); 
     }
 });

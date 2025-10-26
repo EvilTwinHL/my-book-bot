@@ -15,7 +15,7 @@
     --color-primary: #007aff;
     --color-primary-hover: #0056b3;
     --color-success: #28a745;
-    --color-warning: #e0ac01;
+    --color-warning: #e0ac01; /* Змінено з fd7e14 на e0ac01 для відповідності кнопці Вихід */
     --color-danger: #dc3545;
     --color-accent: #6f42c1;
     
@@ -66,6 +66,7 @@ body {
     line-height: 1.6;
 }
 
+/* Змінено: Тепер це загальний контейнер для WS/Auth, але не для Projects View */
 .container { 
     background-color: var(--color-bg-secondary);
     padding: var(--space-xl);
@@ -104,7 +105,7 @@ body {
     z-index: 100;
     height: 60px;
     box-sizing: border-box; 
-    box-shadow: var(--shadow-md); /* Тінь */
+    box-shadow: var(--shadow-md); 
 }
 
 .header-content {
@@ -132,15 +133,13 @@ body {
     justify-content: center;
 }
 
-/* ▼▼▼ ВИПРАВЛЕНО v2.7.2 ▼▼▼ */
 #global-search-container {
     display: flex;
     width: 100%;
     max-width: 400px;
-    position: relative; /* 1. Додано position: relative до контейнера */
+    position: relative; 
 }
 
-/* 2. Додано десктопний стиль для іконки */
 .search-icon-inside {
     position: absolute;
     left: var(--space-sm);
@@ -148,27 +147,17 @@ body {
     transform: translateY(-50%);
     pointer-events: none; 
     z-index: 1; 
-    
-    /* Нові стилі для SVG/IMG */
-    width: 16px;  /* Фіксований розмір іконки */
+    width: 16px; 
     height: 16px;
-    
-    /* Перефарбовуємо SVG у колір нашого тексту.
-       Якщо ви використаєте .png, цей рядок може не спрацювати. */
     filter: invert(60%); 
 }
 
-/* Оновлений input пошуку */
 #global-search-container #global-search-input {
     margin-bottom: 0;
     flex-grow: 1;
     padding-left: calc(var(--space-sm) + 24px); 
     border-radius: var(--radius-md);
-    /* 3. Видалено position: relative з input */
 }
-/* 4. Видалено старий стиль для #global-search-btn */
-/* ▲▲▲ Kінець v2.7.2 ▲▲▲ */
-
 
 .header-right {
     flex: 1 0 150px;
@@ -178,92 +167,38 @@ body {
     gap: var(--space-md);
 }
 
-/* style.css (НОВА ВЕРСІЯ) */
-/*#header-username {
-    color: var(--color-text-secondary);
-    font-weight: 500;
-    white-space: nowrap;
-    
-    /* ▼▼▼ ДОДАНО v2.8.1: Ефекти наведення ▼▼▼ */
-    
-    /* 1. Курсор-рука */
-    /*cursor: pointer; 
-    
-    /* 2. Плавна зміна кольору */
-    /*position: relative; 
-    transition: color 0.2s ease;
-}*/
-
-/* 3. Підсвічування при наведенні */
-/*#header-username:hover {
-    color: var(--color-primary); 
-    text-decoration: underline; 
-}
-
-/* 4. Іконка олівця, що з'являється */
-/*#header-username::after {
-    content: '✏️';
-    font-size: 0.9em; /* Трохи менший олівець */
-    /*margin-left: var(--space-xs); /* Відступ від тексту */
-    
-    /* Анімація появи */
-    /*display: inline-block;
-    opacity: 0; /* Сховано за замовчуванням */
-    /*transform: translateX(-5px); /* Початкова позиція (трохи ліворуч) */
-    /*transition: all 0.2s ease;
-}*/
-
-/*#header-username:hover::after {
-    opacity: 1; /* Показати */
-    /*transform: translateX(0); /* Зсунути на місце */
-/*}*/
-
-/* ▼▼▼ ОНОВЛЕНО v2.8.2: Ефекти наведення для імені користувача ▼▼▼ */
-
-/* Контейнер, що містить ім'я та іконку */
+/* ▼▼▼ СТИЛІ ДЛЯ ІМЕНІ КОРИСТУВАЧА ▼▼▼ */
 #username-container {
     display: flex;
     align-items: center;
-    gap: var(--space-xs); /* Відстань між іменем та іконкою */
+    gap: var(--space-xs); 
     cursor: pointer;
     position: relative; 
-    padding: var(--space-xs) var(--space-sm); /* Збільшити клікабельну зону */
+    padding: var(--space-xs) var(--space-sm); 
     border-radius: var(--radius-md);
     transition: background-color 0.2s ease;
 }
 
-/* Сам текст імені */
 #header-username {
     color: var(--color-text-secondary);
     font-weight: 500;
     white-space: nowrap;
-    transition: all 0.2s ease; /* Для плавного 'scale' */
+    transition: all 0.2s ease; 
 }
 
-/* Нова іконка (SVG) */
 #edit-username-icon {
-    width: 14px;  /* Трохи менша за пошук */
+    width: 14px; 
     height: 14px;
-    filter: invert(60%); /* Світло-сіра, як іконка пошуку */
+    filter: invert(60%); 
     transition: all 0.2s ease;
-    opacity: 0; /* Прихована за замовчуванням */
-    transform: translateX(-5px); /* Початкова позиція для анімації */
+    opacity: 0; 
+    transform: translateX(-5px); 
 }
 
-/* --- Ефекти при наведенні --- */
-
-/* 1. Поява тіні/фону на контейнері */
 #username-container:hover {
     background-color: var(--color-bg-tertiary);
 }
 
-/* 2. Збільшення тексту (замість зміни кольору) */
-#username-container:hover #header-username {
-    /*transform: scale(1.03); /* Легке збільшення */
-     text-shadow: 0 0 5px rgba(255, 255, 255, 0.29); /* (Можете розкоментувати для тіні) */
-}
-
-/* 3. Поява іконки (SVG) */
 #username-container:hover #edit-username-icon {
     opacity: 1;
     transform: translateX(0);
@@ -404,14 +339,15 @@ button, .btn {
     box-shadow: var(--shadow-md);
 }
 
+/* ЗМІНЕНО: Стиль кнопки "Створити" */
 .btn-warning {
-    background-color: var(--color-warning);
+    background-color: var(--color-warning); /* Жовтий */
     color: #212121; 
     box-shadow: var(--shadow-md);
 }
 
 .btn-warning:hover {
-    background-color: #facf41; 
+    background-color: #facf41; /* Світліший жовтий */
     transform: translateY(-1px);
     box-shadow: var(--shadow-lg);
 }
@@ -438,6 +374,154 @@ button, .btn {
     background-color: var(--color-bg-tertiary);
 }
 
+/* ===================================== */
+/* --- v2.9.5: КОЛЕКЦІЯ ПРОЄКТІВ (НОВИЙ ДИЗАЙН) --- */
+/* ===================================== */
+
+/* 1. Контейнер для списку - БЕЗ ЗАГАЛЬНОГО БОКСУ */
+#projects-view {
+    /* Прибираємо контейнерні стилі, щоб він не був у боксі */
+    background: transparent; 
+    padding: 5px 0; 
+    max-width: 1200px;
+    margin: var(--space-md) auto;
+    box-shadow: none;
+}
+/* Старий projects-container більше не потрібен, але ми його використовуємо як загальний контейнер */
+#projects-container {
+    max-width: 1200px; /* Обмеження ширини */
+    margin: 40px auto;
+    padding: 0 var(--space-md); /* Відступ по краях */
+}
+
+/* 2. Заголовок і кнопка "Створити" */
+#projects-header {
+    display: flex;
+    justify-content: space-between; /* Розміщує заголовок і кнопку по краях */
+    align-items: center;
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--color-bg-tertiary); /* Додаємо роздільник */
+}
+
+#projects-header h2 {
+    margin: 0;
+    font-size: var(--font-size-xxxl);
+}
+
+#projects-header #create-project-btn {
+    padding: var(--space-sm) var(--space-md);
+}
+
+
+/* 3. Контейнер для сітки карток */
+#projects-list {
+    display: grid;
+    /* Адаптивна сітка: 280px мінімальна ширина */
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+    gap: var(--space-lg); 
+}
+
+/* 4. Стиль картки */
+.project-card {
+    background-color: var(--color-bg-secondary);
+    border-radius: var(--radius-lg); 
+    border: 1px solid var(--color-bg-tertiary);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    display: flex; 
+    flex-direction: column;
+    min-height: 250px; 
+    overflow: hidden; 
+}
+
+.project-card:hover {
+    transform: translateY(-5px); 
+    box-shadow: var(--shadow-lg); 
+    /*border-color: var(--color-primary-hover);*/
+}
+
+/* 5. ЕЛЕМЕНТ: Зображення */
+.project-card-image {
+    width: 100%;
+    height: 200px; /* Фіксована висота зображення */
+    overflow: hidden;
+    flex-shrink: 0;
+    background-color: var(--color-bg-tertiary); 
+    border-bottom: 1px solid var(--color-bg-tertiary);
+}
+
+.project-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Забезпечує покриття площі */
+}
+
+/* 6. Контент під зображенням */
+.project-card-content {
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.project-card-header h3 {
+    margin-top: 0;
+    margin-bottom: var(--space-xs);
+    font-size: 1.25em; 
+}
+
+/* 7. Footer та Прогрес-бар */
+.project-card-footer {
+    margin-top: auto; /* Притискає футер до низу картки */
+    padding-top: var(--space-sm);
+}
+
+.project-card-stats {
+    border-top: 1px solid var(--color-bg-tertiary);
+    padding-top: var(--space-sm);
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9em;
+    color: var(--color-text-secondary);
+}
+
+.project-card-progress {
+    width: 100%;
+    background-color: var(--color-bg-tertiary);
+    height: 6px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-top: var(--space-sm);
+}
+
+.project-card-progress-bar {
+    height: 100%;
+    width: 0; 
+    background-color: var(--color-primary);
+    border-radius: var(--radius-sm);
+    transition: width 0.5s ease;
+}
+
+/* === Стилі Скелетону для завантаження === */
+.skeleton-item {
+    background-color: var(--color-bg-tertiary);
+    border-radius: var(--radius-lg);
+    height: 250px; 
+    opacity: 0.5;
+    animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.project-card-updated {
+    font-size: 10px;
+    transform: translateY(12px);
+    color: rgba(255, 255, 255, 0.553);
+}
 /* ===================================== */
 /* --- v2.5.0: ПОКРАЩЕНА НАВІГАЦІЯ --- */
 /* ===================================== */
@@ -799,114 +883,6 @@ button, .btn {
     color: var(--color-text-secondary);
     margin-bottom: var(--space-xxl);
 }
-
-/* === ОНОВЛЕНО v2.9.0: СТИЛІ ДЛЯ КОЛЕКЦІЇ ПРОЄКТІВ === */
-#projects-container {
-    max-width: 1200px; /* <--- Збільшено ширину */
-    margin: 40px auto;
-}
-
-/* 1. Створюємо сітку карток */
-#projects-list {
-    display: grid;
-    /* Адаптивна сітка: 
-       - Намагаємося розмістити колонки шириною 280px.
-       - 'auto-fill' додасть стільки колонок, скільки влізе.
-       - '1fr' змусить колонки розтягнутися, щоб заповнити весь простір.
-    */
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--space-lg); /* <--- Збільшено відступ */
-}
-
-/* 2. Стиль самої картки (колишній .project-item) */
-.project-card {
-    background-color: var(--color-bg-secondary);
-    border-radius: var(--radius-lg); /* <--- Більший радіус */
-    border: 1px solid var(--color-bg-tertiary);
-    box-shadow: var(--shadow-sm);
-    padding: var(--space-md);
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    display: flex; /* <--- Flex-колонка для внутрішнього контенту */
-    flex-direction: column;
-    min-height: 200px; /* <--- Мінімальна висота */
-}
-
-.project-card:hover {
-    transform: translateY(-5px); /* <--- Ефект "підняття" */
-    box-shadow: var(--shadow-lg); /* <--- Більша тінь */
-    border-color: var(--color-primary-hover);
-}
-
-/* --- Внутрішні елементи картки --- */
-
-.project-card-header {
-    flex-shrink: 0;
-}
-
-.project-card-header h3 {
-    margin-top: 0;
-    margin-bottom: var(--space-xs);
-    color: var(--color-text-primary);
-    font-size: 1.25em; /* <--- Більший заголовок */
-}
-
-/* "Жанр" - ми додамо це в HTML */
-.project-card-genre {
-    font-size: 0.9em;
-    color: var(--color-accent); /* <--- Акцентний колір */
-    font-weight: 500;
-    margin-bottom: var(--space-md);
-    display: block;
-    min-height: 1.2em; /* Резервуємо місце, навіть якщо жанру немає */
-}
-
-/* Блок, що "розтягується", щоб притиснути статистику до низу */
-.project-card-body {
-    flex-grow: 1; 
-}
-
-/* "Оновлено" */
-.project-card-updated {
-    font-size: 0.8em;
-    color: var(--color-text-tertiary);
-    margin-bottom: var(--space-md);
-}
-
-/* Блок зі статистикою внизу картки */
-.project-card-stats {
-    flex-shrink: 0;
-    border-top: 1px solid var(--color-bg-tertiary);
-    padding-top: var(--space-sm);
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.9em;
-    color: var(--color-text-secondary);
-}
-
-.project-card-stats span {
-    font-weight: 600;
-    color: var(--color-text-primary);
-}
-
-/* Прогрес-бар (ми додамо це в HTML) */
-.project-card-progress {
-    width: 100%;
-    background-color: var(--color-bg-tertiary);
-    height: 6px;
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-    margin-top: var(--space-sm);
-}
-
-.project-card-progress-bar {
-    height: 100%;
-    width: 0; /* Буде встановлено через style="" */
-    background-color: var(--color-primary);
-    border-radius: var(--radius-sm);
-    transition: width 0.5s ease;
-}
-
 
 /* ===================================== */
 /* --- v1.1.0: РОБОЧА ОБЛАСТЬ (WORKSPACE) --- */
@@ -1355,18 +1331,7 @@ button, .btn {
     }
     
     #global-header {
-    /* (Стилі з вашого файлу, вони коректні) */
-        background-color: var(--color-bg-secondary);
-        border-bottom: 1px solid var(--color-bg-tertiary);
         padding: 0 var(--space-md);
-        position: sticky;
-        top: 0;
-        left: 0;
-        width: 100%;
-        z-index: 100;
-        height: 60px;
-        box-sizing: border-box; 
-        box-shadow: var(--shadow-md); 
     }
     .header-content {
         flex-direction: column;
@@ -1381,7 +1346,6 @@ button, .btn {
         justify-content: space-between;
     }
     
-    /* ▼▼▼ ВИПРАВЛЕНО v2.7.2: Стилі для іконки залишаються тут, але також додані в десктопну версію ▼▼▼ */
     #global-search-container {
         display: flex;
         width: 100%;
@@ -1398,9 +1362,7 @@ button, .btn {
         color: var(--color-text-tertiary);
         pointer-events: none; 
     }
-    /* ▲▲▲ Kінець v2.7.2 ▲▲▲ */
     
-
     #workspace-header .header-left {
         flex-basis: 100%;
         margin-bottom: var(--space-md);

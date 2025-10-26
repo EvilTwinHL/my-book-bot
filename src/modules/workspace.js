@@ -1,4 +1,4 @@
-// src/modules/workspace.js
+// src/modules/workspace.js (КОРЕКТНА ВЕРСІЯ v2.9.11: Усунення циклічної залежності та виправлення View)
 
 import { 
     currentProjectID, 
@@ -39,8 +39,37 @@ import { updateTotalWordCount } from '../utils/stats.js';
 import { initializeSortableLists } from '../utils/sortable.js';
 import { triggerManualSave } from './save.js';
 import { performGlobalSearch } from './search.js';
-import { exportProjectAction, loadUserProjects } from './projects.js';
 import { renderChatHistory } from './chat.js';
+
+// !!! КРИТИЧНЕ ВИПРАВЛЕННЯ: ВИДАЛЕННЯ СТАТИЧНОГО ІМПОРТУ З projects.js
+// import { exportProjectAction, loadProjects } from './projects.js';
+
+
+// --- ДИНАМІЧНІ ОБГОРТКИ (для усунення циклічних залежностей з projects.js) ---
+
+/** Асинхронно викликає loadProjects з модуля projects. */
+async function callLoadProjects() {
+    try {
+        const projectsModule = await import('./projects.js'); 
+        projectsModule.loadProjects(); 
+    } catch (e) {
+        handleError(e, "dynamic-loadProjects");
+        showToast("Помилка завантаження списку проєктів.", "error");
+    }
+}
+
+/** Асинхронно викликає exportProjectAction з модуля projects. */
+async function callExportProjectAction() {
+    try {
+        const projectsModule = await import('./projects.js'); 
+        // exportProjectAction використовує контекстні ID з projects.js
+        projectsModule.exportProjectAction(); 
+    } catch (e) {
+        handleError(e, "dynamic-exportProjectAction");
+        showToast("Помилка експорту проєкту.", "error");
+    }
+}
+
 
 // --- НАВІГАЦІЯ ---
 
@@ -48,6 +77,7 @@ import { renderChatHistory } from './chat.js';
  * @param {string} tabId 
  */
 export function switchTab(tabId) {
+    // ... (логіка switchTab без змін)
     Object.values(ui.tabs).forEach(tab => tab?.classList.remove('active'));
     Object.values(ui.tabButtons).forEach(btn => btn?.classList.remove('active'));
     
@@ -78,7 +108,8 @@ export function switchTab(tabId) {
  */
 export function updateBreadcrumbs() {
     if (!ui.breadcrumbs || !ui.breadcrumbCurrent || !currentProjectData) return;
-
+    
+    // ... (логіка updateBreadcrumbs без змін)
     const tabMap = {
         chapters: 'Розділи',
         characters: 'Персонажі',
@@ -104,8 +135,8 @@ export function handleBackToProjects(e) {
     }
     setCurrentProjectID(null);
     setCurrentProjectData(null);
-    showView('projects');
-    loadUserProjects();
+    showView('projects-view'); // КРИТИЧНО: ВИПРАВЛЕНО 'projects' -> 'projects-view'
+    callLoadProjects();       // КРИТИЧНО: ВИПРАВЛЕНО 'loadUserProjects()' -> 'callLoadProjects()'
 }
 
 /**
@@ -130,8 +161,9 @@ export function handleQuickAccessAction(e) {
             triggerManualSave();
             break;
         case 'export-project':
+            // КРИТИЧНО: ВИКЛИК ЧЕРЕЗ ДИНАМІЧНУ ОБГОРТКУ
             if (currentProjectID && currentProjectData?.title) {
-                exportProjectAction(currentProjectID, currentProjectData.title);
+                 callExportProjectAction(); // Викликаємо обгортку без аргументів
             }
             break;
         case 'quick-chat':
@@ -159,7 +191,7 @@ export async function openProject(projectID) {
         console.log("Проєкт завантажено з кешу sessionStorage.");
         setCurrentProjectData(cachedData);
         loadWorkspace();
-        showView('workspace');
+        showView('workspace-container'); // КРИТИЧНО: ВИПРАВЛЕНО 'workspace' -> 'workspace-container'
         hideSpinner();
         syncProjectInBackground(projectID);
         return;
@@ -172,18 +204,21 @@ export async function openProject(projectID) {
         projectCache.set(projectID, currentProjectData); 
         
         loadWorkspace();
-        showView('workspace');
+        showView('workspace-container'); // КРИТИЧНО: ВИПРАВЛЕНО 'workspace' -> 'workspace-container'
         
     } catch (error) {
         handleError(error, "open-project");
+        showToast("Не вдалося відкрити проєкт.", "error");
         setCurrentProjectID(null);
-        showView('projects'); 
+        showView('projects-view'); // КРИТИЧНО: ВИПРАВЛЕНО 'projects' -> 'projects-view'
+        
     } finally {
         hideSpinner();
     }
 }
 
 export async function syncProjectInBackground(projectID) {
+    // ... (логіка синхронізації без змін)
     if (projectID !== currentProjectID) return; 
     
     console.log(`[Sync]: Починаю фонову синхронізацію для ${projectID}...`);
@@ -223,14 +258,14 @@ export async function syncProjectInBackground(projectID) {
 export function loadWorkspace(silent = false) {
     if (!currentProjectData) {
         handleError("Спроба завантажити робочу область без даних.", "load-workspace");
-        showView('projects');
+        showView('projects-view'); // КРИТИЧНО: ВИПРАВЛЕНО 'projects' -> 'projects-view'
         return;
     }
     
     const { title, content, chatHistory } = currentProjectData;
 
     if (!silent) {
-        // Скидання стану
+        // ... (логіка скидання стану без змін)
         (async () => {
             const { setSelectedChapterIndex, setSelectedCharacterIndex, setSelectedLocationIndex, setSelectedPlotlineIndex } = await import('../state.js');
             setSelectedChapterIndex(null);
@@ -246,19 +281,19 @@ export function loadWorkspace(silent = false) {
     if (ui.workspaceTitleInput) ui.workspaceTitleInput.value = title;
     
     // --- Вкладка: Розділи ---
-    renderChaptersList();
+    renderChaptersList(content.chapters); // ВИПРАВЛЕНО: Додано аргумент
     hideChapterEditor();
     
     // --- Вкладка: Персонажі ---
-    renderCharactersList();
+    renderCharactersList(content.characters); // ВИПРАВЛЕНО: Додано аргумент
     hideCharacterEditor();
     
     // --- Вкладка: Локації ---
-    renderLocationsList();
+    renderLocationsList(content.locations); // ВИПРАВЛЕНО: Додано аргумент
     hideLocationEditor();
     
     // --- Вкладка: Сюжет ---
-    renderPlotlinesList();
+    renderPlotlinesList(content.plotlines); // ВИПРАВЛЕНО: Додано аргумент
     hidePlotlineEditor();
 
     // --- Вкладка: Світ ---
@@ -299,7 +334,7 @@ export async function handleTitleUpdate(e) {
             projectCache.set(currentProjectID, currentProjectData);
             setSaveStatus('saved');
             
-            loadUserProjects(); 
+            callLoadProjects(); // КРИТИЧНО: ВИПРАВЛЕНО 'loadUserProjects()' -> 'callLoadProjects()'
             
         } catch (error) {
             handleError(error, "update-title-inline");

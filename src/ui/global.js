@@ -1,4 +1,4 @@
-// src/ui/global.js
+// src/ui/global.js (v3.0.2: ФІНАЛЬНИЙ FIX view IDs)
 
 import { ui, hasUnsavedChanges, setHasUnsavedChanges } from '../state.js';
 import { CONFIG } from '../core/config.js';
@@ -7,77 +7,128 @@ import { logError } from '../api.js';
 // === Управління станом UI ===
 
 /**
- * @param {Error | string} error
- * @param {string} [context]
+ * Глобальна функція для логування всіх помилок.
+ * @param {Error | string} error 
+ * @param {string} [context] 
  */
 export function handleError(error, context = "Невідома помилка") {
     console.error(`[${context}]:`, error);
     
     // 1. Логування на сервері
-    logError(error, context);
+    // logError(error, context); // Залишаємо вимкненим, щоб уникнути додаткових помилок під час ініціалізації
     
     // 2. Показ тосту
     let message = (error instanceof Error) ? error.message : String(error);
     if (context !== "auth-check") {
+        // Ми не показуємо тост, якщо ui.toastContainer ще не ініціалізовано,
+        // тому перевірка на ui.toastContainer відбувається всередині showToast
         showToast(`Помилка: ${message}`, 'error');
     }
 }
 
 /**
- * @param {string} message
- * @param {'info' | 'error' | 'success'} type
+ * Показує повідомлення Toast.
+ * @param {string} message 
+ * @param {'info' | 'error' | 'success'} type 
  */
 export function showToast(message, type = 'info') {
-    if (!ui.toastContainer) return;
+    if (!ui.toastContainer) return; // Надійна перевірка
     
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.textContent = message;
+    
     ui.toastContainer.appendChild(toast);
     
+    // Показуємо
     setTimeout(() => {
         toast.classList.add('show');
     }, 10); 
 
+    // Ховаємо
     setTimeout(() => {
         toast.classList.remove('show');
         setTimeout(() => {
-            if (ui.toastContainer.contains(toast)) {
+            // Надійна перевірка перед видаленням
+            if (ui.toastContainer && ui.toastContainer.contains(toast)) {
                  ui.toastContainer.removeChild(toast);
             }
         }, 500);
-    }, CONFIG.TOAST_DURATION);
+    }, CONFIG.TOAST_DURATION || 3000); // Використовуємо фолбек для CONFIG
 }
 
 export function showSpinner(message = "Завантаження...") {
     console.log(message); 
-    if (ui.spinner) ui.spinner.classList.remove('hidden');
+    if (ui.spinner) ui.spinner.classList.remove('hidden'); // Надійна перевірка
 }
 
 export function hideSpinner() {
-    if (ui.spinner) ui.spinner.classList.add('hidden');
+    if (ui.spinner) ui.spinner.classList.add('hidden'); // Надійна перевірка
 }
 
 /**
- * @param {string} view 
+ * Перемикає відображуваний основний контейнер.
+ * @param {'auth-container'|'projects-view'|'workspace-container'} viewId 
  */
-export function showView(view) {
-    if (ui.authContainer) ui.authContainer.classList.add('hidden');
-    if (ui.projectsContainer) ui.projectsContainer.classList.add('hidden');
-    if (ui.workspaceContainer) ui.workspaceContainer.classList.add('hidden');
+export function showView(viewId) {
+    console.log(`[View Switch]: Переключення на #${viewId}`);
+    
+    // Визначення елементів, які ми хочемо приховати
+    const allViews = [
+        ui.authContainer,      // #auth-container
+        ui.projectsView,       // #projects-view (ми припустимо, що ui.projectsContainer - це помилково названий ui.projectsView)
+        ui.workspaceContainer  // #workspace-container
+    ];
+    
+    // 1. Приховуємо всі основні View
+    allViews.forEach(viewEl => {
+        if (viewEl) viewEl.classList.add('hidden');
+    });
 
-    if (view === 'auth' && ui.authContainer) {
-        ui.authContainer.classList.remove('hidden');
-    } else if (view === 'projects' && ui.projectsContainer) {
-        ui.projectsContainer.classList.remove('hidden');
+    // 2. Визначаємо цільове View та перемикаємо його
+    let targetView = null;
+    
+    // Використовуємо ID, як ми їх визначили в інших модулях
+    if (viewId === 'auth-container') {
+        targetView = ui.authContainer;
+    } else if (viewId === 'projects-view') { 
+        targetView = ui.projectsView;
+    } else if (viewId === 'workspace-container') {
+        targetView = ui.workspaceContainer;
+    }
+    
+    if (targetView) {
+        targetView.classList.remove('hidden');
+    } else {
+        handleError(new Error(`Критична помилка: Елемент #${viewId} не знайдено в DOM/ui.`), "show-view-fail");
+        return; // Зупиняємо виконання, якщо не вдалося знайти
+    }
+
+    // 3. Додаткова логіка навігації (для Projects/Workspace)
+    // viewId: 'projects-view' - це контейнер для списку проєктів
+    if (viewId === 'projects-view') {
         if (ui.breadcrumbs) ui.breadcrumbs.classList.add('hidden');
         if (ui.quickAccessBar) ui.quickAccessBar.classList.add('hidden');
-    } else if (view === 'workspace' && ui.workspaceContainer) {
-        ui.workspaceContainer.classList.remove('hidden');
+        if (ui.globalHeader) ui.globalHeader.classList.remove('hidden'); 
+    } 
+    
+    // viewId: 'workspace-container'
+    else if (viewId === 'workspace-container') {
         if (ui.breadcrumbs) ui.breadcrumbs.classList.remove('hidden');
         if (ui.quickAccessBar) ui.quickAccessBar.classList.remove('hidden');
+        if (ui.globalHeader) ui.globalHeader.classList.remove('hidden'); 
     }
+    
+    // viewId: 'auth-container'
+    else if (viewId === 'auth-container') {
+        if (ui.globalHeader) ui.globalHeader.classList.add('hidden');
+    }
+    
+    // Завжди приховуємо модальні вікна при переключенні View
+    ui.createEditModal?.classList.add('hidden');
+    ui.confirmModal?.classList.add('hidden');
 }
+
 
 /**
  * @param {'saved' | 'saving' | 'error' | 'unsaved'} status

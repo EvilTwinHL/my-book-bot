@@ -181,7 +181,7 @@ app.get('/get-project-content', async (req, res) => {
             owner: projectData.owner,
             // === ОНОВЛЕНО (ФАЗА 1): Додано нові поля ===
             genre: projectData.genre || 'Інше',
-            coverImage: projectData.coverImage || 'default-placeholder.png',
+            imageURL: projectData.imageURL || '/assets/card-placeholder.png',
             totalWordCount: projectData.totalWordCount || 0,
             updatedAt: projectData.updatedAt ? projectData.updatedAt.toDate().toISOString() : new Date().toISOString(),
             content: {
@@ -404,43 +404,44 @@ app.post('/delete-project', async (req, res) => {
 // === ОНОВЛЕНО (ФАЗА 1): Новий маршрут для оновлення деталей проєкту ===
 // (Замінює старий '/update-title')
 app.post('/update-project-details', async (req, res) => {
-    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
-    
-    const { projectID, newTitle, newGenre, newCoverImage } = req.body;
-    
-    if (!projectID) {
-        return res.status(400).json({ error: "Необхідний projectID." });
-    }
+	if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
+	
+	const { projectID, details } = req.body;
+	
+	if (!projectID || !details) {
+			return res.status(400).json({ error: "Необхідний projectID та details." });
+	}
+
+    const { title, genre, imageURL } = details;
 
     // Створюємо об'єкт оновлення лише з тими даними, що надійшли
     const updateData = {
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
     };
-    if (newTitle) {
-        updateData.title = newTitle;
+    if (title) {
+        updateData.title = title;
     }
-    if (newGenre) {
-        updateData.genre = newGenre;
+    if (genre) {
+        updateData.genre = genre;
     }
-    if (newCoverImage) {
-        updateData.coverImage = newCoverImage;
+    if (imageURL) {
+        updateData.imageURL = imageURL;
     }
 
     // Перевіряємо, чи є що оновлювати (окрім дати)
     if (Object.keys(updateData).length <= 1) {
-         return res.status(400).json({ error: "Не надано даних для оновлення (newTitle, newGenre, newCoverImage)." });
+         return res.status(400).json({ error: "Не надано даних для оновлення (title, genre, imageURL)." });
     }
 
-    try {
-        const projectRef = db.collection('projects').doc(projectID);
-        await projectRef.update(updateData);
-        res.status(200).json({ status: 'updated' });
-    } catch (error) {
-        console.error("Помилка при оновленні деталей проєкту:", error);
-        res.status(500).json({ error: "Не вдалося оновити деталі проєкту." });
-    }
+		try {
+			const projectRef = db.collection('projects').doc(projectID);
+			await projectRef.update(updateData);
+			res.status(200).json({ status: 'updated' });
+	} catch (error) {
+			console.error("Помилка при оновленні деталей проєкту:", error);
+			res.status(500).json({ error: "Не вдалося оновити деталі проєкту." });
+	}
 });
-
 // v2.0.0: Маршрут для експорту проєкту
 app.get('/export-project', async (req, res) => {
     if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });

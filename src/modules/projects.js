@@ -7,7 +7,9 @@ import {
     setCurrentProjectData, 
     setCurrentProjectID, 
     ui, 
-    hasUnsavedChanges 
+    hasUnsavedChanges,
+    getProjectsMetadata,
+    setProjectsMetadata
 } from '../state.js';
 import { 
     showSpinner, 
@@ -26,7 +28,20 @@ import {
 } from '../api.js';
 import { projectCache } from '../core/cache.js';
 import { escapeHTML } from '../utils/utils.js';
-import { openProject } from './workspace.js';
+import { openProject, updateBreadcrumbs } from './workspace.js';
+
+const getGenreClass = (genre) => {
+    const genreMap = {
+        'Фентезі': 'genre-fantasy',
+        'Фантастика': 'genre-scifi',
+        'Детектив': 'genre-detective',
+        'Романтика': 'genre-romance',
+        'Роман': 'genre-novel',
+        'Оповідання': 'genre-story',
+        'Інше': 'genre-other',
+    };
+    return genreMap[genre] || 'genre-other';
+};
 
 // ...
 
@@ -37,6 +52,7 @@ export function renderProjectsList(projects) {
     }
 
     const projectList = Array.isArray(projects) ? projects : [];
+    setProjectsMetadata(projectList);
     
     if (projectList.length === 0) {
         ui.projectsList.innerHTML = '<p class="empty-list-info" style="text-align: center; margin-top: 40px; grid-column: 1 / -1;">У вас ще немає проєктів. Натисніть "+ Створити проєкт", щоб почати.</p>';
@@ -51,6 +67,7 @@ export function renderProjectsList(projects) {
         
         const title = escapeHTML(project.title);
         const genre = escapeHTML(project.genre || 'Без жанру');
+        const genreClass = getGenreClass(project.genre);
         const imageURL = project.imageURL ? escapeHTML(project.imageURL) : '/assets/card-placeholder.png';
         const wordCount = project.totalWordCount || 0;
         const updatedAt = new Date(project.updatedAt).toLocaleString('uk-UA', { day: 'numeric', month: 'numeric', year: 'numeric' });
@@ -60,7 +77,7 @@ export function renderProjectsList(projects) {
               <img src="${imageURL}" alt="Обкладинка проєкту" loading="lazy" onerror="this.src='/assets/card-placeholder.png'; this.onerror=null;">
               
               <div class="card-image-overlay">
-                <span class="card-genre-tag">${genre}</span>
+                <span class="card-genre-tag ${genreClass}">${genre}</span>
                 <div class="card-edit-icon" data-project-id="${project.id}" title="Редагувати"></div>
               </div>
             </div>
@@ -166,7 +183,7 @@ function openProjectDetailsModal(projectId) {
         return;
     }
 
-    const project = projectCache.get(projectId);
+    const project = getProjectsMetadata().find(p => p.id === projectId);
     if (!project) {
         showToast("Не вдалося знайти дані проєкту. Спробуйте оновити сторінку.", "error");
         return;
@@ -237,18 +254,9 @@ async function updateProjectDetails(id, details) {
     try {
         await updateProjectDetailsAPI(id, details);
         
-        const cachedProject = projectCache.get(id);
-        if (cachedProject) {
-            projectCache.set(id, {
-                ...cachedProject,
-                ...details,
-                updatedAt: new Date().toISOString() // Оновлюємо час
-            });
-        }
-
         if (id === currentProjectID) {
             currentProjectData.title = details.title;
-            callUpdateBreadcrumbs(); // !!! ВИКЛИК ОБГОРТKI !!!
+            updateBreadcrumbs();
             if (ui.workspaceTitle) {
                 ui.workspaceTitle.textContent = details.title;
             }

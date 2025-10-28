@@ -489,13 +489,22 @@ button, .btn {
 /* 4. Тег жанру (на обкладинці) */
 .card-genre-tag {
     background-color: rgba(0, 0, 0, 0.6); 
-    color: var(--primary-text);
+    color: var(--color-text-primary);
     padding: var(--space-xs) var(--space-sm);
     border-radius: var(--radius-md);
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-medium);
     backdrop-filter: blur(2px); 
 }
+
+/* Genre Colors */
+.genre-fantasy { background-color: #6f42c1 !important; color: white !important; }
+.genre-scifi { background-color: #007bff !important; color: white !important; }
+.genre-detective { background-color: #fd7e14 !important; color: white !important; }
+.genre-romance { background-color: #e83e8c !important; color: white !important; }
+.genre-novel { background-color: #20c997 !important; color: white !important; }
+.genre-story { background-color: #17a2b8 !important; color: white !important; }
+.genre-other { background-color: #6c757d !important; color: white !important; }
 
 /* 5. Іконка редагування (на обкладинці) */
 .card-edit-icon {

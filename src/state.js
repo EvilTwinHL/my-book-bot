@@ -23,6 +23,16 @@ export let pendingSave = { timer: null, func: null };
 /** @type {boolean} Прапор для onbeforeunload */
 export let hasUnsavedChanges = false;
 
+let projectsMetadata = [];
+
+export function getProjectsMetadata() {
+    return projectsMetadata;
+}
+
+export function setProjectsMetadata(projects) {
+    projectsMetadata = projects;
+}
+
 
 // === Менеджер Історії (Undo/Redo) ===
 export const historyManager = {

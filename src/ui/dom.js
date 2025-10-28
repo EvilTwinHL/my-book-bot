@@ -11,11 +11,19 @@ export function bindUIElements() {
         toastContainer: document.getElementById('toast-container'),
         
         // --- Модальні вікна ---
+        simpleEditModal: document.getElementById('simple-edit-modal'),
+        simpleEditModalTitle: document.getElementById('simple-edit-modal-title'),
+        simpleEditModalInput: document.getElementById('simple-edit-modal-input'),
+        simpleEditModalConfirmBtn: document.getElementById('simple-edit-modal-confirm-btn'),
+        simpleEditModalCancelBtn: document.getElementById('simple-edit-modal-cancel-btn'),
+
         createEditModal: document.getElementById('create-edit-modal'),
         createEditModalTitle: document.getElementById('create-edit-modal-title'),
-        createEditInput: document.getElementById('create-edit-input'),
-        createEditConfirmBtn: document.getElementById('create-edit-confirm-btn'),
-        createEditCancelBtn: document.getElementById('create-edit-cancel-btn'),
+        createModalTitleInput: document.getElementById('create-modal-title-input'),
+        createModalGenreSelect: document.getElementById('create-modal-genre-select'),
+        createModalImageSelect: document.getElementById('create-modal-image-select'),
+        createModalConfirmBtn: document.getElementById('create-modal-confirm-btn'),
+        createModalCancelBtn: document.getElementById('create-modal-cancel-btn'),
         
         confirmModal: document.getElementById('confirm-modal'),
         confirmModalTitle: document.getElementById('confirm-modal-title'),

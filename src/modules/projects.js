@@ -16,49 +16,16 @@ import {
     showToast, 
     showView 
 } from '../ui/global.js';
-import { 
-    showConfirmModal, 
-    showCreateEditModal 
-} from '../ui/modal.js';
-import { 
-    fetchProjects, 
-    createNewProject, 
-    deleteProjectAPI, 
-    updateProjectDetailsAPI, 
-    exportProjectAPI 
+import {
+    fetchProjects,
+    createNewProject,
+    deleteProjectAPI,
+    updateProjectDetailsAPI,
+    exportProjectAPI
 } from '../api.js';
-import { projectCache } from '../core/cache.js';
-import { escapeHTML } from '../utils/utils.js';
 
-// --- ДИНАМІЧНІ ОБГОРТКИ (для усунення циклічних залежностей з workspace.js) ---
+// ...
 
-/** Асинхронно викликає openProject з модуля workspace. */
-async function callOpenProject(id) {
-    try {
-        const workspace = await import('./workspace.js'); 
-        workspace.openProject(id);
-    } catch (e) {
-        handleError(e, "dynamic-openProject");
-        showToast("Помилка відкриття проєкту (Workspace).", "error");
-    }
-}
-
-/** Асинхронно викликає updateBreadcrumbs з модуля workspace. */
-async function callUpdateBreadcrumbs() {
-    try {
-        const workspace = await import('./workspace.js'); 
-        workspace.updateBreadcrumbs();
-    } catch (e) {
-        handleError(e, "dynamic-updateBreadcrumbs");
-    }
-}
-
-
-// --- Рендеринг ---
-
-/**
- * @param {Array<object>} projects
- */
 export function renderProjectsList(projects) {
     if (!ui.projectsList) {
         console.error("Помилка рендерингу: ui.projectsList не визначено.");
@@ -115,7 +82,6 @@ export function renderProjectsList(projects) {
     });
 }
 
-
 /**
  * Завантажує список проєктів і відображає його.
  */
@@ -159,28 +125,24 @@ export async function loadProjects() {
     }
 }
 
-export function createNewProjectAction() {
-    // TODO: Вам потрібно буде оновити цю функцію,
-    // щоб вона відкривала нову модалку #create-edit-modal з index.html
-    showCreateEditModal(
-        'Створити новий проєкт',
-        'Назва проєкту',
-        'Створити',
-        async (newTitle) => {
-            await createProject(newTitle);
-        }
-    );
+// ...
+
+export async function createNewProjectAction() {
+    const details = await showCreateProjectModal();
+    if (details) {
+        await createProject(details);
+    }
 }
 
-async function createProject(title) {
-    if (!title) return;
+async function createProject(details) {
+    if (!details || !details.title) return;
 
     showSpinner();
     try {
-        const newProject = await createNewProject(title, currentUser.uid);
+        const newProject = await createNewProject(details, currentUser.uid);
         await loadProjects();
-        showToast(`Проєкт "${title}" створено!`, "success");
-        callOpenProject(newProject.id); // !!! ВИКЛИК ОБГОРТKI !!!
+        showToast(`Проєкт "${details.title}" створено!`, "success");
+        callOpenProject(newProject.id);
     } catch (error) {
         handleError(error, "create-project");
         showToast("Помилка створення проєкту.", "error");
@@ -188,7 +150,6 @@ async function createProject(title) {
         hideSpinner();
     }
 }
-
 
 // === ЛОГІКА МОДАЛЬНОГО ВІКНА РЕДАГУВАННЯ ===
 

@@ -105,27 +105,49 @@ function addSaveListener(element, fieldName, property, isNumber = false) {
     });
 }
 
-async function handleChangeDisplayName() {
+function handleChangeDisplayName() {
     if (!currentUser || !currentUserProfile || !firestore) return;
+    
+    ui.createEditModalTitle.textContent = "Змінити ім'я";
+    ui.createEditInput.value = currentUserProfile.displayName;
+    ui.createEditInput.placeholder = "Введіть нове ім'я";
+    ui.createEditModal.classList.remove('hidden');
+    ui.createEditInput.focus();
+    ui.createEditInput.select();
 
-    const newName = await showCreateEditModal("Змінити ім'я", currentUserProfile.displayName);
+    const confirmHandler = async () => {
+        const newName = ui.createEditInput.value.trim();
+        if (newName && newName !== currentUserProfile.displayName) {
+            try {
+                const userRef = firestore.collection('users').doc(currentUser.uid);
+                await userRef.update({ displayName: newName });
 
-    if (newName && newName !== currentUserProfile.displayName) {
-        try {
-            const userRef = firestore.collection('users').doc(currentUser.uid);
-            await userRef.update({ displayName: newName });
-
-            const updatedProfile = { ...currentUserProfile, displayName: newName };
-            setCurrentUserProfile(updatedProfile);
-            if (ui.headerUsername) ui.headerUsername.textContent = newName;
-            
-            showToast("Ім'я успішно змінено!", "success");
-            
-        } catch (e) {
-            handleError(e, "update-display-name");
-            showToast("Не вдалося змінити ім'я.", "error");
+                const updatedProfile = { ...currentUserProfile, displayName: newName };
+                setCurrentUserProfile(updatedProfile);
+                if (ui.headerUsername) ui.headerUsername.textContent = newName;
+                
+                showToast("Ім'я успішно змінено!", "success");
+                
+            } catch (e) {
+                handleError(e, "update-display-name");
+                showToast("Не вдалося змінити ім'я.", "error");
+            }
         }
-    }
+        closeModal();
+    };
+
+    const cancelHandler = () => {
+        closeModal();
+    };
+
+    const closeModal = () => {
+        ui.createEditModal.classList.add('hidden');
+        ui.createEditConfirmBtn.removeEventListener('click', confirmHandler);
+        ui.createEditCancelBtn.removeEventListener('click', cancelHandler);
+    };
+
+    ui.createEditConfirmBtn.addEventListener('click', confirmHandler);
+    ui.createEditCancelBtn.addEventListener('click', cancelHandler);
 }
 
 

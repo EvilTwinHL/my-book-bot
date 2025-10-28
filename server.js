@@ -73,13 +73,14 @@ app.use(['/chat', '/create-project', '/delete-project', '/save-project-content',
 app.get('/get-projects', async (req, res) => {
     if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
     
-    const user = req.query.user;
-        if (!user) {
-            return res.status(400).json({ error: "Необхідний ідентифікатор користувача (user ID)." });
-        }
-        try {
-            const projectsRef = db.collection('projects')
-                .where('owner', '==', user)            .orderBy('updatedAt', 'desc'); 
+    const userID = req.query.user;
+    if (!userID) {
+        return res.status(400).json({ error: "Необхідний ідентифікатор користувача (user ID)." });
+    }
+    try {
+        const projectsRef = db.collection('projects')
+            .where('owner', '==', userID) 
+            .orderBy('updatedAt', 'desc'); 
         const snapshot = await projectsRef.get();
         
         const projects = [];
@@ -92,7 +93,7 @@ app.get('/get-projects', async (req, res) => {
                 updatedAt: data.updatedAt ? data.updatedAt.toDate().toISOString() : new Date().toISOString(),
                 // === ОНОВЛЕНО (ФАЗА 1): Додано нові поля ===
                 genre: data.genre || 'Інше', // Повертаємо жанр, або 'Інше' за замовчуванням
-                imageURL: data.imageURL || '/assets/card-placeholder.png' // Повертаємо обкладинку
+                coverImage: data.coverImage || 'default-placeholder.png' // Повертаємо обкладинку
             });
         });
         
@@ -321,62 +322,76 @@ app.post('/migrate-project-data', async (req, res) => {
 
 // === ОНОВЛЕНО (ФАЗА 1): Маршрут для створення проєкту ===
 app.post('/create-project', async (req, res) => {
-    console.log('Request body:', req.body);
-    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
+    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
+    
+    // Отримуємо нові поля
+    const { title, user, genre, coverImage } = req.body;
+    if (!title || !user) {
+        return res.status(400).json({ error: "Необхідні title та user ID." });
+    }
 
-    const { details, user } = req.body;
-    const { title, genre, imageURL } = details || {};
-
-    if (!title || !user) {
-        return res.status(400).json({ error: "Необхідні title та user ID." });
-    }
-
-    try {
-        const projectRef = db.collection('projects').doc();
-        const projectID = projectRef.id;
-
+    try {
+        const projectRef = db.collection('projects').doc();
+        const projectID = projectRef.id;
+        
         const defaultGenre = genre || 'Інше';
-        const defaultImage = imageURL || '/assets/card-placeholder.png';
-
-        await projectRef.set({
-            title: title,
-            owner: user,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            totalWordCount: 0,
-            wordGoal: 50000,
+        const defaultCover = coverImage || 'default-placeholder.png';
+        
+        // --- 1. Створюємо головний документ (projects/{id}) ---
+        await projectRef.set({
+            title: title,
+            owner: user,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            totalWordCount: 0,
+            wordGoal: 50000,
+            // Додаємо нові поля
             genre: defaultGenre,
-            imageURL: defaultImage
-        });
+            coverImage: defaultCover
+        });
 
-        const dataCollectionRef = projectRef.collection('data');
-        await dataCollectionRef.doc('world').set({ premise: '', theme: '', mainArc: '', wordGoal: 50000, notes: '', research: '' });
-        await dataCollectionRef.doc('chatHistory').set({ history: [] });
-        const emptyLists = ['chapters', 'characters', 'locations', 'plotlines'];
-        for (const listName of emptyLists) {
-            await dataCollectionRef.doc(listName).set({ items: [] });
-        }
+        const dataCollectionRef = projectRef.collection('data');
+        
+        // --- 2. Створюємо допоміжні документи в субколекції data ---
+        
+        // 2.1. World (основна інформація)
+        await dataCollectionRef.doc('world').set({
+            premise: '', theme: '', mainArc: '', wordGoal: 50000, notes: '', research: ''
+        });
 
-        res.status(201).json({
-            id: projectID,
-            message: "Проєкт створено",
-            data: {
-                id: projectID,
-                title: title,
+        // 2.2. Chat History
+        await dataCollectionRef.doc('chatHistory').set({
+            history: []
+        });
+
+        // 2.3. Списки (розділи, персонажі, локації, сюжет)
+        const emptyLists = ['chapters', 'characters', 'locations', 'plotlines'];
+        for (const listName of emptyLists) {
+            await dataCollectionRef.doc(listName).set({ items: [] });
+        }
+
+        // === ОНОВЛЕНО (ФАЗА 1): Повертаємо повний об'єкт проєкту ===
+        res.status(201).json({ 
+            id: projectID, 
+            message: "Проєкт створено",
+            data: { // Повертаємо дані для негайного рендерингу
+                id: projectID,
+                title: title,
                 genre: defaultGenre,
-                imageURL: defaultImage,
+                coverImage: defaultCover,
                 updatedAt: new Date().toISOString(),
                 totalWordCount: 0,
-                content: { chapters: [], characters: [], locations: [], plotlines: [] },
-                chatHistory: []
-            }
-        });
+                content: { chapters: [], characters: [], locations: [], plotlines: [] },
+                chatHistory: []
+            } 
+        });
 
-    } catch (error) {
-        console.error("Помилка при створенні проєкту:", error);
-        res.status(500).json({ error: "Не вдалося створити проєкт." });
-    }
+    } catch (error) {
+        console.error("Помилка при створенні проєкту:", error);
+        res.status(500).json({ error: "Не вдалося створити проєкт." });
+    }
 });
+
 // v2.0.0: Маршрут для видалення проєкту
 app.post('/delete-project', async (req, res) => {
     if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });

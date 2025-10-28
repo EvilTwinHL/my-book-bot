@@ -76,8 +76,8 @@ export async function fetchProjectContent(projectID) {
     return normalizedData;
 }
 
-export async function createNewProject(details, user) {
-    return fetchBackend('/create-project', 'POST', { details, user });
+export async function createNewProject(title, user) {
+    return fetchBackend('/create-project', 'POST', { title, user });
 }
 
 export async function deleteProjectAPI(projectID) {

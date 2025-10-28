@@ -1,4 +1,4 @@
-// src/ui/dom.js - (Виправлено v2.9.17: Коректний signInBtn ID та додано projectsView)
+// src/ui/dom.js - (ОНОВЛЕНО ФАЗА 4: Додано модалку деталей проєкту)
 
 import { setUI } from '../state.js';
 
@@ -27,9 +27,19 @@ export function bindUIElements() {
         searchResultsList: document.getElementById('search-results-list'),
         searchResultsCloseBtn: document.getElementById('search-results-close-btn'),
         
-        // --- АУТЕНТИФІКАЦІЯ (КРИТИЧНІ ВИПРАВЛЕННЯ) ---
+        // === НОВА МОДАЛКА (ФАЗА 4) ===
+        projectDetailsModal: document.getElementById('project-details-modal'),
+        projectDetailsTitle: document.getElementById('project-details-title'),
+        projectDetailsNameInput: document.getElementById('project-details-name-input'),
+        projectDetailsGenreInput: document.getElementById('project-details-genre-input'),
+        projectDetailsImageInput: document.getElementById('project-details-image-input'),
+        projectDetailsConfirmBtn: document.getElementById('project-details-confirm-btn'),
+        projectDetailsCancelBtn: document.getElementById('project-details-cancel-btn'),
+        // ==============================
+
+        // --- АУТЕНТИФІКАЦІЯ ---
         authContainer: document.getElementById('auth-container'),
-        signInBtn: document.getElementById('signInBtn'), // ✅ ВИПРАВЛЕНО: з 'sign-in-btn' на 'signInBtn'
+        signInBtn: document.getElementById('signInBtn'), 
 
         // --- v2.7.0: Глобальний Хедер ---
         globalHeader: document.getElementById('global-header'),
@@ -42,8 +52,8 @@ export function bindUIElements() {
         // --- Головний контейнер ---
         workspaceContainer: document.getElementById('workspace-container'),
         
-        // --- Панель проєктів (КРИТИЧНО: ДОДАНО projectsView) ---
-        projectsView: document.getElementById('projects-view'), // ✅ ДОДАНО
+        // --- Панель проєктів ---
+        projectsView: document.getElementById('projects-view'), 
         projectsContainer: document.getElementById('projects-container'),
         projectsList: document.getElementById('projects-list'),
         createProjectBtn: document.getElementById('create-project-btn'),
@@ -57,7 +67,10 @@ export function bindUIElements() {
         // --- Робоча область: Навігація ---
         workspaceHeader: document.getElementById('workspace-header'),
         workspaceTitle: document.getElementById('workspace-title'),
-        workspaceTitleInput: document.getElementById('workspace-title-input'),
+        
+        // === ВИДАЛЕНО (ФАЗА 3) ===
+        // workspaceTitleInput: document.getElementById('workspace-title-input'),
+        
         saveStatusIndicator: document.getElementById('save-status-indicator'),
         saveStatusText: document.getElementById('save-status-text'),
         saveStatusSpinner: document.getElementById('save-status-spinner'),
@@ -66,7 +79,7 @@ export function bindUIElements() {
         breadcrumbs: document.getElementById('breadcrumbs'), 
         breadcrumbProjects: document.getElementById('breadcrumb-projects'), 
         breadcrumbCurrent: document.getElementById('breadcrumb-current'), 
-        quickAccessBar: document.getElementById('quick-access-bar'), // Виправлено: 'quick-access' -> 'quick-access-bar'
+        quickAccessBar: document.getElementById('quick-access-bar'),
         navProgress: document.getElementById('nav-progress'), 
 
         workspaceNav: document.getElementById('workspace-nav'),
@@ -185,5 +198,5 @@ export function bindUIElements() {
     // Встановлення об'єкта ui в глобальний стан
     setUI(ui);
     
-    console.log("Елементи UI зв'язані.");
+    console.log("Елементи UI зв'язані (включно з новою модалкою).");
 }

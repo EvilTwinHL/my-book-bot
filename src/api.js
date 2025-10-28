@@ -1,4 +1,4 @@
-// src/api.js
+// src/api.js - (ВИПРАВЛЕНО: Додано updateProjectDetailsAPI)
 
 import { 
     currentUser, 
@@ -39,7 +39,6 @@ async function fetchBackend(path, method = 'GET', body = null) {
         throw new Error(errorData.error || `HTTP помилка! Статус: ${response.status}`);
     }
 
-    // Для деяких запитів (наприклад, експорт) відповідь не JSON
     if (response.headers.get('content-type')?.includes('application/json')) {
         return response.json();
     }
@@ -50,10 +49,8 @@ async function fetchBackend(path, method = 'GET', body = null) {
 
 export async function fetchProjects() {
     if (!currentUser) return [];
-    // !!! КРИТИЧНИЙ FIX v2.6.4: Додаємо 'await' для правильного отримання даних (а не Promise)
     const projects = await fetchBackend(`/get-projects?user=${currentUser.uid}`);
     
-    // Додаткова оборонна перевірка (на всякий випадок)
     if (!Array.isArray(projects)) {
         console.warn("API /get-projects повернув не-масив. Повертаємо пустий масив.");
         return []; 
@@ -65,7 +62,6 @@ export async function fetchProjects() {
 export async function fetchProjectContent(projectID) {
     const freshData = await fetchBackend(`/get-project-content?projectID=${projectID}`);
     
-    // v2.5.6: Гарантуємо, що масиви існують після завантаження з сервера
     const normalizedData = {
         ...freshData,
         content: { 
@@ -88,9 +84,17 @@ export async function deleteProjectAPI(projectID) {
     return fetchBackend('/delete-project', 'POST', { projectID });
 }
 
-export async function updateProjectTitleAPI(projectID, newTitle) {
-    return fetchBackend('/update-title', 'POST', { projectID, newTitle });
+// === ОНОВЛЕНО (ФАЗА 5): Заміна 'updateProjectTitleAPI' на 'updateProjectDetailsAPI' ===
+/**
+ * Оновлює деталі проєкту (title, genre, imageURL).
+ * @param {string} projectID
+ * @param {{title: string, genre: string, imageURL: string}} details
+ */
+export async function updateProjectDetailsAPI(projectID, details) {
+    // Викликаємо новий ендпоінт, який ми створили в server.js
+    return fetchBackend('/update-project-details', 'POST', { projectID, details });
 }
+// ======================================================================
 
 export async function exportProjectAPI(projectID) {
     return fetchBackend(`/export-project?projectID=${projectID}`, 'GET');
@@ -129,7 +133,8 @@ export async function scheduleSave(field, value) {
             
             if (field === 'content.chapters') {
                 updateTotalWordCount();
-                (await import('./modules/projects.js')).loadUserProjects();
+                // === ВИПРАВЛЕННЯ (ФАЗА 5): 'loadUserProjects' -> 'loadProjects' ===
+                (await import('./modules/projects.js')).loadProjects();
             }
 
         } catch (error) {

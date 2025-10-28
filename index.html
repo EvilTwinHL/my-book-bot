@@ -61,8 +61,25 @@
         </div>
     </div>
 
-    
-
+    <div id="project-details-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3 id="project-details-title">Редагувати проєкт</h3>
+            
+            <label for="project-details-name-input">Назва проєкту</label>
+            <input type="text" id="project-details-name-input" placeholder="Введіть назву проєкту...">
+            
+            <label for="project-details-genre-input">Жанр</label>
+            <input type="text" id="project-details-genre-input" placeholder="Наприклад: Фентезі, Наукова фантастика...">
+            
+            <label for="project-details-image-input">URL Обкладинки (зображення)</label>
+            <input type="text" id="project-details-image-input" placeholder="Вставте URL посилання на зображення...">
+            
+            <div class="modal-buttons">
+                <button id="project-details-confirm-btn" class="btn-primary">Зберегти</button>
+                <button id="project-details-cancel-btn" class="btn-secondary">Відміна</button>
+            </div>
+        </div>
+    </div>
     
     <div id="auth-container" class="container"> 
         <h2>Вхід до OpusAI</h2>
@@ -77,7 +94,7 @@
         
         <div id="projects-header">
             <h2>Мої проєкти</h2>
-            <button id="create-project-btn" class="btn-warning">+ Створити книгу</button>
+            <button id="create-project-btn" class="btn-warning">+ Створити проєкт</button>
         </div>
 
         <div id="projects-container"> 
@@ -91,8 +108,7 @@
         <div id="workspace-header">
             <div class="header-left">
                 <button id="back-to-projects-btn" class="btn-icon">🏠</button>
-                <h1 id="workspace-title" title="Клікніть, щоб редагувати">Назва Проєкту</h1>
-                <input type="text" id="workspace-title-input" class="hidden" value="Назва Проєкту">
+                <h1 id="workspace-title" title="Назва Проєкту">Назва Проєкту</h1>
             </div>
 
             <div class="header-right">
@@ -375,7 +391,7 @@
     </footer>
 
     <div id="project-context-menu" class="context-menu hidden">
-        <button id="context-edit-btn">Змінити назву</button>
+        <button id="context-edit-btn">Редагувати деталі</button>
         <button id="context-export-btn">Експортувати (.txt)</button>
         <button id="context-delete-btn">Видалити проєкт</button>
     </div>

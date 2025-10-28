@@ -64,20 +64,20 @@ async function getOrCreateUserProfile(user) {
         const defaultName = user.displayName || "Автор";
         
         return new Promise((resolve) => {
-            if (!ui.createEditModal || !ui.createEditModalTitle || !ui.createEditInput || !ui.createEditConfirmBtn || !ui.createEditCancelBtn) {
+            if (!ui.simpleEditModal || !ui.simpleEditModalTitle || !ui.simpleEditModalInput || !ui.simpleEditModalConfirmBtn || !ui.simpleEditModalCancelBtn) {
                 console.error("Елементи модального вікна не знайдені!");
                 resolve(null); 
                 return;
             }
 
-            ui.createEditModalTitle.textContent = "Як вас називати?";
-            ui.createEditInput.value = defaultName;
-            ui.createEditInput.placeholder = "Введіть ваше ім'я";
-            ui.createEditCancelBtn.classList.add('hidden'); 
-            ui.createEditModal.classList.remove('hidden');
+            ui.simpleEditModalTitle.textContent = "Як вас називати?";
+            ui.simpleEditModalInput.value = defaultName;
+            ui.simpleEditModalInput.placeholder = "Введіть ваше ім'я";
+            ui.simpleEditModalCancelBtn.classList.add('hidden'); 
+            ui.simpleEditModal.classList.remove('hidden');
 
             const onConfirm = async () => {
-                const newName = ui.createEditInput.value.trim() || defaultName;
+                const newName = ui.simpleEditModalInput.value.trim() || defaultName;
                 const userProfile = {
                     displayName: newName,
                     email: user.email,
@@ -88,9 +88,9 @@ async function getOrCreateUserProfile(user) {
                     await userRef.set(userProfile);
                     console.log("Профіль створено:", userProfile);
                     
-                    ui.createEditModal.classList.add('hidden');
-                    ui.createEditCancelBtn.classList.remove('hidden');
-                    ui.createEditConfirmBtn.removeEventListener('click', onConfirm);
+                    ui.simpleEditModal.classList.add('hidden');
+                    ui.simpleEditModalCancelBtn.classList.remove('hidden');
+                    ui.simpleEditModalConfirmBtn.removeEventListener('click', onConfirm);
                     
                     resolve(userProfile);
 
@@ -100,7 +100,7 @@ async function getOrCreateUserProfile(user) {
                 }
             };
 
-            ui.createEditConfirmBtn.addEventListener('click', onConfirm);
+            ui.simpleEditModalConfirmBtn.addEventListener('click', onConfirm);
         });
     }
 }

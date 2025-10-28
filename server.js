@@ -19,20 +19,20 @@ app.use(express.json({ limit: '50mb' }));
 // --- Налаштування Firebase Admin ---
 let db;
 try {
-    let serviceAccount;
-    if (process.env.SERVICE_ACCOUNT_KEY_JSON) {
-        serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY_JSON);
-    } else {
-        serviceAccount = require('./serviceAccountKey.json');
-    }
-    
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
-    db = admin.firestore(); // Ініціалізація бази
+    let serviceAccount;
+    if (process.env.SERVICE_ACCOUNT_KEY_JSON) {
+        serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY_JSON);
+    } else {
+        serviceAccount = require('./serviceAccountKey.json');
+    }
+    
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    db = admin.firestore(); // Ініціалізація бази
 } catch (error) {
-    console.error("ПОМИЛКА КРИТИЧНОЇ ІНІЦІАЛІЗАЦІЇ FIREBASE ADMIN:", error.message);
-    db = null; 
+    console.error("ПОМИЛКА КРИТИЧНОЇ ІНІЦІАЛІЗАЦІЇ FIREBASE ADMIN:", error.message);
+    db = null; 
 }
 
 
@@ -40,11 +40,11 @@ try {
 let genAI;
 let model;
 if (process.env.GEMINI_API_KEY) {
-    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 } else {
-    console.error("ПОМИЛКА ІНІЦІАЛІЗАЦІЇ GEMINI: GEMINI_API_KEY не знайдено.");
-    model = null;
+    console.error("ПОМИЛКА ІНІЦІАЛІЗАЦІЇ GEMINI: GEMINI_API_KEY не знайдено.");
+    model = null;
 }
 
 
@@ -63,8 +63,8 @@ const apiLimiter = rateLimit({
     }
 });
 
-// Застосовуємо Rate Limiter тільки до API-маршрутів
-app.use(['/chat', '/create-project', '/delete-project', '/save-project-content', '/get-projects', '/get-project-content', '/update-title', '/export-project', '/migrate-project-data'], apiLimiter);
+// === ОНОВЛЕНО (ФАЗА 1): Замінено '/update-title' на '/update-project-details' ===
+app.use(['/chat', '/create-project', '/delete-project', '/save-project-content', '/get-projects', '/get-project-content', '/update-project-details', '/export-project', '/migrate-project-data'], apiLimiter);
 
 
 // === 3. API МАРШРУТИ (ПОВИННІ ЙТИ ПЕРЕД ОБСЛУГОВУВАННЯМ ФРОНТЕНДУ) === 
@@ -72,16 +72,15 @@ app.use(['/chat', '/create-project', '/delete-project', '/save-project-content',
 // v2.0.0: Маршрут для отримання всіх проєктів користувача
 app.get('/get-projects', async (req, res) => {
     if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
-    
-    const userID = req.query.user;
+    
+    const userID = req.query.user;
     if (!userID) {
         return res.status(400).json({ error: "Необхідний ідентифікатор користувача (user ID)." });
     }
     try {
-        // v2.6.5 FIX: Використовуємо поле 'owner' для пошуку за UID
         const projectsRef = db.collection('projects')
-            .where('owner', '==', userID) 
-            .orderBy('updatedAt', 'desc'); 
+            .where('owner', '==', userID) 
+            .orderBy('updatedAt', 'desc'); 
         const snapshot = await projectsRef.get();
         
         const projects = [];
@@ -91,13 +90,15 @@ app.get('/get-projects', async (req, res) => {
                 id: doc.id,
                 title: data.title,
                 totalWordCount: data.totalWordCount || 0,
-                updatedAt: data.updatedAt ? data.updatedAt.toDate().toISOString() : new Date().toISOString()
+                updatedAt: data.updatedAt ? data.updatedAt.toDate().toISOString() : new Date().toISOString(),
+                // === ОНОВЛЕНО (ФАЗА 1): Додано нові поля ===
+                genre: data.genre || 'Інше', // Повертаємо жанр, або 'Інше' за замовчуванням
+                coverImage: data.coverImage || 'default-placeholder.png' // Повертаємо обкладинку
             });
         });
         
-        // v2.6.3: Повертаємо масив (навіть якщо він порожній)
         res.json(projects); 
-        
+        
     } catch (error) {
         console.error("Помилка при отриманні проєктів:", error);
         res.status(500).json({ error: "Не вдалося отримати список проєктів." });
@@ -107,8 +108,8 @@ app.get('/get-projects', async (req, res) => {
 // v2.0.0: Маршрут для отримання повного контенту проєкту (З ЛОГІКОЮ МІГРАЦІЇ)
 app.get('/get-project-content', async (req, res) => {
     if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
-    
-    const { projectID } = req.query;
+    
+    const { projectID } = req.query;
     if (!projectID) {
         return res.status(400).json({ error: "Необхідний ідентифікатор проєкту." });
     }
@@ -117,7 +118,6 @@ app.get('/get-project-content', async (req, res) => {
         const projectRef = db.collection('projects').doc(projectID);
         const dataCollectionRef = projectRef.collection('data');
         
-        // Отримуємо всі документи одночасно
         const [projectDoc, worldDoc, chatDoc, chaptersDoc, charactersDoc, locationsDoc, plotlinesDoc] = await Promise.all([
             projectRef.get(),
             dataCollectionRef.doc('world').get(),
@@ -146,7 +146,6 @@ app.get('/get-project-content', async (req, res) => {
 
             }
             
-            // Перевіряємо старий формат (субколекції)
             const oldCollectionRef = dataCollectionRef.doc(collectionName).collection('items');
             
             try {
@@ -160,7 +159,6 @@ app.get('/get-project-content', async (req, res) => {
                     
                     oldItems.sort((a, b) => (a.index || 0) - (b.index || 0));
                     
-                    // Автоматично мігруємо дані в новий формат
                     const newDocRef = dataCollectionRef.doc(collectionName);
                     await newDocRef.set({ items: oldItems }); 
                     
@@ -182,6 +180,9 @@ app.get('/get-project-content', async (req, res) => {
             id: projectDoc.id,
             title: projectData.title,
             owner: projectData.owner,
+            // === ОНОВЛЕНО (ФАЗА 1): Додано нові поля ===
+            genre: projectData.genre || 'Інше',
+            coverImage: projectData.coverImage || 'default-placeholder.png',
             totalWordCount: projectData.totalWordCount || 0,
             updatedAt: projectData.updatedAt ? projectData.updatedAt.toDate().toISOString() : new Date().toISOString(),
             content: {
@@ -209,9 +210,9 @@ app.get('/get-project-content', async (req, res) => {
 
 // v2.0.0: Маршрут для збереження контенту
 app.post('/save-project-content', async (req, res) => {
-    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
-    
-    const { projectID, field, value } = req.body;
+    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
+    
+    const { projectID, field, value } = req.body;
     if (!projectID || !field) {
         return res.status(400).json({ error: "Необхідні projectID та field." });
     }
@@ -221,16 +222,13 @@ app.post('/save-project-content', async (req, res) => {
         const projectRef = db.collection('projects').doc(projectID);
         const dataCollectionRef = projectRef.collection('data');
 
-        // Оновлюємо основний документ проєкту
         batch.update(projectRef, {
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
         
-        // World fields
         if (field.startsWith('content.')) {
             const worldField = field.substring('content.'.length);
             
-            // Перевіряємо, чи це поле світу (не список)
             const worldFields = ['premise', 'theme', 'mainArc', 'wordGoal', 'notes', 'research'];
             if (worldFields.includes(worldField)) {
                 const worldDocRef = dataCollectionRef.doc('world');
@@ -244,22 +242,18 @@ app.post('/save-project-content', async (req, res) => {
             }
         } 
         
-        // Chat History
         if (field === 'chatHistory') {
             const chatDocRef = dataCollectionRef.doc('chatHistory');
             batch.set(chatDocRef, { history: value });
         }
         
-        // Lists (chapters, characters, locations, plotlines)
         const listFields = ['content.chapters', 'content.characters', 'content.locations', 'content.plotlines'];
         if (listFields.includes(field)) {
             const collectionName = field.substring('content.'.length);
             const listDocRef = dataCollectionRef.doc(collectionName);
             
-            // Зберігаємо весь масив у полі 'items'
             batch.set(listDocRef, { items: value });
             
-            // Оновлюємо загальний лічильник слів для розділів
             if (collectionName === 'chapters') {
                 const totalWordCount = value.reduce((sum, item) => sum + (item.word_count || 0), 0);
                 batch.update(projectRef, { totalWordCount: totalWordCount });
@@ -277,9 +271,9 @@ app.post('/save-project-content', async (req, res) => {
 
 // Додатковий маршрут для примусової міграції даних
 app.post('/migrate-project-data', async (req, res) => {
-    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
-    
-    const { projectID } = req.body;
+    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
+    
+    const { projectID } = req.body;
     if (!projectID) {
         return res.status(400).json({ error: "Необхідний projectID." });
     }
@@ -294,7 +288,6 @@ app.post('/migrate-project-data', async (req, res) => {
 
         for (const collectionName of collectionsToMigrate) {
             
-            // Перевіряємо старі дані
             const oldCollectionRef = dataCollectionRef.doc(collectionName).collection('items');
             const oldSnapshot = await oldCollectionRef.get();
             
@@ -307,10 +300,8 @@ app.post('/migrate-project-data', async (req, res) => {
                 oldItems.push({ ...oldDoc.data(), id: oldDoc.id });
             });
 
-            // Сортуємо за index
             oldItems.sort((a, b) => (a.index || 0) - (b.index || 0));
 
-            // Зберігаємо в новому форматі
             const newDocRef = dataCollectionRef.doc(collectionName);
             await newDocRef.set({ items: oldItems });
             
@@ -329,11 +320,12 @@ app.post('/migrate-project-data', async (req, res) => {
     }
 });
 
-// v2.0.0: Маршрут для створення проєкту
+// === ОНОВЛЕНО (ФАЗА 1): Маршрут для створення проєкту ===
 app.post('/create-project', async (req, res) => {
-    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
-    
-    const { title, user } = req.body;
+    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
+    
+    // Отримуємо нові поля
+    const { title, user, genre, coverImage } = req.body;
     if (!title || !user) {
         return res.status(400).json({ error: "Необхідні title та user ID." });
     }
@@ -341,6 +333,9 @@ app.post('/create-project', async (req, res) => {
     try {
         const projectRef = db.collection('projects').doc();
         const projectID = projectRef.id;
+        
+        const defaultGenre = genre || 'Інше';
+        const defaultCover = coverImage || 'default-placeholder.png';
         
         // --- 1. Створюємо головний документ (projects/{id}) ---
         await projectRef.set({
@@ -350,6 +345,9 @@ app.post('/create-project', async (req, res) => {
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             totalWordCount: 0,
             wordGoal: 50000,
+            // Додаємо нові поля
+            genre: defaultGenre,
+            coverImage: defaultCover
         });
 
         const dataCollectionRef = projectRef.collection('data');
@@ -372,11 +370,17 @@ app.post('/create-project', async (req, res) => {
             await dataCollectionRef.doc(listName).set({ items: [] });
         }
 
+        // === ОНОВЛЕНО (ФАЗА 1): Повертаємо повний об'єкт проєкту ===
         res.status(201).json({ 
             id: projectID, 
             message: "Проєкт створено",
-            data: {
+            data: { // Повертаємо дані для негайного рендерингу
+                id: projectID,
                 title: title,
+                genre: defaultGenre,
+                coverImage: defaultCover,
+                updatedAt: new Date().toISOString(),
+                totalWordCount: 0,
                 content: { chapters: [], characters: [], locations: [], plotlines: [] },
                 chatHistory: []
             } 
@@ -390,9 +394,9 @@ app.post('/create-project', async (req, res) => {
 
 // v2.0.0: Маршрут для видалення проєкту
 app.post('/delete-project', async (req, res) => {
-    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
-    
-    const { projectID } = req.body;
+    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
+    
+    const { projectID } = req.body;
     if (!projectID) {
         return res.status(400).json({ error: "Необхідний projectID." });
     }
@@ -400,11 +404,9 @@ app.post('/delete-project', async (req, res) => {
     try {
         const projectRef = db.collection('projects').doc(projectID);
 
-        // --- 1. Рекурсивне видалення субколекцій (data) ---
         const dataCollectionRef = projectRef.collection('data');
         await deleteCollection(db, dataCollectionRef, 10);
         
-        // --- 2. Видалення головного документа ---
         await projectRef.delete();
 
         res.status(200).json({ status: 'deleted' });
@@ -414,47 +416,67 @@ app.post('/delete-project', async (req, res) => {
     }
 });
 
-// v2.0.0: Маршрут для оновлення назви проєкту
-app.post('/update-title', async (req, res) => {
-    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
-    
-    const { projectID, newTitle } = req.body;
-    if (!projectID || !newTitle) {
-        return res.status(400).json({ error: "Необхідні projectID та newTitle." });
+// === ОНОВЛЕНО (ФАЗА 1): Новий маршрут для оновлення деталей проєкту ===
+// (Замінює старий '/update-title')
+app.post('/update-project-details', async (req, res) => {
+    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
+    
+    const { projectID, newTitle, newGenre, newCoverImage } = req.body;
+    
+    if (!projectID) {
+        return res.status(400).json({ error: "Необхідний projectID." });
     }
+
+    // Створюємо об'єкт оновлення лише з тими даними, що надійшли
+    const updateData = {
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    };
+    if (newTitle) {
+        updateData.title = newTitle;
+    }
+    if (newGenre) {
+        updateData.genre = newGenre;
+    }
+    if (newCoverImage) {
+        updateData.coverImage = newCoverImage;
+    }
+
+    // Перевіряємо, чи є що оновлювати (окрім дати)
+    if (Object.keys(updateData).length <= 1) {
+         return res.status(400).json({ error: "Не надано даних для оновлення (newTitle, newGenre, newCoverImage)." });
+    }
+
     try {
         const projectRef = db.collection('projects').doc(projectID);
-        await projectRef.update({
-            title: newTitle,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
+        await projectRef.update(updateData);
         res.status(200).json({ status: 'updated' });
     } catch (error) {
-        console.error("Помилка при оновленні назви:", error);
-        res.status(500).json({ error: "Не вдалося оновити назву проєкту." });
+        console.error("Помилка при оновленні деталей проєкту:", error);
+        res.status(500).json({ error: "Не вдалося оновити деталі проєкту." });
     }
 });
 
 // v2.0.0: Маршрут для експорту проєкту
 app.get('/export-project', async (req, res) => {
-    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
-    
-    const { projectID } = req.query;
+    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
+    
+    const { projectID } = req.query;
     if (!projectID) {
         return res.status(400).json({ error: "Необхідний projectID." });
     }
 
     try {
-        // Використовуємо http://localhost:${port} для самозвернення
         const projectContentResponse = await fetch(`http://localhost:${port}/get-project-content?projectID=${projectID}`);
         if (!projectContentResponse.ok) {
             throw new Error("Не вдалося завантажити контент для експорту.");
         }
-        const { title, content } = await projectContentResponse.json();
+        // === ОНОВЛЕНО (ФАЗА 1): Отримуємо нові поля ===
+        const { title, content, genre, totalWordCount } = await projectContentResponse.json();
 
-        // Формуємо текст для експорту (логіка без змін)
         let exportText = `Назва: ${title}\n`;
-        exportText += `Слів: ${content.totalWordCount || 0}\n`;
+        // === ОНОВЛЕНО (ФАЗА 1): Додано жанр ===
+        exportText += `Жанр: ${genre || 'Не вказано'}\n`;
+        exportText += `Слів: ${totalWordCount || 0}\n`; // Використовуємо загальний лічильник
         exportText += `Мета: ${content.wordGoal || 50000}\n\n`;
         exportText += `=====================================\n\n`;
 
@@ -526,10 +548,10 @@ app.get('/export-project', async (req, res) => {
 
 // v2.3.0: Маршрут для чату (оновлено для селективного контексту)
 app.post('/chat', async (req, res) => {
-    if (!model) return res.status(500).json({ error: "Сервіси AI не ініціалізовані." });
-    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
-    
-    const { projectID, message, contextOptions } = req.body;
+    if (!model) return res.status(500).json({ error: "Сервіси AI не ініціалізовані." });
+    if (!db) return res.status(500).json({ error: "Сервіси бази даних не ініціалізовані." });
+    
+    const { projectID, message, contextOptions } = req.body;
     if (!projectID || !message) {
         return res.status(400).json({ error: "Необхідні projectID та message." });
     }
@@ -538,7 +560,6 @@ app.post('/chat', async (req, res) => {
         const projectRef = db.collection('projects').doc(projectID);
         const dataCollectionRef = projectRef.collection('data');
         
-        // --- 1. Отримуємо дані для контексту ---
         const [projectDoc, worldDoc, chatDoc, chaptersDoc, charactersDoc, locationsDoc, plotlinesDoc] = await Promise.all([
             projectRef.get(),
             dataCollectionRef.doc('world').get(),
@@ -557,7 +578,6 @@ app.post('/chat', async (req, res) => {
         const worldData = worldDoc.exists ? worldDoc.data() : {};
         const currentChatHistory = chatDoc.exists ? (chatDoc.data().history || []) : [];
 
-        // Функція для отримання даних з підтримкою обох форматів
         const getDataForChat = async (doc, collectionName) => {
             if (doc.exists && doc.data().items) {
                 return doc.data().items || [];
@@ -565,21 +585,17 @@ app.post('/chat', async (req, res) => {
             return [];
         };
 
-        // --- 2. Збираємо контекст (Project Content) ---
         let context = `Я - письменник, що працює над книгою: "${projectTitle}". \n`;
         context += `Моя роль: допомогти мені у творчому процесі. \n`;
         context += `Твої відповіді мають бути лаконічними, зосередженими та корисними, з огляду на наданий контекст. \n\n`;
         
-        // 2.0. World (завжди додаємо, оскільки це ядро, але використовуємо опції для додаткового контексту)
         context += `--- ЯДРО ТА МЕТА ПРОЄКТУ ---\n`;
         context += `Тема: ${worldData.theme || '...'}\n`;
         context += `Головна арка: ${worldData.mainArc || '...'}\n`;
         context += `Преміса (Logline): ${worldData.premise || '...'}\n\n`;
 
-        // Змінні для керування контекстом
         const { includeChapters, includeCharacters, includeLocations, includePlotlines } = contextOptions || {};
         
-        // 2.1. Список розділів
         if (includeChapters) {
             const chapters = await getDataForChat(chaptersDoc, 'chapters');
             
@@ -592,7 +608,6 @@ app.post('/chat', async (req, res) => {
             }
         }
         
-        // 2.2. Персонажі
         if (includeCharacters) {
             const characters = await getDataForChat(charactersDoc, 'characters');
             
@@ -604,7 +619,6 @@ app.post('/chat', async (req, res) => {
             }
         }
         
-        // 2.3. Локації
         if (includeLocations) {
             const locations = await getDataForChat(locationsDoc, 'locations');
             
@@ -616,7 +630,6 @@ app.post('/chat', async (req, res) => {
             }
         }
         
-        // 2.4. Сюжетні лінії
         if (includePlotlines) {
             const plotlines = await getDataForChat(plotlinesDoc, 'plotlines');
 
@@ -628,30 +641,26 @@ app.post('/chat', async (req, res) => {
             }
         }
         
-        // 3. Формуємо історію чату (System + History + New Message)
-        const chatModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-        
-        const contents = [...currentChatHistory.map(h => ({ 
-            role: h.role, 
-            parts: h.parts 
-        })), { role: "user", parts: [{ text: message }] }];
+        const chatModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        
+        const contents = [...currentChatHistory.map(h => ({ 
+            role: h.role, 
+            parts: h.parts 
+        })), { role: "user", parts: [{ text: message }] }];
 
         const result = await chatModel.generateContent({
             contents: contents,
-            config: { systemInstruction: context } // Передаємо контекст як systemInstruction
+            config: { systemInstruction: context } 
         });
 
         const modelResponse = result.text.trim();
         
-        // --- 5. Оновлюємо історію в Firestore (якщо запит успішний) ---
         const newChatHistory = [...currentChatHistory];
         newChatHistory.push({ role: "user", parts: [{ text: message }] });
         newChatHistory.push({ role: "model", parts: [{ text: modelResponse }] });
         
-        // Оновлюємо документ chatHistory
         await dataCollectionRef.doc('chatHistory').set({ history: newChatHistory });
         
-        // Оновлюємо updated дату проєкту
         await projectRef.update({ updatedAt: admin.firestore.FieldValue.serverTimestamp() });
 
         res.json({ message: modelResponse });
@@ -664,9 +673,9 @@ app.post('/chat', async (req, res) => {
 
 // v1.1.0: API для логування клієнтських помилок (без змін)
 app.post('/log-error', (req, res) => {
-    const errorLog = req.body;
-    console.error(`КЛІЄНТСЬКА ПОМИЛКА: ${JSON.stringify(errorLog)}`);
-    res.status(200).send({ status: 'logged' });
+    const errorLog = req.body;
+    console.error(`КЛІЄНТСЬКА ПОМИЛКА: ${JSON.stringify(errorLog)}`);
+    res.status(200).send({ status: 'logged' });
 });
 
 
@@ -675,58 +684,53 @@ app.post('/log-error', (req, res) => {
 if (process.env.NODE_ENV === 'production') {
     console.log("РЕЖИМ: Production. Обслуговування папки dist.");
     
-    // 1. Обслуговування статичних файлів (JS, CSS, IMG)
-    // Express шукає тут усі файли, крім API.
     app.use(express.static(path.join(__dirname, 'dist')));
     
-    // 2. Catch-all: якщо Express не знайшов ні статичного файлу, ні API-маршруту, 
-    // повертаємо index.html (для клієнтського роутингу, наприклад, /projects/123).
     app.get(/.*/, (req, res) => { 
         res.sendFile(path.join(__dirname, 'dist', 'index.html'));
     });
 } else {
-    // У розробці, Express не обслуговує фронтенд, це робить Vite.
-    // Ви можете видалити цей else-блок, якщо використовуєте Vite Dev Server.
-    // Якщо залишаєте, то `app.use(express.static('.'));` може бути тут, 
-    // але не в Production. 
-    console.log("РЕЖИМ: Development. Фронтенд обслуговується Vite.");
-    // app.use(express.static('.')); // Можна видалити, якщо Vite робить все.
+    console.log("РЕЖИМ: Development. Фронтенд обслуговується Vite.");
+    // === ОНОВЛЕНО (ФАЗА 1): Додано app.use(express.static('.')) для dev ===
+    // Це потрібно, щоб dev-сервер міг знайти активи, якщо Vite не запущений,
+    // або для обслуговування файлів, які Vite не обробляє (наприклад, serviceAccountKey.json у dev)
+    app.use(express.static('.'));
 }
 
 // --- Запуск сервера ---
 app.listen(port, () => {
-    console.log(`Сервер запущено на http://localhost:${port}`);
+    console.log(`Сервер запущено на http://localhost:${port}`);
 });
 
 // === ОНОВЛЕНО v2.0.0: Допоміжна функція для видалення субколекцій ===
 async function deleteCollection(db, collectionRef, batchSize) {
-    const query = collectionRef.limit(batchSize);
-    return new Promise((resolve, reject) => {
-        deleteQueryBatch(db, query, resolve, reject);
-    });
+    const query = collectionRef.limit(batchSize);
+    return new Promise((resolve, reject) => {
+        deleteQueryBatch(db, query, resolve, reject);
+    });
 }
 
 async function deleteQueryBatch(db, query, resolve, reject) {
-    try {
-        const snapshot = await query.get();
-        if (snapshot.size === 0) {
-            return resolve();
-        }
+    try {
+        const snapshot = await query.get();
+        if (snapshot.size === 0) {
+            return resolve();
+        }
 
-        const batch = db.batch();
-        snapshot.docs.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-        await batch.commit();
+        const batch = db.batch();
+        snapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
 
-        if (snapshot.size === batchSize) {
-            setTimeout(() => {
-                deleteQueryBatch(db, query, resolve, reject);
-            }, 100);
-        } else {
-            resolve();
-        }
-    } catch (error) {
-        reject(error);
-    }
+        if (snapshot.size === batchSize) {
+            setTimeout(() => {
+                deleteQueryBatch(db, query, resolve, reject);
+            }, 100);
+        } else {
+            resolve();
+        }
+    } catch (error) {
+        reject(error);
+    }
 }

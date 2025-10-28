@@ -14,10 +14,15 @@ export default defineConfig({
       '/get-project-content': 'http://localhost:3000',
       '/create-project': 'http://localhost:3000',
       '/delete-project': 'http://localhost:3000',
-      '/update-title': 'http://localhost:3000',
+      
+      // === ОНОВЛЕНО (ФАЗА 1/2) ===
+      '/update-project-details': 'http://localhost:3000', // Новий маршрут
+      // '/update-title': 'http://localhost:3000', // Старий маршрут видалено
+
       '/export-project': 'http://localhost:3000',
       '/get-projects': 'http://localhost:3000',
       '/log-error': 'http://localhost:3000',
+      '/migrate-project-data': 'http://localhost:3000' // Додано про всяк випадок
     }
   },
 

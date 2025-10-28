@@ -125,9 +125,6 @@ body {
     font-size: 1.5rem;
     font-weight: bold;
     color: var(--color-text-primary);
-    font-family: 'Lucida Console', serif;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
 }
 
 .header-center {
@@ -377,20 +374,18 @@ button, .btn {
     background-color: var(--color-bg-tertiary);
 }
 
-/* ===================================== */
-/* --- v2.9.5: КОЛЕКЦІЯ ПРОЄКТІВ (НОВИЙ ДИЗАЙН) --- */
-/* ===================================== */
+/* ======================================================= */
+/* --- v2.9.5: КОЛЕКЦІЯ ПРОЄКТІВ (РЕФАКТОРИНГ ФАЗА 2) --- */
+/* ======================================================= */
 
 /* 1. Контейнер для списку - БЕЗ ЗАГАЛЬНОГО БОКСУ */
 #projects-view {
-    /* Прибираємо контейнерні стилі, щоб він не був у боксі */
     background: transparent; 
     padding: 5px 0; 
     max-width: 1500px;
     margin: var(--space-md) auto;
     box-shadow: none;
 }
-/* Старий projects-container більше не потрібен, але ми його використовуємо як загальний контейнер */
 #projects-container {
     max-width: 1500px; /* Обмеження ширини */
     margin: 25px auto;
@@ -435,20 +430,22 @@ button, .btn {
     transition: all 0.2s ease-in-out;
     display: flex; 
     flex-direction: column;
-    min-height: 250px; 
+    /* min-height: 250px; (Видалено, висота буде динамічною) */
     overflow: hidden; 
 }
 
 .project-card:hover {
     transform: translateY(-5px); 
     box-shadow: var(--shadow-lg); 
-    /*border-color: var(--color-primary-hover);*/
 }
 
 /* 5. ЕЛЕМЕНТ: Зображення */
 .project-card-image {
     width: 100%;
-    height: 200px; /* Фіксована висота зображення */
+    /* === ОНОВЛЕНО (ФАЗА 2): Співвідношення сторін 16:9 === */
+    height: 0;
+    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+    position: relative; 
     overflow: hidden;
     flex-shrink: 0;
     background-color: var(--color-bg-tertiary); 
@@ -459,6 +456,9 @@ button, .btn {
     width: 100%;
     height: 100%;
     object-fit: cover; /* Забезпечує покриття площі */
+    position: absolute;
+    top: 0;
+    left: 0;
 }
 
 /* 6. Контент під зображенням */
@@ -466,30 +466,43 @@ button, .btn {
     padding: var(--space-md);
     display: flex;
     flex-direction: column;
-    flex-grow: 1;
-    padding-top: 10px;
-    
+    flex-grow: 1; /* Заповнює весь простір, що залишився */
 }
 
-.project-card-header h3 {
+/* === ОНОВЛЕНО (ФАЗА 2): Новий стиль для заголовка (прибрано hack) === */
+.project-card-title {
     margin-top: 0;
     margin-bottom: var(--space-xs);
     font-size: 1.25em; 
-    padding-bottom: 100px;
-    flex-direction: column;
-    display: flex;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    /* Обрізка довгої назви */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* 7. Footer та Прогрес-бар */
+/* === ОНОВЛЕНО (ФАЗА 2): Новий стиль для жанру === */
+.project-card-genre {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
+    background-color: var(--color-bg-tertiary);
+    padding: 2px var(--space-xs);
+    border-radius: var(--radius-sm);
+    display: inline-block; /* Маленький тег */
+    margin-bottom: var(--space-md); /* Відступ до футера */
+}
+
+/* 7. Footer (притиснутий до низу) */
+/* === ОНОВЛЕНО (ФАЗА 2): Рефакторинг футера картки === */
 .project-card-footer {
-    margin-top: auto; /* Притискає футер до низу картки */
+    margin-top: auto; /* Притискає футер до низу .project-card-content */
     padding-top: var(--space-sm);
-    display: flex;
+    border-top: 1px solid var(--color-bg-tertiary);
 }
 
 .project-card-stats {
-    border-top: 1px solid var(--color-bg-tertiary);
-    padding-top: var(--space-sm);
     display: flex;
     justify-content: space-between;
     font-size: 0.9em;
@@ -513,26 +526,20 @@ button, .btn {
     transition: width 0.5s ease;
 }
 
-.project-card-body {
-    
-
-    margin-top: auto;
-    margin-bottom: -10px
-}
-
+/* === ОНОВЛЕНО (ФАЗА 2): Стиль для дати оновлення (прибрано hack) === */
 .project-card-updated {
     font-size: 10px;
-    transform: translate(0,0);
     color: rgba(255, 255, 255, 0.553);
-    margin-top: auto;
-    margin-bottom: 10px;
+    margin-top: var(--space-xs); /* Невеликий відступ від прогрес-бару */
 }
+
 
 /* === Стилі Скелетону для завантаження === */
 .skeleton-item {
     background-color: var(--color-bg-tertiary);
     border-radius: var(--radius-lg);
-    height: 250px; 
+    /* === ОНОВЛЕНО (ФАЗА 2): Висота скелетону === */
+    height: 320px; /* Орієнтовна висота картки (200px img + 120px content) */
     opacity: 0.5;
     animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
@@ -541,6 +548,9 @@ button, .btn {
     50% { opacity: 0.5; }
 }
 
+/* ======================================================= */
+/* --- (КІНЕЦЬ СЕКЦІЇ ПРОЄКТІВ) --- */
+/* ======================================================= */
 
 
 
@@ -1356,22 +1366,25 @@ button, .btn {
         padding: 0 var(--space-md);
     }
     .header-content {
-        flex-direction: column;
+        /* === ОНОВЛЕНО (ФАЗА 2): Покращена мобільна версія хедера === */
+        flex-wrap: wrap; /* Дозволяє переносити */
+        height: auto; /* Автоматична висота */
+        padding: var(--space-sm) 0;
         gap: var(--space-sm);
     }
-    .header-left, .header-center, .header-right {
-        flex-basis: auto;
-        width: 100%;
-        justify-content: center;
+    .header-left, .header-right {
+        flex-basis: 100%; /* Займають 100% ширини */
+        justify-content: space-between; /* Розтягує лого та вихід */
     }
-    .header-right {
-        justify-content: space-between;
+    .header-center {
+        flex-basis: 100%;
+        order: 3; /* Пошук іде останнім */
     }
     
     #global-search-container {
         display: flex;
         width: 100%;
-        max-width: 400px;
+        max-width: 100%; /* На всю ширину */
         position: relative; 
     }
 
@@ -1381,7 +1394,7 @@ button, .btn {
         left: var(--space-sm);
         top: 50%;
         transform: translateY(-50%);
-        color: var(--color-text-tertiary);
+        /* color: var(--color-text-tertiary); (Вже є filter) */
         pointer-events: none; 
     }
     
@@ -1494,4 +1507,42 @@ button, .btn {
     margin-bottom: 0;
     margin-right: var(--space-xs);
     accent-color: var(--color-primary);
+}
+
+/* === v2.9.15: Стилі для контекстного меню === */
+.context-menu {
+    position: fixed;
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-bg-tertiary);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 1010;
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-xs);
+}
+
+.context-menu button {
+    background: none;
+    border: none;
+    color: var(--color-text-primary);
+    padding: var(--space-sm) var(--space-md);
+    text-align: left;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    box-shadow: none;
+    font-weight: var(--font-weight-medium);
+}
+
+.context-menu button:hover {
+    background-color: var(--color-bg-elevated);
+}
+
+.context-menu #context-delete-btn {
+    color: var(--color-danger);
+}
+
+.context-menu #context-delete-btn:hover {
+    background-color: var(--color-danger);
+    color: white;
 }

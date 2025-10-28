@@ -26,6 +26,7 @@ import {
 } from '../api.js';
 import { projectCache } from '../core/cache.js';
 import { escapeHTML } from '../utils/utils.js';
+import { openProject } from './workspace.js';
 
 // ...
 
@@ -74,7 +75,7 @@ export function renderProjectsList(projects) {
 
         item.addEventListener('click', (e) => {
             if (!e.target.classList.contains('card-edit-icon')) {
-                callOpenProject(project.id); 
+                openProject(project.id); 
             }
         });
 
@@ -144,7 +145,7 @@ async function createProject(details) {
         const newProject = await createNewProject(details, currentUser.uid);
         await loadProjects();
         showToast(`Проєкт "${details.title}" створено!`, "success");
-        callOpenProject(newProject.id);
+        openProject(newProject.id);
     } catch (error) {
         handleError(error, "create-project");
         showToast("Помилка створення проєкту.", "error");

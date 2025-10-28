@@ -23,6 +23,7 @@ import {
     updateProjectDetailsAPI,
     exportProjectAPI
 } from '../api.js';
+import { projectCache } from '../core/cache.js';
 
 // ...
 

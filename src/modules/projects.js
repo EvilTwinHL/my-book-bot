@@ -24,6 +24,7 @@ import {
     exportProjectAPI
 } from '../api.js';
 import { projectCache } from '../core/cache.js';
+import { escapeHTML } from '../utils/utils.js';
 
 // ...
 
@@ -42,7 +43,6 @@ export function renderProjectsList(projects) {
     
     ui.projectsList.innerHTML = ''; 
     projectList.forEach(project => {
-        projectCache.set(project.id, project); // <<< FIX
         const item = document.createElement('div');
         item.className = 'project-card'; 
         item.dataset.id = project.id;

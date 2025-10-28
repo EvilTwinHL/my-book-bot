@@ -16,6 +16,7 @@ import {
     showToast, 
     showView 
 } from '../ui/global.js';
+import { showCreateProjectModal } from '../ui/modal.js';
 import {
     fetchProjects,
     createNewProject,

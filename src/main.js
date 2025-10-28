@@ -163,7 +163,6 @@ function setupGlobalListeners() {
     ui.usernameContainer?.addEventListener('click', handleChangeDisplayName); 
 
     // --- Проєкти та Контекстне меню ---
-    ui.createProjectBtn?.addEventListener('click', createNewProjectAction);
     ui.projectContextMenu?.addEventListener('click', (e) => {
         e.stopPropagation();
         const action = e.target.id;

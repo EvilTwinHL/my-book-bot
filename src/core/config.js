@@ -1,10 +1,10 @@
 // src/core/config.js
 
 /**
- * CONFIGURATION SETTINGS (v2.10.2)
+ * CONFIGURATION SETTINGS (v2.11.0)
  */
 export const CONFIG = {
-    APP_VERSION: "2.10.2", // ОНОВЛЕНО v2.10.2 (add main_icon in dader, change color scheme)
+    APP_VERSION: "2.11.0", // ОНОВЛЕНО v2.11.0 (chage logic cards)
     AUTOSAVE_DELAY: 1500, // ms
     DEFAULT_GOAL_WORDS: 50000,
     SNIPPET_LENGTH: 80, // characters

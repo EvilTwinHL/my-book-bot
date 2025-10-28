@@ -13,12 +13,12 @@
 <header id="global-header" class="hidden">
     <div class="header-content">
         <div class="header-left">
-            <span id="header-logo"><img src="assets/main_icon.png" class="main-icon-headholder">Gemini OpusAI</span>
+            <span id="header-logo"><img src="/assets/main_icon.png" class="main-icon-headholder">Gemini OpusAI</span>
         </div>
 
         <div class="header-center">
             <div id="global-search-container">
-                <img src="assets/search-icon.svg" class="search-icon-inside" alt="Пошук"> 
+                <img src="/assets/search-icon.svg" class="search-icon-inside" alt="Пошук"> 
                 <input type="text" id="global-search-input" placeholder="Пошук...">
                 </div>
             </div>
@@ -26,7 +26,7 @@
         <div class="header-right">
             <div id="username-container" title="Змінити ім'я"> 
                 <span id="header-username"></span>
-                <img src="assets/edit-icon.svg" id="edit-username-icon" alt="Ред.">
+                <img src="/assets/edit-icon.svg" id="edit-username-icon" alt="Ред.">
             </div>
             <button id="header-logout-btn" class="btn-warning">Вихід</button>
         </div>
@@ -41,14 +41,37 @@
 
     <div id="create-edit-modal" class="modal hidden">
         <div class="modal-content">
-            <h3 id="create-edit-modal-title"></h3>
-            <input type="text" id="create-edit-input" placeholder="Введіть назву">
+            <h3 id="create-edit-modal-title">Створення нової книги</h3>
+            
+            <label for="create-modal-title-input">Назва книги</label>
+            <input type="text" id="create-modal-title-input" placeholder="Введіть назву...">
+            
+            <label for="create-modal-genre-select">Жанр</label>
+            <select id="create-modal-genre-select">
+                <option value="">Оберіть жанр</option>
+                <option value="Фентезі">Фентезі</option>
+                <option value="Фантастика">Фантастика</option>
+                <option value="Детектив">Детектив</option>
+                <option value="Романтика">Романтика</option>
+                <option value="Роман">Роман</option>
+                <option value="Оповідання">Оповідання</option>
+                <option value="Інше">Інше</option>
+            </select>
+            
+            <label for="create-modal-image-select">Обкладинка</label>
+            <select id="create-modal-image-select">
+                <option value="/assets/card-placeholder.png">Стандартна обкладинка</option>
+                <option value="/assets/cover-fantasy.png">Обкладинка "Фентезі" (Приклад)</option>
+                <option value="/assets/cover-scifi.png">Обкладинка "Фантастика" (Приклад)</option>
+            </select>
+
             <div class="modal-buttons">
-                <button id="create-edit-confirm-btn" class="btn-primary">OK</button>
-                <button id="create-edit-cancel-btn" class="btn-secondary">Відміна</button>
+                <button id="create-modal-confirm-btn" class="btn-primary">Створити</button>
+                <button id="create-modal-cancel-btn" class="btn-secondary">Відміна</button>
             </div>
         </div>
     </div>
+
 
     <div id="confirm-modal" class="modal hidden">
         <div class="modal-content">
@@ -69,10 +92,23 @@
             <input type="text" id="project-details-name-input" placeholder="Введіть назву проєкту...">
             
             <label for="project-details-genre-input">Жанр</label>
-            <input type="text" id="project-details-genre-input" placeholder="Наприклад: Фентезі, Наукова фантастика...">
+            <select id="project-details-genre-input">
+                <option value="">Оберіть жанр</option>
+                <option value="Фентезі">Фентезі</option>
+                <option value="Фантастика">Фантастика</option>
+                <option value="Детектив">Детектив</option>
+                <option value="Романтика">Романтика</option>
+                <option value="Роман">Роман</option>
+                <option value="Оповідання">Оповідання</option>
+                <option value="Інше">Інше</option>
+            </select>
             
-            <label for="project-details-image-input">URL Обкладинки (зображення)</label>
-            <input type="text" id="project-details-image-input" placeholder="Вставте URL посилання на зображення...">
+            <label for="project-details-image-input">Обкладинка</label>
+            <select id="project-details-image-input">
+                <option value="/assets/card-placeholder.png">Стандартна обкладинка</option>
+                <option value="/assets/cover-fantasy.png">Обкладинка "Фентезі" (Приклад)</option>
+                <option value="/assets/cover-scifi.png">Обкладинка "Фантастика" (Приклад)</option>
+            </select>
             
             <div class="modal-buttons">
                 <button id="project-details-confirm-btn" class="btn-primary">Зберегти</button>
@@ -80,12 +116,14 @@
             </div>
         </div>
     </div>
-    
     <div id="auth-container" class="container"> 
         <h2>Вхід до OpusAI</h2>
         <p>Увійдіть, щоб продовжити роботу над вашими проєктами.</p>
+        
+        <p>Будь ласка, авторизуйтесь:</p>
+        
         <button id="signInBtn" class="btn-primary">
-            <img src="assets/google-icon.svg" style="height: 1.2em; margin-right: 10px;" alt="Google">
+            <img src="/assets/google-icon.svg" style="height: 1.2em; margin-right: 10px;" alt="Google">
             Увійти через Google
         </button>
     </div>
@@ -93,8 +131,8 @@
     <div id="projects-view" class="hidden">
         
         <div id="projects-header">
-            <h2>Мої проєкти</h2>
-            <button id="create-project-btn" class="btn-warning">+ Створити проєкт</button>
+            <h2>Мої колекції</h2> 
+            <button id="create-project-btn" class="btn-warning">Створити книгу</button> 
         </div>
 
         <div id="projects-container"> 
@@ -102,6 +140,7 @@
                 </div>
         </div>
     </div>
+
 
     <div id="workspace-container" class="container hidden">
 
@@ -135,7 +174,7 @@
         <div id="nav-progress" class="nav-progress hidden"></div>
 
         <div id="quick-access-bar" class="quick-access-bar hidden">
-             </div>
+            </div>
 
         <div id="tab-content-container">
 

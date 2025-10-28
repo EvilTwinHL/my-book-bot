@@ -1,4 +1,4 @@
-// src/modules/projects.js (ОНОВЛЕНО ФАЗА 5: Рефакторинг редагування деталей)
+// src/modules/projects.js (ФІНАЛЬНА ВЕРСІЯ З ВИПРАВЛЕННЯМ)
 
 import { 
     currentUser, 
@@ -24,7 +24,6 @@ import {
     fetchProjects, 
     createNewProject, 
     deleteProjectAPI, 
-    // === ОНОВЛЕНО (ФАЗА 5): 'updateProjectTitleAPI' замінено на 'updateProjectDetailsAPI' ===
     updateProjectDetailsAPI, 
     exportProjectAPI 
 } from '../api.js';
@@ -75,53 +74,41 @@ export function renderProjectsList(projects) {
     
     ui.projectsList.innerHTML = ''; 
     projectList.forEach(project => {
+        projectCache.set(project.id, project); // <<< FIX
         const item = document.createElement('div');
         item.className = 'project-card'; 
         item.dataset.id = project.id;
         
-        // === ОНОВЛЕНО (ФАЗА 5): Використання нових полів ===
         const title = escapeHTML(project.title);
         const genre = escapeHTML(project.genre || 'Без жанру');
-        const imageURL = project.imageURL ? escapeHTML(project.imageURL) : 'assets/card-placeholder.png';
+        const imageURL = project.imageURL ? escapeHTML(project.imageURL) : '/assets/card-placeholder.png';
         const wordCount = project.totalWordCount || 0;
-        const updatedAt = new Date(project.updatedAt).toLocaleString('uk-UA', { day: 'numeric', month: 'short', year: 'numeric' });
+        const updatedAt = new Date(project.updatedAt).toLocaleString('uk-UA', { day: 'numeric', month: 'numeric', year: 'numeric' });
         
-        const goal = project.content?.wordGoal || project.wordGoal || 0; 
-        
-        let progressPercent = 0;
-        if (goal > 0 && wordCount > 0) {
-            progressPercent = Math.min(100, (wordCount / goal) * 100);
-        }
-
-        // === ОНОВЛЕНО (ФАЗА 5): Нова структура картки ===
         item.innerHTML = `
             <div class="project-card-image">
-                <img src="${imageURL}" alt="Обкладинка проєкту" onerror="this.src='assets/card-placeholder.png'; this.onerror=null;">
+              <img src="${imageURL}" alt="Обкладинка проєкту" loading="lazy" onerror="this.src='/assets/card-placeholder.png'; this.onerror=null;">
+              
+              <div class="card-image-overlay">
+                <span class="card-genre-tag">${genre}</span>
+                <div class="card-edit-icon" data-project-id="${project.id}" title="Редагувати"></div>
+              </div>
             </div>
+
             <div class="project-card-content">
-                <span class="project-card-genre">${genre}</span>
-                <h3 class="project-card-title">${title}</h3>
-                
-                <div class="project-card-footer">
-                    <div class="project-card-stats">
-                        <div>Слів: <span>${wordCount.toLocaleString('uk-UA')}</span></div>
-                        ${goal > 0 ? `<div>Ціль: <span>${goal.toLocaleString('uk-UA')}</span></div>` : ''}
-                    </div>
-                    ${goal > 0 ? `
-                    <div class="project-card-progress" title="${progressPercent.toFixed(0)}% виконано">
-                        <div class="project-card-progress-bar" style="width: ${progressPercent}%;"></div>
-                    </div>
-                    ` : ''}
-                    <p class="project-card-updated">Оновлено: ${updatedAt}</p>
-                </div>
+              <h3 class="project-card-title">${title}</h3>
+              <div class="project-card-stats">
+                <span>Оновлено: ${updatedAt} | ${wordCount.toLocaleString('uk-UA')} слів</span>
+              </div>
             </div>
         `;
 
         item.addEventListener('click', (e) => {
-            callOpenProject(project.id); // !!! ВИКЛИК ОБГОРТКИ !!!
+            if (!e.target.classList.contains('card-edit-icon')) {
+                callOpenProject(project.id); 
+            }
         });
 
-        // === ОНОВЛЕНО (ФАЗА 5): Передаємо весь об'єкт 'project' в контекстне меню ===
         item.addEventListener('contextmenu', (e) => showProjectContextMenu(e, project));
         
         ui.projectsList.appendChild(item);
@@ -172,8 +159,9 @@ export async function loadProjects() {
     }
 }
 
-// ... (createNewProjectAction, createProject без змін)
 export function createNewProjectAction() {
+    // TODO: Вам потрібно буде оновити цю функцію,
+    // щоб вона відкривала нову модалку #create-edit-modal з index.html
     showCreateEditModal(
         'Створити новий проєкт',
         'Назва проєкту',
@@ -192,7 +180,7 @@ async function createProject(title) {
         const newProject = await createNewProject(title, currentUser.uid);
         await loadProjects();
         showToast(`Проєкт "${title}" створено!`, "success");
-        callOpenProject(newProject.id); // !!! ВИКЛИК ОБГОРТКИ !!!
+        callOpenProject(newProject.id); // !!! ВИКЛИК ОБГОРТKI !!!
     } catch (error) {
         handleError(error, "create-project");
         showToast("Помилка створення проєкту.", "error");
@@ -201,29 +189,45 @@ async function createProject(title) {
     }
 }
 
-// === ВИДАЛЕНО (ФАЗА 5): Старі функції editProjectTitleAction та updateProjectTitle ===
 
-// === ДОДАНО (ФАЗА 5): Нова логіка для модалки деталей проєкту ===
+// === ЛОГІКА МОДАЛЬНОГО ВІКНА РЕДАГУВАННЯ ===
 
 /**
  * Відкриває модальне вікно для редагування деталей проєкту.
- * Викликається з handleContextEditDetails.
+ * @param {string} projectId - ID проєкту для редагування.
  */
-function openProjectDetailsModal() {
-    if (!contextMenuProjectID) return;
+function openProjectDetailsModal(projectId) {
+    if (!projectId) {
+        console.error("openProjectDetailsModal: не передано projectId");
+        return;
+    }
 
-    // Отримуємо повні дані проєкту з кешу
-    const project = projectCache.get(contextMenuProjectID);
+    const project = projectCache.get(projectId);
     if (!project) {
         showToast("Не вдалося знайти дані проєкту. Спробуйте оновити сторінку.", "error");
+        return;
+    }
+    
+    // ПЕРЕВІРКА: чи бачить JS елементи модалки (з dom.js)
+    if (!ui.projectDetailsModal || !ui.projectDetailsTitle || !ui.projectDetailsNameInput || !ui.projectDetailsConfirmBtn || !ui.projectDetailsCancelBtn) {
+        console.error("Критична помилка: 'ui.projectDetailsModal' або його дочірні елементи не знайдені в 'ui/dom.js'. Перевірте ID в index.html та dom.js.");
+        showToast("Помилка UI: Не вдалося відкрити вікно редагування.", "error");
         return;
     }
 
     // Заповнюємо модальне вікно
     ui.projectDetailsTitle.textContent = `Редагувати "${escapeHTML(project.title)}"`;
     ui.projectDetailsNameInput.value = project.title || '';
-    ui.projectDetailsGenreInput.value = project.genre || '';
-    ui.projectDetailsImageInput.value = project.imageURL || '';
+
+    const genreSelect = document.getElementById('project-details-genre-input');
+    const imageSelect = document.getElementById('project-details-image-input');
+
+    if (genreSelect) {
+        genreSelect.value = project.genre || 'Інше';
+    }
+    if (imageSelect) {
+        imageSelect.value = project.imageURL || '/assets/card-placeholder.png';
+    }
 
     ui.projectDetailsModal.classList.remove('hidden');
     ui.projectDetailsNameInput.focus();
@@ -232,8 +236,8 @@ function openProjectDetailsModal() {
     const confirmHandler = () => {
         const newDetails = {
             title: ui.projectDetailsNameInput.value.trim(),
-            genre: ui.projectDetailsGenreInput.value.trim(),
-            imageURL: ui.projectDetailsImageInput.value.trim()
+            genre: genreSelect.value.trim(),
+            imageURL: imageSelect.value.trim()
         };
         
         if (!newDetails.title) {
@@ -241,7 +245,7 @@ function openProjectDetailsModal() {
             return;
         }
 
-        updateProjectDetails(contextMenuProjectID, newDetails);
+        updateProjectDetails(projectId, newDetails);
         closeModal();
     };
 
@@ -267,10 +271,8 @@ function openProjectDetailsModal() {
 async function updateProjectDetails(id, details) {
     showSpinner("Оновлення деталей...");
     try {
-        // Використовуємо новий API ендпоінт
         await updateProjectDetailsAPI(id, details);
         
-        // Оновлюємо дані в кеші
         const cachedProject = projectCache.get(id);
         if (cachedProject) {
             projectCache.set(id, {
@@ -280,17 +282,14 @@ async function updateProjectDetails(id, details) {
             });
         }
 
-        // Якщо це поточний проєкт, оновлюємо UI воркспейсу
         if (id === currentProjectID) {
             currentProjectData.title = details.title;
-            // (genre та imageURL не відображаються у воркспейсі, але title - так)
-            callUpdateBreadcrumbs(); // !!! ВИКЛИК ОБГОРТКИ !!!
+            callUpdateBreadcrumbs(); // !!! ВИКЛИК ОБГОРТKI !!!
             if (ui.workspaceTitle) {
                 ui.workspaceTitle.textContent = details.title;
             }
         }
 
-        // Перезавантажуємо список проєктів, щоб відобразити зміни
         await loadProjects(); 
         
         showToast(`Проєкт "${details.title}" успішно оновлено.`, "success");
@@ -302,7 +301,6 @@ async function updateProjectDetails(id, details) {
     }
 }
 
-// ... (deleteProjectAction, deleteProject без змін)
 export function deleteProjectAction(id, title) {
     showConfirmModal(
         'Видалити проєкт?',
@@ -378,7 +376,6 @@ export function showProjectContextMenu(e, project) {
     e.preventDefault();
     if (!ui.projectContextMenu) return;
     
-    // === ОНОВЛЕНО (ФАЗА 5): Зберігаємо дані проєкту ===
     contextMenuProjectID = project.id;
     contextMenuProjectTitle = project.title; // Для delete/export
 
@@ -398,9 +395,8 @@ export function showProjectContextMenu(e, project) {
     document.addEventListener('click', closeMenuHandler);
 }
 
-// === ОНОВЛЕНО (ФАЗА 5): 'handleContextEdit' -> 'handleContextEditDetails' ===
 export function handleContextEditDetails() {
-    openProjectDetailsModal(); // Нова функція, що відкриває нову модалку
+    openProjectDetailsModal(contextMenuProjectID); 
     ui.projectContextMenu?.classList.add('hidden');
 }
 
@@ -416,12 +412,26 @@ export function handleContextExport() {
 
 // --- Ініціалізація (обробник викликається з main.js) ---
 
+// === ФІНАЛЬНЕ ВИПРАВЛЕННЯ ТУТ ===
 export function bindProjectListeners() {
     ui.createProjectBtn?.addEventListener('click', createNewProjectAction); 
     
-    // === ОНОВЛЕНО (ФАЗА 5): Змінено обробник ===
     ui.contextEditBtn?.addEventListener('click', handleContextEditDetails);
     
     ui.contextDeleteBtn?.addEventListener('click', handleContextDelete);
     ui.contextExportBtn?.addEventListener('click', handleContextExport);
-}
+
+    // Додаємо ОДИН обробник на ВЕСЬ список проєктів,
+    // який буде "ловити" кліки саме по іконках
+    ui.projectsList?.addEventListener('click', (e) => {
+        // Перевіряємо, чи був клік саме по елементу з класом 'card-edit-icon'
+        if (e.target.classList.contains('card-edit-icon')) {
+            e.stopPropagation(); // Зупиняємо клік, щоб не відкрився проєкт
+            const projectId = e.target.dataset.projectId;
+            if (projectId) {
+                // Викликаємо модалку
+                openProjectDetailsModal(projectId); 
+            }
+        }
+    });
+} // кінець//

@@ -27,59 +27,7 @@ import {
 // ...
 
 export function renderProjectsList(projects) {
-    if (!ui.projectsList) {
-        console.error("Помилка рендерингу: ui.projectsList не визначено.");
-        return;
-    }
-
-    const projectList = Array.isArray(projects) ? projects : [];
-    
-    if (projectList.length === 0) {
-        ui.projectsList.innerHTML = '<p class="empty-list-info" style="text-align: center; margin-top: 40px; grid-column: 1 / -1;">У вас ще немає проєктів. Натисніть "+ Створити проєкт", щоб почати.</p>';
-        return;
-    }
-    
-    ui.projectsList.innerHTML = ''; 
-    projectList.forEach(project => {
-        projectCache.set(project.id, project); // <<< FIX
-        const item = document.createElement('div');
-        item.className = 'project-card'; 
-        item.dataset.id = project.id;
-        
-        const title = escapeHTML(project.title);
-        const genre = escapeHTML(project.genre || 'Без жанру');
-        const imageURL = project.imageURL ? escapeHTML(project.imageURL) : '/assets/card-placeholder.png';
-        const wordCount = project.totalWordCount || 0;
-        const updatedAt = new Date(project.updatedAt).toLocaleString('uk-UA', { day: 'numeric', month: 'numeric', year: 'numeric' });
-        
-        item.innerHTML = `
-            <div class="project-card-image">
-              <img src="${imageURL}" alt="Обкладинка проєкту" loading="lazy" onerror="this.src='/assets/card-placeholder.png'; this.onerror=null;">
-              
-              <div class="card-image-overlay">
-                <span class="card-genre-tag">${genre}</span>
-                <div class="card-edit-icon" data-project-id="${project.id}" title="Редагувати"></div>
-              </div>
-            </div>
-
-            <div class="project-card-content">
-              <h3 class="project-card-title">${title}</h3>
-              <div class="project-card-stats">
-                <span>Оновлено: ${updatedAt} | ${wordCount.toLocaleString('uk-UA')} слів</span>
-              </div>
-            </div>
-        `;
-
-        item.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('card-edit-icon')) {
-                callOpenProject(project.id); 
-            }
-        });
-
-        item.addEventListener('contextmenu', (e) => showProjectContextMenu(e, project));
-        
-        ui.projectsList.appendChild(item);
-    });
+    // ...
 }
 
 /**
